@@ -19,7 +19,7 @@ export function DashNav() {
     <nav className="sticky top-0 z-50 flex h-16 items-center bg-navy px-8">
       <div className="flex w-full items-center justify-between">
         <Link
-          href="/dashboard"
+          href="/"
           className="shrink-0 text-xl font-extrabold tracking-tight text-artha-gold"
         >
           ArthaFlow

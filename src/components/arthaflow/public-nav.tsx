@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/arthaflow/theme-toggle";
 
 const links = [
   { href: "/#how-it-works", label: "How It Works" },
@@ -47,6 +48,7 @@ export function PublicNav() {
           >
             Login
           </Link>
+          <ThemeToggle />
           <Link href="/login">
             <Button size="sm">Get Started Free</Button>
           </Link>

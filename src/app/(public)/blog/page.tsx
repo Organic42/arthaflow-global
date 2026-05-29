@@ -1,6 +1,7 @@
 "use client";
 
 import { HoverCard } from "@/components/arthaflow/hover-card";
+import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { FileText, Clock, Search } from "lucide-react";
@@ -148,37 +149,35 @@ export default function BlogPage() {
         </HoverCard>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <StaggerGrid className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((a, i) => (
-            <HoverCard
-              key={i}
-              className="overflow-hidden !p-0"
-              onClick={() => {}}
-            >
-              <div
-                className={`flex h-[140px] items-center justify-center ${a.bg} ${a.color}`}
-              >
-                <FileText size={40} />
-              </div>
-              <div className="p-5">
-                <div className="mb-3">
-                  <BadgeColor cat={a.cat} />
+            <StaggerItem key={i}>
+              <HoverCard className="overflow-hidden !p-0" onClick={() => {}}>
+                <div
+                  className={`flex h-[140px] items-center justify-center ${a.bg} ${a.color}`}
+                >
+                  <FileText size={40} />
                 </div>
-                <h3 className="mb-2 text-base font-bold leading-snug text-text-heading">
-                  {a.title}
-                </h3>
-                <p className="mb-3.5 text-[13px] leading-snug text-text-secondary">
-                  {a.excerpt}
-                </p>
-                <div className="flex items-center gap-2 text-xs text-text-muted">
-                  <span>{a.date}</span>
-                  <span>·</span>
-                  <span>{a.read}</span>
+                <div className="p-5">
+                  <div className="mb-3">
+                    <BadgeColor cat={a.cat} />
+                  </div>
+                  <h3 className="mb-2 text-base font-bold leading-snug text-text-heading">
+                    {a.title}
+                  </h3>
+                  <p className="mb-3.5 text-[13px] leading-snug text-text-secondary">
+                    {a.excerpt}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-text-muted">
+                    <span>{a.date}</span>
+                    <span>·</span>
+                    <span>{a.read}</span>
+                  </div>
                 </div>
-              </div>
-            </HoverCard>
+              </HoverCard>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGrid>
       </div>
     </section>
   );

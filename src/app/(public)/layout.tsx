@@ -1,5 +1,6 @@
 import { PublicNav } from "@/components/arthaflow/public-nav";
 import { Footer } from "@/components/arthaflow/footer";
+import { PageTransition } from "@/components/arthaflow/page-transition";
 
 export default function PublicLayout({
   children,
@@ -9,7 +10,9 @@ export default function PublicLayout({
   return (
     <>
       <PublicNav />
-      <main>{children}</main>
+      <main>
+        <PageTransition>{children}</PageTransition>
+      </main>
       <Footer />
     </>
   );

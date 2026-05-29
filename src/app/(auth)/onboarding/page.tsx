@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Check, ArrowRight, HelpCircle, X, Plus, Upload, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import confetti from "canvas-confetti";
 
 const STEPS = ["Company Info", "Product Catalogue", "Export Readiness", "Documents"];
 
@@ -247,13 +248,26 @@ export default function OnboardingPage() {
     }
   };
 
+  const fireConfetti = () => {
+    const colors = ["#2563EB", "#D4A843", "#059669", "#7C3AED"];
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 }, colors });
+    setTimeout(() => {
+      confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors });
+    }, 200);
+    setTimeout(() => {
+      confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors });
+    }, 400);
+  };
+
   const next = async () => {
     if (step < 3) {
       await saveStep(step + 1);
       setStep(step + 1);
     } else {
       await saveStep(4);
-      router.push("/dashboard");
+      fireConfetti();
+      // Brief delay so user sees the celebration
+      setTimeout(() => router.push("/dashboard"), 1400);
     }
   };
 

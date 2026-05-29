@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Package, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
 
 interface Product {
   id: string;
@@ -217,20 +218,24 @@ export default function ProductCataloguePage() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <StaggerGrid className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((p) => (
-          <ProductCard key={p.id} product={p} onRefresh={loadProducts} />
+          <StaggerItem key={p.id}>
+            <ProductCard product={p} onRefresh={loadProducts} />
+          </StaggerItem>
         ))}
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="flex min-h-[320px] flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-action-blue hover:text-action-blue"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-subtle">
-            <Plus size={22} />
-          </div>
-          <span className="text-sm font-semibold">Add Product</span>
-        </button>
-      </div>
+        <StaggerItem>
+          <button
+            onClick={() => setDialogOpen(true)}
+            className="flex min-h-[320px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-action-blue hover:text-action-blue"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-subtle">
+              <Plus size={22} />
+            </div>
+            <span className="text-sm font-semibold">Add Product</span>
+          </button>
+        </StaggerItem>
+      </StaggerGrid>
 
       {products.length === 0 && (
         <div className="mt-8 text-center">

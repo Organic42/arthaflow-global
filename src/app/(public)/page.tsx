@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { HoverCard } from "@/components/arthaflow/hover-card";
 import { ProgressBar } from "@/components/arthaflow/progress-bar";
+import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
 import {
   FileText,
   Search,
@@ -190,23 +191,28 @@ export default function HomePage() {
               infrastructure doesn&apos;t exist.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerGrid
+            inView
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
             {problems.map((p, i) => (
-              <HoverCard key={i}>
-                <div
-                  className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${p.bg} ${p.color}`}
-                >
-                  {p.icon}
-                </div>
-                <h3 className="mb-2 text-[17px] font-bold text-text-heading">
-                  {p.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-text-secondary">
-                  {p.desc}
-                </p>
-              </HoverCard>
+              <StaggerItem key={i}>
+                <HoverCard>
+                  <div
+                    className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${p.bg} ${p.color}`}
+                  >
+                    {p.icon}
+                  </div>
+                  <h3 className="mb-2 text-[17px] font-bold text-text-heading">
+                    {p.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-text-secondary">
+                    {p.desc}
+                  </p>
+                </HoverCard>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGrid>
         </div>
       </section>
 
@@ -255,23 +261,28 @@ export default function HomePage() {
               Everything You Need to Export — In One Platform
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerGrid
+            inView
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
             {features.map((f, i) => (
-              <HoverCard key={i}>
-                <div
-                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[10px] ${f.bg} ${f.color}`}
-                >
-                  {f.icon}
-                </div>
-                <h3 className="mb-2 text-base font-bold text-text-heading">
-                  {f.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-text-secondary">
-                  {f.desc}
-                </p>
-              </HoverCard>
+              <StaggerItem key={i}>
+                <HoverCard>
+                  <div
+                    className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[10px] ${f.bg} ${f.color}`}
+                  >
+                    {f.icon}
+                  </div>
+                  <h3 className="mb-2 text-base font-bold text-text-heading">
+                    {f.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-text-secondary">
+                    {f.desc}
+                  </p>
+                </HoverCard>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGrid>
         </div>
       </section>
 

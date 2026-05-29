@@ -458,7 +458,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3 */}
+          {/* Step 3 * yes/}
           {step === 2 && (
             <div className="animate-fade-reveal">
               <h2 className="mb-1.5 text-xl font-extrabold text-text-heading">Step 3: Export Readiness</h2>

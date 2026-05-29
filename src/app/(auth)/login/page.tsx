@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 function GoogleIcon() {
   return (
@@ -26,19 +27,108 @@ const bullets = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/dashboard";
+
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
+
+  // Form fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleLogin = () => {
-    // TODO: Supabase auth
-    router.push("/dashboard");
+  const supabase = createClient();
+
+  const handleLogin = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+
+      // Check onboarding status
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", user.id)
+          .single();
+
+        if (profile && !profile.onboarding_completed) {
+          router.push("/onboarding");
+        } else {
+          router.push(redirectTo);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRegister = () => {
-    // TODO: Supabase auth
-    router.push("/onboarding");
+  const handleRegister = async () => {
+    setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone,
+          },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        },
+      });
+      if (error) throw error;
+
+      // Update profile with phone
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("profiles").update({
+          full_name: fullName,
+          contact_phone: phone,
+        }).eq("id", user.id);
+      }
+
+      router.push("/onboarding");
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?redirect=${redirectTo}`,
+      },
+    });
+    if (error) setError(error.message);
   };
 
   return (
@@ -72,7 +162,6 @@ export default function LoginPage() {
 
       {/* RIGHT — form panel */}
       <div className="relative flex items-center justify-center bg-card px-8 py-12">
-        {/* Mobile logo */}
         <Link
           href="/"
           className="absolute left-8 top-6 text-[22px] font-extrabold text-artha-gold lg:hidden"
@@ -81,6 +170,13 @@ export default function LoginPage() {
         </Link>
 
         <div className="w-full max-w-[380px]">
+          {/* Error banner */}
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
+              {error}
+            </div>
+          )}
+
           {mode === "login" ? (
             <>
               <h1 className="mb-1.5 text-[26px] font-extrabold tracking-tight text-text-heading">
@@ -92,9 +188,7 @@ export default function LoginPage() {
 
               <div className="flex flex-col gap-4.5">
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Email
-                  </label>
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Email</label>
                   <Input
                     type="email"
                     placeholder="you@company.in"
@@ -103,14 +197,13 @@ export default function LoginPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Password
-                  </label>
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Password</label>
                   <Input
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   />
                   <div className="mt-2 text-right">
                     <a className="cursor-pointer text-[13px] text-action-blue hover:underline">
@@ -118,23 +211,18 @@ export default function LoginPage() {
                     </a>
                   </div>
                 </div>
-                <Button size="lg" className="w-full" onClick={handleLogin}>
-                  Sign In
+                <Button size="lg" className="w-full" onClick={handleLogin} disabled={loading}>
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Sign In"}
                 </Button>
               </div>
 
-              {/* Divider */}
               <div className="my-6 flex items-center gap-3">
                 <div className="h-px flex-1 bg-border" />
                 <span className="text-[13px] text-text-muted">or</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
 
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={handleLogin}
-              >
+              <Button variant="outline" className="w-full gap-2" onClick={handleGoogleLogin}>
                 <GoogleIcon />
                 Sign in with Google
               </Button>
@@ -142,7 +230,7 @@ export default function LoginPage() {
               <p className="mt-7 text-center text-sm text-text-secondary">
                 Don&apos;t have an account?{" "}
                 <button
-                  onClick={() => setMode("register")}
+                  onClick={() => { setMode("register"); setError(null); }}
                   className="font-semibold text-action-blue hover:underline"
                 >
                   Register
@@ -160,39 +248,51 @@ export default function LoginPage() {
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Full Name
-                  </label>
-                  <Input placeholder="Rajesh Patel" />
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Full Name</label>
+                  <Input
+                    placeholder="Rajesh Patel"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Email
-                  </label>
-                  <Input type="email" placeholder="you@company.in" />
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="you@company.in"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Phone Number
-                  </label>
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Phone Number</label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-text-muted">
-                      +91
-                    </span>
-                    <Input className="pl-11" placeholder="98765 43210" />
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-text-muted">+91</span>
+                    <Input
+                      className="pl-11"
+                      placeholder="98765 43210"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Password
-                  </label>
-                  <Input type="password" placeholder="Create a password" />
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">
-                    Confirm Password
-                  </label>
-                  <Input type="password" placeholder="Re-enter password" />
+                  <label className="mb-1.5 block text-[13px] font-medium text-text-body">Confirm Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
                 </div>
 
                 <label className="flex cursor-pointer items-start gap-2.5 text-[13px] leading-relaxed text-text-body">
@@ -203,8 +303,7 @@ export default function LoginPage() {
                     className="mt-0.5 h-4 w-4 accent-action-blue"
                   />
                   <span>
-                    I agree to the{" "}
-                    <a className="text-action-blue">Terms of Service</a> and{" "}
+                    I agree to the <a className="text-action-blue">Terms of Service</a> and{" "}
                     <a className="text-action-blue">Privacy Policy</a>
                   </span>
                 </label>
@@ -212,17 +311,17 @@ export default function LoginPage() {
                 <Button
                   size="lg"
                   className="w-full"
-                  disabled={!agreed}
+                  disabled={!agreed || loading}
                   onClick={handleRegister}
                 >
-                  Create Account
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Create Account"}
                 </Button>
               </div>
 
               <p className="mt-6 text-center text-sm text-text-secondary">
                 Already have an account?{" "}
                 <button
-                  onClick={() => setMode("login")}
+                  onClick={() => { setMode("login"); setError(null); }}
                   className="font-semibold text-action-blue hover:underline"
                 >
                   Sign In

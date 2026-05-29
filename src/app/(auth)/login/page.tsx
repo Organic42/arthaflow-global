@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,8 @@ const bullets = [
   "End-to-end logistics orchestration",
 ];
 
-export default function LoginPage() {
+// 1. We rename the main function to LoginContent
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/dashboard";
@@ -332,5 +333,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 2. We create a new default export that wraps our content in Suspense!
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-action-blue" /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

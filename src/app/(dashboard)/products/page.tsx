@@ -158,9 +158,9 @@ export default function ProductCataloguePage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-extrabold tracking-tight text-text-heading">Products</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus size={16} /> Add Product</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button />}>
+  <Plus size={16} /> Add Product
+</DialogTrigger>
           <DialogContent className="max-w-[480px]">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
@@ -196,7 +196,7 @@ export default function ProductCataloguePage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-[13px] font-medium text-text-body">Certifications</label>
-                <Select value={newCert} onValueChange={setNewCert}>
+                <Select value={newCert} onValueChange={(val) => setNewCert(val || "")}>
                   <SelectTrigger><SelectValue placeholder="Select certification" /></SelectTrigger>
                   <SelectContent>
                     {["ISO 9001:2015", "CE Mark", "AGMA", "RoHS", "None yet"].map((o) => (
@@ -206,9 +206,9 @@ export default function ProductCataloguePage() {
                 </Select>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
+                <DialogClose render={<Button variant="outline" />}>
+  Cancel
+</DialogClose>
                 <Button onClick={handleAdd} disabled={!newName.trim() || saving}>
                   {saving ? <Loader2 size={16} className="animate-spin" /> : "Add Product"}
                 </Button>

@@ -176,7 +176,7 @@ export default function OnboardingPage() {
       }
     }
     loadProfile();
-  }, []);
+  }, [router, supabase]);
 
   const saveStep = async (nextStep: number) => {
     if (!userId) return;
@@ -436,7 +436,7 @@ export default function OnboardingPage() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-[13px] font-medium text-text-body">Certifications</label>
-                        <Select value={p.certifications} onValueChange={(v) => { const u = [...products]; u[i].certifications = v; setProducts(u); }}>
+                        <Select value={p.certifications} onValueChange={(v) => { const u = [...products]; u[i].certifications = v || ""; setProducts(u); }}>
                           <SelectTrigger><SelectValue placeholder="Select certifications" /></SelectTrigger>
                           <SelectContent>
                             {["ISO 9001:2015", "CE Mark", "AGMA", "RoHS", "None yet"].map((o) => (

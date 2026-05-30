@@ -12,6 +12,8 @@ const dashboardRoutes = [
   "/inquiries",
   "/shipments",
   "/mobile",
+  "/settings",
+  "/help",
 ];
 
 export async function middleware(request: NextRequest) {

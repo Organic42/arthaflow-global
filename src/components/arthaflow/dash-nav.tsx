@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/arthaflow/theme-toggle";
+import { UserMenu } from "@/components/arthaflow/user-menu";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
@@ -43,12 +44,7 @@ export function DashNav() {
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <ThemeToggle />
-          <span className="hidden text-sm font-medium text-white/80 sm:block">
-            Rajesh Patel
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-action-blue text-[13px] font-bold text-white">
-            RP
-          </div>
+          <UserMenu />
         </div>
       </div>
     </nav>

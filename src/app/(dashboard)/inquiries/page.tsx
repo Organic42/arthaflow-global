@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, HelpCircle, Shield } from "lucide-react";
+import { AnimatedTabs } from "@/components/arthaflow/animated-tabs";
+import { motion } from "motion/react";
 
 const inquiries = [
   { flag: "\u{1F1E9}\u{1F1EA}", country: "Germany", time: "2 hours ago", product: "CNC Precision Components", sub: "500 units, monthly recurring", status: "New", statusColor: "text-action-blue", priority: "High Priority", hs: "8466.93", qty: "500 units/month", delivery: "CIF Hamburg", timeline: "First shipment within 45 days", certs: "ISO 9001, CE Mark", budget: "$15–22 per unit", sector: "Automotive sector", since: "Active since 2019" },
@@ -42,21 +44,7 @@ export default function BuyerInquiriesPage() {
                 3 New
               </span>
             </div>
-            <div className="flex gap-4 border-b border-border">
-              {filterTabs.map((t, i) => (
-                <button
-                  key={i}
-                  onClick={() => setTab(i)}
-                  className={`border-b-2 pb-3 text-[13px] font-medium transition-colors ${
-                    tab === i
-                      ? "border-action-blue text-action-blue"
-                      : "border-transparent text-text-secondary hover:text-text-heading"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+            <AnimatedTabs tabs={filterTabs} activeTab={tab} onChange={setTab} />
           </div>
 
           <div>
@@ -101,9 +89,19 @@ export default function BuyerInquiriesPage() {
               <span className="rounded-md bg-gold-bg px-2 py-0.5 text-[11px] font-semibold text-[#92710A]">{cur.priority}</span>
             </div>
 
-            <h2 className="mb-4 text-[22px] font-extrabold tracking-tight text-text-heading">
-              {cur.product} — {cur.country}
-            </h2>
+            <div className="mb-4 flex items-center gap-3">
+              <div className="relative flex h-8 w-8 items-center justify-center">
+                <motion.span
+                  className="absolute inline-flex h-full w-full rounded-full bg-action-blue/30"
+                  animate={{ scale: [1, 1.7, 1], opacity: [0.7, 0, 0.7] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <span className="relative text-xl">{cur.flag}</span>
+              </div>
+              <h2 className="text-[22px] font-extrabold tracking-tight text-text-heading">
+                {cur.product} — {cur.country}
+              </h2>
+            </div>
 
             {/* Buyer tags */}
             <div className="mb-5 flex flex-wrap gap-2">

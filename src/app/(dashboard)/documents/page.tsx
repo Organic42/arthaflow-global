@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/arthaflow/empty-state";
 import { Search, Upload, FileText, Download, Share2, Edit, Folder } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AnimatedTabs } from "@/components/arthaflow/animated-tabs";
 
 const tabs = ["All Documents", "Company Docs", "Product Docs", "Export Docs", "Logistics"];
 const categoryMap: Record<string, string> = {
@@ -116,21 +117,7 @@ export default function DocumentVaultPage() {
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto border-b border-border">
-        {tabs.map((t, i) => (
-          <button
-            key={i}
-            onClick={() => setTab(i)}
-            className={`whitespace-nowrap border-b-2 pb-3.5 text-sm font-medium transition-colors ${
-              tab === i
-                ? "border-action-blue text-action-blue"
-                : "border-transparent text-text-secondary hover:text-text-heading"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <AnimatedTabs tabs={tabs} activeTab={tab} onChange={setTab} />
 
       {filtered.length > 0 ? (
         <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card shadow-sm">

@@ -86,18 +86,20 @@ export default function DashboardPage() {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       setProfile(p);
 
-      // Count stats
+      // Count stats — fetch id arrays (reliable; HEAD count requests get
+      // aborted by React StrictMode's double-mount in dev and return null)
       const [prodRes, docRes, inqRes, shipRes] = await Promise.all([
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "new"),
-        supabase.from("shipments").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("products").select("id").eq("user_id", user.id),
+        supabase.from("documents").select("id").eq("user_id", user.id),
+        supabase.from("inquiries").select("id").eq("user_id", user.id).eq("status", "new"),
+        supabase.from("shipments").select("id").eq("user_id", user.id),
       ]);
+      const productCount = prodRes.data?.length || 0;
       setStats({
-        products: prodRes.count || 0,
-        documents: docRes.count || 0,
-        inquiries: inqRes.count || 0,
-        shipments: shipRes.count || 0,
+        products: productCount,
+        documents: docRes.data?.length || 0,
+        inquiries: inqRes.data?.length || 0,
+        shipments: shipRes.data?.length || 0,
       });
 
       // Calculate readiness
@@ -105,7 +107,7 @@ export default function DashboardPage() {
         setReadiness([
           { label: "IEC Registered", pct: p.has_iec ? 100 : 0 },
           { label: "AD Code Active", pct: p.ad_code_registered === "yes" ? 100 : 0 },
-          { label: "Product Catalogue", pct: (prodRes.count || 0) > 0 ? 75 : 0 },
+          { label: "Product Catalogue", pct: productCount > 0 ? 75 : 0 },
           { label: "Certifications", pct: 50 },
           { label: "GST Active", pct: p.gst_number ? 100 : 0 },
           { label: "Bank Verified", pct: 0 },

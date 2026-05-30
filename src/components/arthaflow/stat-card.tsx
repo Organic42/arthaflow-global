@@ -1,17 +1,16 @@
 "use client";
 
-import CountUp from "react-countup";
+import { useEffect, useState } from "react";
 
 interface StatCardProps {
   label: string;
   value: string;
   suffix?: string;
   color?: string;
-  animate?: boolean;
+  animateValue?: boolean;
 }
 
 function parseValue(s: string) {
-  // Match optional prefix (non-digits), the number, and optional suffix
   const match = s.match(/^([^\d-]*)(-?\d+(?:[.,]\d+)?)(.*)$/);
   if (match) {
     const [, prefix, num, suffix] = match;
@@ -19,10 +18,56 @@ function parseValue(s: string) {
       prefix,
       num: parseFloat(num.replace(",", "")),
       numSuffix: suffix,
-      hasDecimals: num.includes(".") || num.includes(","),
+      decimals: /[.,]/.test(num) ? 1 : 0,
     };
   }
   return null;
+}
+
+function CountNumber({
+  target,
+  prefix,
+  suffix,
+  decimals,
+}: {
+  target: number;
+  prefix: string;
+  suffix: string;
+  decimals: number;
+}) {
+  const [display, setDisplay] = useState(target);
+
+  useEffect(() => {
+    if (target === 0) {
+      setDisplay(0);
+      return;
+    }
+    let raf = 0;
+    const duration = 1100;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      // easeOutExpo
+      const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      setDisplay(target * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  const formatted =
+    decimals > 0
+      ? display.toFixed(decimals)
+      : Math.round(display).toLocaleString("en-IN");
+
+  return (
+    <span>
+      {prefix}
+      {formatted}
+      {suffix}
+    </span>
+  );
 }
 
 export function StatCard({
@@ -30,9 +75,9 @@ export function StatCard({
   value,
   suffix,
   color = "text-action-blue",
-  animate = true,
+  animateValue = true,
 }: StatCardProps) {
-  const parsed = animate ? parseValue(value) : null;
+  const parsed = animateValue ? parseValue(value) : null;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -40,16 +85,12 @@ export function StatCard({
       <div className="mt-1 flex items-baseline gap-1">
         <span className={`text-4xl font-bold leading-tight ${color}`}>
           {parsed ? (
-            <>
-              {parsed.prefix}
-              <CountUp
-                end={parsed.num}
-                duration={1.4}
-                decimals={parsed.hasDecimals ? 1 : 0}
-                separator=","
-              />
-              {parsed.numSuffix}
-            </>
+            <CountNumber
+              target={parsed.num}
+              prefix={parsed.prefix}
+              suffix={parsed.numSuffix}
+              decimals={parsed.decimals}
+            />
           ) : (
             value
           )}

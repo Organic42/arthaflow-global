@@ -62,33 +62,37 @@ export async function middleware(request: NextRequest) {
 
   // ── Authenticated ───────────────────────────────────────────────────
 
-  // Redirect away from login if already signed in
-  if (pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // For /login and any route that needs onboarding check, fetch profile once
+  const needsCheck =
+    pathname === "/login" ||
+    pathname === onboardingRoute ||
+    dashboardRoutes.some((r) => pathname.startsWith(r));
 
-  // Check onboarding status for dashboard routes
-  const isDashboardRoute = dashboardRoutes.some((r) => pathname.startsWith(r));
-
-  if (isDashboardRoute || pathname === onboardingRoute) {
+  if (needsCheck) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("onboarding_completed, onboarding_step")
+      .select("onboarding_completed")
       .eq("id", user.id)
       .single();
 
     const completed = profile?.onboarding_completed === true;
 
-    // If on onboarding but already completed → go to dashboard
+    // Authenticated user on /login → send to the right place in one hop
+    if (pathname === "/login") {
+      const url = request.nextUrl.clone();
+      url.pathname = completed ? "/dashboard" : onboardingRoute;
+      return NextResponse.redirect(url);
+    }
+
+    // Completed onboarding but visiting /onboarding → dashboard
     if (pathname === onboardingRoute && completed) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
 
-    // If on dashboard routes but onboarding not done → go to onboarding
+    // Dashboard route but onboarding not done → onboarding
+    const isDashboardRoute = dashboardRoutes.some((r) => pathname.startsWith(r));
     if (isDashboardRoute && !completed) {
       const url = request.nextUrl.clone();
       url.pathname = onboardingRoute;

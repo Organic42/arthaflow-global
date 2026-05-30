@@ -41,8 +41,9 @@ export function UserMenu() {
   async function handleLogout() {
     setSigningOut(true);
     await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    // Hard navigation so the browser sends a fresh request with cleared cookies.
+    // A soft router.push can still carry the old session cookie through middleware.
+    window.location.href = "/login";
   }
 
   const initials = name

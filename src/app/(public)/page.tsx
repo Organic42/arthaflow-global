@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { HoverCard } from "@/components/arthaflow/hover-card";
 import { ProgressBar } from "@/components/arthaflow/progress-bar";
 import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
+import { MagneticButton } from "@/components/arthaflow/magnetic-button";
 import {
   FileText,
   Search,
@@ -85,22 +86,19 @@ export default function HomePage() {
               documentation, buyer matching, logistics — all handled.
             </p>
             <div className="mb-7 flex flex-wrap gap-4">
-              <Link href="/login">
-                <Button
-                  size="lg"
-                  className="bg-artha-gold text-navy hover:bg-artha-gold/90"
-                >
-                  Start Exporting Free
+              <MagneticButton>
+                <Link href="/login">
+                  <Button size="lg" className="bg-artha-gold text-navy hover:bg-artha-gold/90">
+                    Start Exporting Free
+                  </Button>
+                </Link>
+              </MagneticButton>
+              <MagneticButton strength={0.2}>
+                <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10">
+                  <Play size={18} />
+                  Watch Demo
                 </Button>
-              </Link>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/40 text-white hover:bg-white/10"
-              >
-                <Play size={18} />
-                Watch Demo
-              </Button>
+              </MagneticButton>
             </div>
             <p className="text-[13px] text-white/45">
               Trusted by 50+ manufacturers across Maharashtra
@@ -328,14 +326,13 @@ export default function HomePage() {
             Join 50+ manufacturers already growing their business
             internationally with ArthaFlow.
           </p>
-          <Link href="/login">
-            <Button
-              size="lg"
-              className="bg-artha-gold text-navy hover:bg-artha-gold/90"
-            >
-              Get Started Free
-            </Button>
-          </Link>
+          <MagneticButton>
+            <Link href="/login">
+              <Button size="lg" className="bg-artha-gold text-navy hover:bg-artha-gold/90">
+                Get Started Free
+              </Button>
+            </Link>
+          </MagneticButton>
           <p className="mt-5 text-[13px] text-white/45">
             No credit card required. Free for your first export.
           </p>

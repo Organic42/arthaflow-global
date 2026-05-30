@@ -15,6 +15,7 @@ import {
 import { Check, ArrowRight, HelpCircle, X, Plus, Upload, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "motion/react";
 
 const STEPS = ["Company Info", "Product Catalogue", "Export Readiness", "Documents"];
 
@@ -60,14 +61,28 @@ function UploadZone({
   return (
     <div>
       <label className="mb-1.5 block text-[13px] font-medium text-text-body">{label}</label>
+      <AnimatePresence mode="wait">
       {uploaded ? (
-        <div className="flex items-center gap-3 rounded-[10px] border border-success/30 bg-green-bg px-4 py-3.5">
-          <Check size={18} className="text-success" />
+        <motion.div
+          key="uploaded"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className="flex items-center gap-3 rounded-[10px] border border-success/30 bg-green-bg px-4 py-3.5"
+        >
+          <motion.div
+            initial={{ scale: 0, rotate: -30 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20, delay: 0.05 }}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-success text-white"
+          >
+            <Check size={14} strokeWidth={3} />
+          </motion.div>
           <span className="flex-1 text-sm font-medium text-text-body">
-            {label.toLowerCase().replace(/ /g, "_")}.pdf
+            {label.toLowerCase().replace(/ \//g, "").replace(/ /g, "_")}.pdf
           </span>
-          <span className="text-xs text-text-muted">Uploaded</span>
-        </div>
+          <span className="text-xs text-text-muted">Uploaded ✓</span>
+        </motion.div>
       ) : (
         <label className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-[10px] border-2 border-dashed border-border bg-background p-6 transition-colors hover:border-action-blue hover:bg-hover-blue">
           {uploading ? (
@@ -90,6 +105,7 @@ function UploadZone({
           />
         </label>
       )}
+      </AnimatePresence>
     </div>
   );
 }

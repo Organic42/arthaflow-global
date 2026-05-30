@@ -14,6 +14,7 @@ const dashboardRoutes = [
   "/mobile",
   "/settings",
   "/help",
+  "/states",
 ];
 
 export async function proxy(request: NextRequest) {

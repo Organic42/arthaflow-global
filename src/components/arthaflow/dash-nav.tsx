@@ -11,6 +11,8 @@ const links = [
   { href: "/documents", label: "Documents" },
   { href: "/inquiries", label: "Inquiries" },
   { href: "/shipments", label: "Shipments" },
+  { href: "/mobile", label: "Mobile" },
+  { href: "/states", label: "States" },
 ];
 
 export function DashNav() {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, HelpCircle } from "lucide-react";
+import { LogOut, HelpCircle, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function UserMenu() {
@@ -71,6 +71,14 @@ export function UserMenu() {
             {email && <p className="truncate text-xs text-text-muted">{email}</p>}
           </div>
           <div className="p-1.5">
+            <Link
+              href="/settings"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-text-body transition-colors hover:bg-background"
+            >
+              <Settings size={16} className="text-text-muted" />
+              Settings
+            </Link>
             <Link
               href="/help"
               onClick={() => setOpen(false)}

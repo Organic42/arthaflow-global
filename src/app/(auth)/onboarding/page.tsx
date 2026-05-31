@@ -500,7 +500,7 @@ export default function OnboardingPage() {
                         />
                       </Field>
                       <Field label="Annual Turnover">
-                        <Select value={annualTurnover} onValueChange={(v) => setAnnualTurnover(v ?? "")}>
+                        <Select value={annualTurnover} onValueChange={(val) => setAnnualTurnover(val || "")}>
                           <SelectTrigger><SelectValue placeholder="Select range" /></SelectTrigger>
                           <SelectContent>
                             {["Under ₹1 Cr", "₹1–5 Cr", "₹5–25 Cr", "₹25–100 Cr", "Over ₹100 Cr"].map((o) => (

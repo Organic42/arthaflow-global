@@ -17,13 +17,38 @@ import {
   Check,
   Star,
   Play,
+  TrendingUp,
+  Wrench,
+  Pill,
+  FlaskConical,
+  Shirt,
+  Leaf,
+  Gem,
+  ArrowRight,
 } from "lucide-react";
 
-const stats = [
-  { value: "57M+", label: "MSMEs in India" },
-  { value: "0.3%", label: "Currently Export" },
-  { value: "$821B", label: "Total Exports" },
-  { value: "3x", label: "MSME Export Growth" },
+// ── Opportunity section data ──────────────────────────────────────────────────
+
+const exportTimeline = [
+  { year: "2014", value: "$318B", muted: true },
+  { year: "2024", value: "$821B", current: true },
+  { year: "2030", value: "$2T", target: true },
+];
+
+const globalComparison = [
+  { country: "China",      value: 3500, label: "$3.5T", color: "bg-text-muted/40" },
+  { country: "India",      value: 821,  label: "$821B", color: "bg-action-blue",   highlight: true },
+  { country: "Vietnam",    value: 370,  label: "$370B", color: "bg-text-muted/40" },
+  { country: "Bangladesh", value: 50,   label: "$50B",  color: "bg-text-muted/40" },
+];
+
+const growingSectors = [
+  { name: "Engineering",  growth: "+18%", icon: <Wrench size={16} />,       bg: "bg-blue-bg",   color: "text-action-blue" },
+  { name: "Pharma",       growth: "+15%", icon: <Pill size={16} />,         bg: "bg-green-bg",  color: "text-success" },
+  { name: "Chemicals",    growth: "+22%", icon: <FlaskConical size={16} />, bg: "bg-purple-bg", color: "text-purple" },
+  { name: "Textiles",     growth: "+9%",  icon: <Shirt size={16} />,        bg: "bg-gold-bg",   color: "text-[#92710A]" },
+  { name: "Agri Products",growth: "+12%", icon: <Leaf size={16} />,         bg: "bg-green-bg",  color: "text-success" },
+  { name: "Gems & Jewelry",growth: "+7%", icon: <Gem size={16} />,          bg: "bg-blue-bg",   color: "text-action-blue" },
 ];
 
 const problems = [
@@ -173,22 +198,134 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STATS BAR */}
-      <section className="border-y border-border bg-card px-8 py-9">
-        <div className="mx-auto grid max-w-[1000px] grid-cols-2 gap-6 sm:grid-cols-4">
-          {stats.map((s, i) => (
-            <div
-              key={i}
-              className={`text-center ${i < 3 ? "border-r border-border max-sm:border-r-0" : ""}`}
-            >
-              <div className="text-3xl font-extrabold tracking-tight text-action-blue">
-                {s.value}
+      {/* OPPORTUNITY — compact, info-dense */}
+      <section className="bg-card px-8 py-16">
+        <div className="mx-auto max-w-[1100px]">
+          {/* Header */}
+          <div className="mb-10 flex flex-col items-center text-center">
+            <div className="mb-3 text-xs font-bold uppercase tracking-[2px] text-action-blue">
+              The Opportunity
+            </div>
+            <h2 className="mb-2.5 text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
+              India is at an Export Inflection Point
+            </h2>
+            <p className="max-w-[560px] text-[15px] text-text-secondary">
+              Government targeting <span className="font-semibold text-text-body">$2 trillion</span> in
+              exports by 2030 — but only 0.3% of MSMEs participate today.
+            </p>
+          </div>
+
+          {/* Timeline strip */}
+          <div className="mb-10 rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-text-muted">
+              <TrendingUp size={13} className="text-action-blue" />
+              India&apos;s Export Trajectory
+            </div>
+            <div className="flex items-center justify-between gap-2 sm:gap-6">
+              {exportTimeline.map((t, i) => (
+                <div key={t.year} className="flex flex-1 items-center">
+                  <div className="flex-1 text-center">
+                    <div
+                      className={`text-2xl font-extrabold tracking-tight sm:text-3xl ${
+                        t.target
+                          ? "text-artha-gold"
+                          : t.current
+                            ? "text-action-blue"
+                            : "text-text-muted"
+                      }`}
+                    >
+                      {t.value}
+                    </div>
+                    <div className="mt-0.5 text-xs font-medium text-text-secondary">
+                      {t.year}
+                      {t.target && (
+                        <span className="ml-1.5 rounded bg-gold-bg px-1.5 py-0.5 text-[10px] font-bold text-[#92710A]">
+                          TARGET
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {i < exportTimeline.length - 1 && (
+                    <ArrowRight size={16} className="shrink-0 text-text-muted" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Two-column grid: comparison + sectors */}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_1fr]">
+            {/* LEFT — Global comparison */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <div className="mb-1 text-[15px] font-bold text-text-heading">
+                Where India Stands Globally
               </div>
-              <div className="mt-0.5 text-[13px] text-text-secondary">
-                {s.label}
+              <p className="mb-5 text-[13px] text-text-secondary">
+                5th largest exporter — but the gap from leaders means runway, not ceiling.
+              </p>
+              <div className="flex flex-col gap-3.5">
+                {globalComparison.map((c) => {
+                  const pct = (c.value / 3500) * 100;
+                  return (
+                    <div key={c.country}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span
+                          className={`text-[13px] font-semibold ${
+                            c.highlight ? "text-action-blue" : "text-text-body"
+                          }`}
+                        >
+                          {c.country}
+                        </span>
+                        <span
+                          className={`font-mono text-xs font-bold ${
+                            c.highlight ? "text-action-blue" : "text-text-secondary"
+                          }`}
+                        >
+                          {c.label}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-subtle">
+                        <div
+                          className={`h-full rounded-full ${c.color} transition-all`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          ))}
+
+            {/* RIGHT — Growing sectors */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <div className="mb-1 text-[15px] font-bold text-text-heading">
+                Sectors Driving Growth
+              </div>
+              <p className="mb-5 text-[13px] text-text-secondary">
+                YoY export growth — find where your products fit.
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {growingSectors.map((s) => (
+                  <div
+                    key={s.name}
+                    className="flex flex-col items-start gap-1.5 rounded-lg border border-subtle bg-background p-3 transition-colors hover:border-action-blue hover:bg-hover-blue"
+                  >
+                    <div
+                      className={`flex h-7 w-7 items-center justify-center rounded-md ${s.bg} ${s.color}`}
+                    >
+                      {s.icon}
+                    </div>
+                    <div className="text-[12.5px] font-semibold leading-tight text-text-heading">
+                      {s.name}
+                    </div>
+                    <div className="text-[11px] font-bold text-success">
+                      {s.growth} YoY
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

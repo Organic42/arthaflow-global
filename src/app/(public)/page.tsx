@@ -4,6 +4,7 @@ import { HoverCard } from "@/components/arthaflow/hover-card";
 import { ProgressBar } from "@/components/arthaflow/progress-bar";
 import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
 import { MagneticButton } from "@/components/arthaflow/magnetic-button";
+import { Globe } from "@/components/arthaflow/globe";
 import {
   FileText,
   Search,
@@ -68,6 +69,23 @@ const features = [
 export default function HomePage() {
   return (
     <>
+      {/* GLOBE HERO */}
+      <section className="relative overflow-hidden bg-navy">
+        <div className="relative mx-auto max-w-[720px] px-6 pt-10 sm:px-8">
+          {/* "ArthaFlow" text */}
+          <div className="pointer-events-none relative z-10 flex items-center justify-center">
+            <h1 className="text-6xl font-extrabold tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:text-8xl">
+              Artha<span className="text-artha-gold">Flow</span>
+            </h1>
+          </div>
+
+          {/* Globe — bottom cropped */}
+          <div className="relative -mt-12" style={{ marginBottom: "-42%" }}>
+            <Globe />
+          </div>
+        </div>
+      </section>
+
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-br from-navy to-royal-blue px-8 pb-24 pt-22">
         <div className="absolute -right-20 -top-30 h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(212,168,67,0.12),transparent_70%)]" />

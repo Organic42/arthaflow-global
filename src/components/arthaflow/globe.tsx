@@ -115,7 +115,7 @@ export function Globe() {
     };
     window.addEventListener("resize", onResize);
 
-    return () => {
+   return () => {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", onResize);
       canvas.removeEventListener("pointerdown", onDown);
@@ -124,9 +124,12 @@ export function Globe() {
       canvas.removeEventListener("mousemove", onMove as EventListener);
       canvas.removeEventListener("touchmove", onTouch as EventListener);
       globe.destroy();
-      if (container.contains(canvas)) {
+      
+      // FIX: Strictly check if the container is still the direct parent
+      if (canvas && canvas.parentNode === container) {
         container.removeChild(canvas);
       }
+      
       canvasRef.current = null;
       globeRef.current = null;
     };

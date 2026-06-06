@@ -127,6 +127,7 @@ function LoginContent() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback?redirect=${redirectTo}`,
+        
       },
     });
     if (error) setError(error.message);

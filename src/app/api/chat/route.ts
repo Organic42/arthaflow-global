@@ -1,10 +1,9 @@
 import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
 
-// Initialize Groq client
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Ensure this route is always evaluated at request time, never during the
+// static build's page-data collection (which has no env vars).
+export const dynamic = "force-dynamic";
 
 // System prompt to give context about ArthaFlow
 const SYSTEM_PROMPT = `
@@ -57,6 +56,11 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Instantiate the client lazily, INSIDE the handler — the Groq SDK throws
+    // in its constructor when the key is missing, so creating it at module
+    // scope crashed the production build. Now it only runs at request time.
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     // Call Groq API
     const chatCompletion = await groq.chat.completions.create({

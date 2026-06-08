@@ -1,8 +1,10 @@
 import { DashNav } from "@/components/arthaflow/dash-nav";
 import { Sidebar } from "@/components/arthaflow/sidebar";
 import { PageTransition } from "@/components/arthaflow/page-transition";
-import { ChatBot } from "@/components/arthaflow/chat-bot"; // 1. Import the ChatBot
 
+// NOTE: ChatBot is already mounted globally in the root layout (src/app/layout.tsx),
+// so it must NOT be mounted here too — otherwise dashboard pages render two
+// floating chat buttons stacked on top of each other.
 export default function DashboardLayout({
   children,
 }: {
@@ -17,9 +19,6 @@ export default function DashboardLayout({
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
-      
-      {/* 2. Mount the ChatBot here so it floats over the entire dashboard */}
-      <ChatBot />
     </div>
   );
 }

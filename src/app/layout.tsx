@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ChatBot } from "@/components/arthaflow/chat-bot";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-heading",
@@ -38,6 +39,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background text-text-body">
         {children}
+        <ChatBot />
       </body>
     </html>
   );

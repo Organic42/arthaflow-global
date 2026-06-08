@@ -1,6 +1,7 @@
 import { DashNav } from "@/components/arthaflow/dash-nav";
 import { Sidebar } from "@/components/arthaflow/sidebar";
 import { PageTransition } from "@/components/arthaflow/page-transition";
+import { ChatBot } from "@/components/arthaflow/chat-bot"; // 1. Import the ChatBot
 
 export default function DashboardLayout({
   children,
@@ -8,7 +9,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full relative">
       <Sidebar />
       <div className="flex flex-1 flex-col min-w-0">
         <DashNav />
@@ -16,6 +17,9 @@ export default function DashboardLayout({
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+      
+      {/* 2. Mount the ChatBot here so it floats over the entire dashboard */}
+      <ChatBot />
     </div>
   );
 }

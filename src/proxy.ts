@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const publicRoutes = ["/", "/pricing", "/blog", "/login"];
+const publicRoutes = ["/", "/pricing", "/blog", "/login", "/privacy", "/terms"];
 const onboardingRoute = "/onboarding";
 
 // Routes that require onboarding to be complete

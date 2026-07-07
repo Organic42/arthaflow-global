@@ -97,7 +97,7 @@ export default function PricingPage() {
               key={i}
               className={`relative rounded-2xl border bg-card p-8 ${
                 t.highlight
-                  ? "scale-[1.03] border-2 border-action-blue border-t-4 border-t-artha-gold shadow-lg"
+                  ? "scale-[1.03] border-2 border-artha-gold shadow-lg"
                   : "border-border shadow-sm"
               }`}
             >
@@ -135,9 +135,9 @@ export default function PricingPage() {
               </div>
               <Link href="/login">
                 <Button
-                  variant={t.variant}
+                  variant={t.highlight ? "default" : "outline"}
                   className={`w-full ${
-                    t.name === "Managed"
+                    t.highlight
                       ? "bg-artha-gold text-navy hover:bg-artha-gold/90"
                       : ""
                   }`}

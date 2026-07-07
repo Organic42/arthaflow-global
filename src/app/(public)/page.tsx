@@ -96,16 +96,43 @@ export default function HomePage() {
     <>
       {/* GLOBE HERO */}
       <section className="relative overflow-hidden bg-navy">
-        <div className="relative mx-auto max-w-[720px] px-6 pt-10 sm:px-8">
-          {/* "ArthaFlow" text */}
-          <div className="pointer-events-none relative z-10 flex items-center justify-center">
-            <h1 className="text-6xl font-extrabold tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:text-8xl">
-              Artha<span className="text-artha-gold">Flow</span>
+        <div className="relative mx-auto max-w-[840px] px-6 pt-14 sm:px-8">
+          {/* Value proposition — the first thing a visitor reads */}
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <div className="mb-4 text-xs font-bold uppercase tracking-[2px] text-artha-gold">
+              AI-Powered Export Infrastructure
+            </div>
+            <h1 className="mb-4 max-w-[720px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:text-6xl">
+              Your AI-Powered Export Department —{" "}
+              <span className="text-artha-gold">Without The Overhead</span>
             </h1>
+            <p className="mb-7 max-w-[540px] text-base leading-relaxed text-white/70 sm:text-lg">
+              We help Indian manufacturers export products to 50+ countries. AI
+              documentation, buyer matching, logistics — all handled.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <MagneticButton>
+                <Link href="/login">
+                  <Button size="lg" className="bg-artha-gold text-navy hover:bg-artha-gold/90">
+                    Start Exporting Free
+                  </Button>
+                </Link>
+              </MagneticButton>
+              <MagneticButton strength={0.2}>
+                <Link href="/pricing">
+                  <Button size="lg" variant="outline" className="border-white/50 bg-white/10 text-white hover:bg-white/20 hover:border-white/70">
+                    View Pricing
+                  </Button>
+                </Link>
+              </MagneticButton>
+            </div>
+            <p className="mt-5 text-[13px] text-white/45">
+              Trusted by 50+ manufacturers across Maharashtra
+            </p>
           </div>
 
           {/* Globe — bottom cropped */}
-          <div className="relative -mt-12" style={{ marginBottom: "-42%" }}>
+          <div className="relative mx-auto -mt-6 max-w-[720px]" style={{ marginBottom: "-42%" }}>
             <Globe />
           </div>
         </div>
@@ -118,34 +145,27 @@ export default function HomePage() {
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <div className="mb-5 text-xs font-bold uppercase tracking-[2px] text-artha-gold">
-              AI-Powered Export Infrastructure
+              The Platform
             </div>
-            <h1 className="mb-5 max-w-[620px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">
-              Your AI-Powered Export Department —{" "}
-              <span className="text-artha-gold">Without The Overhead</span>
-            </h1>
+            <h2 className="mb-5 max-w-[620px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">
+              One Dashboard for the{" "}
+              <span className="text-artha-gold">Entire Export Journey</span>
+            </h2>
             <p className="mb-9 max-w-[540px] text-lg leading-relaxed text-white/70">
-              We help Indian manufacturers export products to 50+ countries. AI
-              documentation, buyer matching, logistics — all handled.
+              Readiness scoring, AI-generated documents, buyer inquiries, and
+              live shipment tracking — everything your export business needs,
+              in one place.
             </p>
-            <div className="mb-7 flex flex-wrap gap-4">
-              <MagneticButton>
+            <div className="flex flex-wrap gap-4">
+              <MagneticButton strength={0.2}>
                 <Link href="/login">
-                  <Button size="lg" className="bg-artha-gold text-navy hover:bg-artha-gold/90">
-                    Start Exporting Free
+                  <Button size="lg" variant="outline" className="border-white/50 bg-white/10 text-white hover:bg-white/20 hover:border-white/70">
+                    <Play size={18} />
+                    See It In Action
                   </Button>
                 </Link>
               </MagneticButton>
-              <MagneticButton strength={0.2}>
-                <Button size="lg" variant="outline" className="border-white/50 bg-white/10 text-white hover:bg-white/20 hover:border-white/70">
-                  <Play size={18} />
-                  Watch Demo
-                </Button>
-              </MagneticButton>
             </div>
-            <p className="text-[13px] text-white/45">
-              Trusted by 50+ manufacturers across Maharashtra
-            </p>
           </div>
 
           {/* Dashboard mockup */}

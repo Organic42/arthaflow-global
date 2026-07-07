@@ -37,8 +37,10 @@ export function Globe() {
     if (!container) return;
 
     const canvas = document.createElement("canvas");
-    canvas.width = 1360;
-    canvas.height = 1360;
+    const bufferSize = (container.offsetWidth || 680) *
+      Math.min(window.devicePixelRatio || 1, window.innerWidth < 768 ? 1 : 2);
+    canvas.width = bufferSize;
+    canvas.height = bufferSize;
     canvas.className = "h-full w-full cursor-grab";
     canvas.style.transition = "opacity 1s";
     canvas.style.opacity = "0";
@@ -48,15 +50,20 @@ export function Globe() {
 
     const size = container.offsetWidth || 680;
 
+    // Lighter rendering on small screens: budget Android devices are the
+    // typical visitor, and full-res WebGL here costs real battery/jank.
+    const isSmall = window.innerWidth < 768;
+    const dpr = Math.min(window.devicePixelRatio || 1, isSmall ? 1 : 2);
+
     const globe = createGlobe(canvas, {
-      devicePixelRatio: 2,
-      width: size * 2,
-      height: size * 2,
+      devicePixelRatio: dpr,
+      width: size * dpr,
+      height: size * dpr,
       phi: 1.2,
       theta: 0.25,
       dark: 1,
       diffuse: 1.2,
-      mapSamples: 40000,
+      mapSamples: isSmall ? 16000 : 40000,
       mapBrightness: 12,
       mapBaseBrightness: 0,
       baseColor: [0.19, 0.12, 0.0],              // Inverts → land = #0B1D3A navy

@@ -42,7 +42,7 @@ You have deep knowledge about:
    - Confident, helpful, knowledgeable
    - Simple language; avoid jargon unless the user is clearly experienced
 
-Keep responses concise, helpful, and focused on export-related queries. If asked about something outside your knowledge base, politely say you're specialized in export assistance and suggest contacting support at hello@arthaflow.in for other inquiries.
+Keep responses concise, helpful, and focused on export-related queries. If asked about something outside your knowledge base, politely say you're specialized in export assistance and suggest contacting support at info@arthaflowglobal.com for other inquiries.
 `;
 
 export async function POST(request: Request) {

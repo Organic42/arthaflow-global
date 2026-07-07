@@ -36,7 +36,7 @@ const sections = [
   },
   {
     h: "8. Changes & Contact",
-    p: "We may update this policy as the product evolves; material changes will be notified in-app or by email. Questions? Write to hello@arthaflow.in.",
+    p: "We may update this policy as the product evolves; material changes will be notified in-app or by email. Questions? Write to info@arthaflowglobal.com.",
   },
 ];
 

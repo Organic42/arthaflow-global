@@ -7,7 +7,12 @@ const resourceLinks = [
   { label: "HS Code Lookup", href: "#" },
   { label: "FAQ", href: "#" },
 ];
-const companyLinks = ["About", "Careers", "Contact", "Privacy Policy"];
+const companyLinks = [
+  { label: "Contact", href: "mailto:hello@arthaflow.in" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+];
 
 export function Footer() {
   return (
@@ -57,12 +62,13 @@ export function Footer() {
             Company
           </h4>
           {companyLinks.map((l) => (
-            <a
-              key={l}
-              className="mb-2.5 block cursor-pointer text-sm text-white/50 hover:text-white/80"
+            <Link
+              key={l.label}
+              href={l.href}
+              className="mb-2.5 block text-sm text-white/50 hover:text-white/80"
             >
-              {l}
-            </a>
+              {l.label}
+            </Link>
           ))}
         </div>
       </div>

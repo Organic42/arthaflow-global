@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-const productLinks = ["Dashboard", "AI Docs", "Buyer Matching", "Logistics"];
+const productLinks = [
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "AI Docs", href: "/documents/generate" },
+  { label: "Buyer Matching", href: "/inquiries" },
+  { label: "Logistics", href: "/shipments" },
+];
 const resourceLinks = [
   { label: "Blog", href: "/blog" },
   { label: "Export Guide", href: "#" },
@@ -8,7 +13,7 @@ const resourceLinks = [
   { label: "FAQ", href: "#" },
 ];
 const companyLinks = [
-  { label: "Contact", href: "mailto:hello@arthaflow.in" },
+  { label: "Contact", href: "mailto:info@arthaflowglobal.com" },
   { label: "Pricing", href: "/pricing" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Terms of Service", href: "/terms" },
@@ -25,7 +30,7 @@ export function Footer() {
           <p className="mb-3 max-w-[240px] text-[13px] leading-relaxed">
             Your AI-powered export department — without the overhead.
           </p>
-          <p className="text-[13px]">hello@arthaflow.in</p>
+          <p className="text-[13px]">info@arthaflowglobal.com</p>
         </div>
 
         <div>
@@ -33,12 +38,13 @@ export function Footer() {
             Product
           </h4>
           {productLinks.map((l) => (
-            <a
-              key={l}
-              className="mb-2.5 block cursor-pointer text-sm text-white/50 hover:text-white/80"
+            <Link
+              key={l.label}
+              href={l.href}
+              className="mb-2.5 block text-sm text-white/50 hover:text-white/80"
             >
-              {l}
-            </a>
+              {l.label}
+            </Link>
           ))}
         </div>
 

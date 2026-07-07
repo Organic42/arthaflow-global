@@ -26,7 +26,7 @@ export default function Error({
       </h2>
       <p className="mb-6 max-w-[380px] text-sm text-text-secondary">
         An unexpected error occurred. Try again, or head back to the homepage.
-        If it keeps happening, write to hello@arthaflow.in.
+        If it keeps happening, write to info@arthaflowglobal.com.
       </p>
       <div className="flex gap-3">
         <Button onClick={reset}>

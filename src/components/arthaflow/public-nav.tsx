@@ -50,7 +50,9 @@ export function PublicNav() {
           </Link>
           <ThemeToggle />
           <Link href="/login">
-            <Button size="sm">Get Started Free</Button>
+            <Button size="sm" className="bg-artha-gold text-navy hover:bg-artha-gold/90">
+              Get Started Free
+            </Button>
           </Link>
         </div>
 
@@ -77,7 +79,9 @@ export function PublicNav() {
             </Link>
           ))}
           <Link href="/login" onClick={() => setMobileOpen(false)}>
-            <Button className="w-full">Get Started Free</Button>
+            <Button className="w-full bg-artha-gold text-navy hover:bg-artha-gold/90">
+              Get Started Free
+            </Button>
           </Link>
         </div>
       )}

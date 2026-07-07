@@ -40,7 +40,7 @@ const sections = [
   },
   {
     h: "9. Governing Law & Contact",
-    p: "These terms are governed by the laws of India, with courts at Pune, Maharashtra having jurisdiction. Questions? Write to hello@arthaflow.in.",
+    p: "These terms are governed by the laws of India, with courts at Pune, Maharashtra having jurisdiction. Questions? Write to info@arthaflowglobal.com.",
   },
 ];
 

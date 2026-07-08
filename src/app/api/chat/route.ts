@@ -1,9 +1,14 @@
 import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 // Ensure this route is always evaluated at request time, never during the
 // static build's page-data collection (which has no env vars).
 export const dynamic = "force-dynamic";
+
+// Guardrails: keep costs and abuse in check.
+const MAX_MESSAGE_CHARS = 1000; // one long paragraph, ~250 tokens
+const RATE_LIMIT = { scope: "chat", limit: 15, windowMs: 60_000 }; // 15/min/IP
 
 // System prompt to give context about ArthaFlow
 const SYSTEM_PROMPT = `
@@ -47,12 +52,40 @@ Keep responses concise, helpful, and focused on export-related queries. If asked
 
 export async function POST(request: Request) {
   try {
-    const { message } = await request.json();
+    // Rate limit BEFORE parsing body so a flood of empty POSTs still bounces.
+    const rl = rateLimit(clientIp(request), RATE_LIMIT);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many messages. Please slow down and try again shortly." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(rl.resetInMs / 1000)),
+            "X-RateLimit-Limit": String(RATE_LIMIT.limit),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+
+    const body = (await request.json().catch(() => null)) as
+      | { message?: unknown }
+      | null;
+    const message =
+      typeof body?.message === "string" ? body.message.trim() : "";
 
     if (!message) {
       return NextResponse.json(
         { error: "Message is required" },
         { status: 400 }
+      );
+    }
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return NextResponse.json(
+        {
+          error: `Message too long. Please keep it under ${MAX_MESSAGE_CHARS} characters.`,
+        },
+        { status: 413 }
       );
     }
 

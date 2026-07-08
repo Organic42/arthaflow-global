@@ -1,8 +1,14 @@
 import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+// Each document call is an LLM invocation — hard cap generosity here.
+// 20/hr matches the Starter tier ceiling (3/mo x margin) and stops one
+// user with a script from burning your Groq quota.
+const RATE_LIMIT = { scope: "gendoc", limit: 20, windowMs: 60 * 60_000 };
 
 // ── Document type definitions ────────────────────────────────────────────────
 
@@ -86,6 +92,27 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // Per-user rate limit — auth means we can bucket by user id, not IP,
+    // so a shared office network isn't unfairly throttled.
+    const rl = rateLimit(user.id, RATE_LIMIT);
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error: `You've hit the hourly document limit. Try again in ${Math.ceil(
+            rl.resetInMs / 60_000
+          )} minutes, or upgrade your plan for higher limits.`,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(rl.resetInMs / 1000)),
+            "X-RateLimit-Limit": String(RATE_LIMIT.limit),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
     }
 
     if (!process.env.GROQ_API_KEY) {

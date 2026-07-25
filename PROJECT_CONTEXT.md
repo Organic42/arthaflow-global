@@ -319,6 +319,8 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 GROQ_API_KEY
 COMTRADE_API_KEY
+SUPABASE_SERVICE_ROLE_KEY   # optional — enables trade-data caching (§9.2).
+                            # Server-only. NEVER prefix with NEXT_PUBLIC_.
 ```
 
 Lint: `npx eslint src`. Typecheck: `node node_modules/typescript/bin/tsc --noEmit`.
@@ -331,13 +333,21 @@ Lint: `npx eslint src`. Typecheck: `node node_modules/typescript/bin/tsc --noEmi
 APIs, conventions, and file structure. **Read `node_modules/next/dist/docs/` before
 writing framework code** rather than relying on training data.
 
-**⚠️ 2. `trade_cache` table does not exist in the live database.** Migration `005` was
-never applied — the REST endpoint returns 404. Both cache clients swallow the failure
-silently, so **caching has never worked**: every query hits the upstream API, burning
-Comtrade's 500/day quota and adding latency. Two things are needed to fix it:
-(a) apply migration 005, and (b) give the server a **service-role key** — the deny-all
-RLS policy blocks the anon key the app currently uses. `next: { revalidate }` on the
-fetches provides some caching in production in the meantime.
+**⚠️ 2. Caching is wired but not yet switched on.** Two prerequisites, both manual:
+
+- **(a) Apply migration `005`.** It has never been run against the live database — the
+  REST endpoint returns 404 for `trade_cache`. Paste `supabase/migrations/005_trade_cache.sql`
+  into the Supabase SQL Editor.
+- **(b) Set `SUPABASE_SERVICE_ROLE_KEY`** (Supabase → Settings → API → `service_role`)
+  in `.env.local` and in Vercel's env vars. `trade_cache` is deny-all under RLS, so only
+  a service-role client can reach it — see `src/lib/supabase/admin.ts`. This is
+  deliberate: the anon key ships to the browser, and a publicly writable cache would let
+  anyone seed false trade figures that Saathi would repeat as fact.
+
+Until both are done, `createAdminClient()` returns `null`, caching is skipped, and every
+lookup hits the upstream API — correct behaviour, but it burns Comtrade's 500/day quota
+and adds latency. `next: { revalidate }` on the fetches still gives some protection in
+production. **Never prefix the service-role key with `NEXT_PUBLIC_`.**
 
 **⚠️ 3. Groq free tier = 100,000 tokens/day, org-wide.** It is genuinely easy to
 exhaust (a QA session did). Users then see "Saathi is at capacity." Upgrade to Dev Tier

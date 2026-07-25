@@ -12,7 +12,7 @@
  *   - Fail informatively (return typed errors, never throw opaque).
  */
 
-import { createClient as createSupabase } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const BASE_URL = "https://comtradeapi.un.org/data/v1/get";
 
@@ -104,7 +104,10 @@ async function readCache(
   key: string
 ): Promise<{ data: ComtradeRecord[]; count: number } | null> {
   try {
-    const supabase = await createSupabase();
+    // Service role only — trade_cache is deny-all under RLS, so the anon
+    // client silently reads nothing. No key configured = no caching.
+    const supabase = createAdminClient();
+    if (!supabase) return null;
     const { data } = await supabase
       .from("trade_cache")
       .select("payload, expires_at")
@@ -125,7 +128,8 @@ async function writeCache(
   payload: { data: ComtradeRecord[]; count: number }
 ): Promise<void> {
   try {
-    const supabase = await createSupabase();
+    const supabase = createAdminClient();
+    if (!supabase) return;
     const expires = new Date();
     expires.setDate(expires.getDate() + 30); // 30-day TTL
     await supabase.from("trade_cache").upsert(

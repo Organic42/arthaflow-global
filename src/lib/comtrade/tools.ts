@@ -11,6 +11,7 @@
 
 import { comtradeQuery, type ComtradeResult, type ComtradeRecord } from "./client";
 import { findByM49, COUNTRIES } from "./countries";
+import { witsIndiaExports } from "@/lib/wits/client";
 
 // ── Common shapes ────────────────────────────────────────────────────────────
 
@@ -67,8 +68,11 @@ function errorNarrative(res: Extract<ComtradeResult, { ok: false }>): string {
 }
 
 function currentDataYear(): number {
-  // Comtrade lags ~6-12 months; safest default is the year before last.
-  return new Date().getUTCFullYear() - 1;
+  // Comtrade annual data lags: the most recent year is usually incomplete or
+  // unpublished across most reporters. Year-minus-2 is the sweet spot where
+  // broad multi-country coverage is reliably settled (verified: 2024 returns
+  // data, 2025 does not, as of mid-2026).
+  return new Date().getUTCFullYear() - 2;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -191,11 +195,151 @@ export interface IndiaExportsData {
   totalIndiaExportsUsd: number;
   totalIndiaExportsUsdM: number;
   topDestinations: CountryValue[];
+  /**
+   * How the figures were derived:
+   *  - "direct": India self-reported its exports to Comtrade.
+   *  - "mirror": India did not report, so we summed what PARTNER countries
+   *    reported importing FROM India ("mirror statistics"). Standard practice
+   *    in trade analysis when a reporter's own filings are late or missing.
+   *  - "wits": neither was available in Comtrade (its usual state for India),
+   *    so figures come from the World Bank's WITS database at HS-chapter-group
+   *    granularity — coarser than the requested HS code.
+   */
+  source: "direct" | "mirror" | "wits";
+  /** Only set when source === "wits": the chapter group actually measured. */
+  group?: string;
+  groupLabel?: string;
+}
+
+const INDIA_M49 = 356;
+
+/**
+ * Mirror-statistics fallback: instead of asking India what it exported, ask
+ * every major economy what it reported importing FROM India. Partner-reported
+ * imports are the accepted proxy when a country reports late or not at all —
+ * which is exactly India's pattern in Comtrade.
+ *
+ * Note the flow inversion: a country's IMPORT from India is an India EXPORT,
+ * so the reporter of each row is the destination market.
+ */
+/**
+ * Last resort: the World Bank's WITS database, which (unlike Comtrade) does
+ * carry India. Coarser products — HS chapter groups rather than the exact
+ * code — so the narrative says so explicitly.
+ */
+async function indiaExportsViaWits(
+  hsCode: string,
+  year: number | undefined,
+  limit: number
+): Promise<ToolResult<IndiaExportsData>> {
+  const res = await witsIndiaExports({ hsCode, year, limit });
+  if (!res.ok) {
+    return { ok: false, error: res.error, narrative: res.narrative };
+  }
+  return {
+    ok: true,
+    cached: res.cached,
+    narrative: res.narrative,
+    data: {
+      hsCode,
+      year: res.data.year,
+      totalIndiaExportsUsd: res.data.totalUsd,
+      totalIndiaExportsUsdM: res.data.totalUsdM,
+      topDestinations: res.data.destinations,
+      source: "wits",
+      group: res.data.group,
+      groupLabel: res.data.groupLabel,
+    },
+  };
+}
+
+async function indiaExportsViaMirror(
+  hsCode: string,
+  year: number,
+  limit: number,
+  requestedYear: number | undefined
+): Promise<ToolResult<IndiaExportsData>> {
+  const reporters = COUNTRIES.filter(
+    (c) => c.m49 > 0 && c.m49 !== INDIA_M49
+  ).map((c) => c.m49);
+
+  const res = await comtradeQuery({
+    reporterCode: reporters,
+    partnerCode: INDIA_M49, // ...imported FROM India
+    cmdCode: hsCode,
+    period: year,
+    flowCode: "M",          // Their imports = India's exports
+    maxRecords: 500,
+  });
+
+  // Partners don't report India either (Comtrade's usual state) → WITS.
+  // Fall through on ANY failure, not just NO_DATA: a rate limit or upstream
+  // blip on Comtrade shouldn't deny the user data that WITS can serve.
+  if (!res.ok) {
+    return indiaExportsViaWits(hsCode, requestedYear, limit);
+  }
+
+  // One aggregated row per reporting (destination) country.
+  const byReporter = new Map<number, ComtradeRecord>();
+  for (const rec of res.data) {
+    if (rec.reporterCode === 0) continue;
+    const existing = byReporter.get(rec.reporterCode);
+    if (!existing || rec.primaryValue > existing.primaryValue) {
+      byReporter.set(rec.reporterCode, rec);
+    }
+  }
+
+  const sorted = [...byReporter.values()].sort(
+    (a, b) => b.primaryValue - a.primaryValue
+  );
+  const total = sorted.reduce((s, r) => s + r.primaryValue, 0);
+
+  if (total === 0) {
+    return indiaExportsViaWits(hsCode, requestedYear, limit);
+  }
+
+  const top = sorted.slice(0, limit).map((rec, i) => {
+    const country = findByM49(rec.reporterCode);
+    return {
+      iso3: country?.iso3 ?? rec.reporterISO,
+      name: country?.name ?? rec.reporterDesc,
+      valueUsd: rec.primaryValue,
+      valueUsdM: usdM(rec.primaryValue),
+      sharePct:
+        total > 0 ? Math.round((rec.primaryValue / total) * 1000) / 10 : 0,
+      rank: i + 1,
+    };
+  });
+
+  const narrative =
+    `Based on partner-country reports (mirror data, used because India's own ` +
+    `filings for this period are unavailable), buyers imported about ` +
+    `$${usdM(total)}M of HS ${hsCode} from India in ${year}. Top destinations: ` +
+    top.map((c) => `${c.name} ($${c.valueUsdM}M, ${c.sharePct}%)`).join(", ") +
+    ".";
+
+  return {
+    ok: true,
+    cached: res.cached,
+    narrative,
+    data: {
+      hsCode,
+      year,
+      totalIndiaExportsUsd: total,
+      totalIndiaExportsUsdM: usdM(total),
+      topDestinations: top,
+      source: "mirror",
+    },
+  };
 }
 
 /**
  * Get India's exports of a given HS code, broken down by destination country.
  * Answers: "how much of X does India export, and to whom?"
+ *
+ * Strategy: try India's own filings first (most authoritative). India reports
+ * to Comtrade late and sparsely, so when that comes back empty we fall back to
+ * mirror statistics — what partner countries reported importing from India.
  */
 export async function getIndiaExports(
   args: GetIndiaExportsArgs
@@ -203,17 +347,24 @@ export async function getIndiaExports(
   const year = args.year ?? currentDataYear();
   const limit = args.limit ?? 5;
 
+  // NOTE: partnerCode 0 is Comtrade's "World" aggregate, so this establishes
+  // whether India reported at all. It cannot yield a per-destination
+  // breakdown (that needs the partner dimension expanded) — but India has no
+  // Comtrade data whatsoever today, so in practice this always falls through
+  // to the mirror and then to WITS, which is where destinations come from.
   const res = await comtradeQuery({
-    reporterCode: 356, // India
-    partnerCode: 0,     // All partners
+    reporterCode: INDIA_M49,
+    partnerCode: 0,
     cmdCode: args.hsCode,
     period: year,
     flowCode: "X",       // Exports
     maxRecords: 500,
   });
 
+  // India didn't report (the common case) → mirror, and on to WITS from there.
+  // Any failure falls through; the chain's job is to find data somewhere.
   if (!res.ok) {
-    return { ok: false, error: res.message, narrative: errorNarrative(res) };
+    return indiaExportsViaMirror(args.hsCode, year, limit, args.year);
   }
 
   // Get "India → World" total (partnerCode=0 aggregate) and per-partner rows
@@ -224,16 +375,19 @@ export async function getIndiaExports(
 
   const total = worldTotal?.primaryValue ?? perPartner.reduce((s, r) => s + r.primaryValue, 0);
 
+  // Rows came back but carry no value — mirror is still the better answer.
+  if (total === 0) {
+    return indiaExportsViaMirror(args.hsCode, year, limit, args.year);
+  }
+
   const top = perPartner.slice(0, limit).map((rec, i) => toCountryValue(rec, total, i + 1));
 
   const narrative =
-    total === 0
-      ? `India did not export any HS ${args.hsCode} in ${year}.`
-      : `In ${year}, India exported $${usdM(total)}M of HS ${args.hsCode} globally. ` +
-        (top.length
-          ? `Top destinations: ` +
-            top.map((c) => `${c.name} ($${c.valueUsdM}M, ${c.sharePct}%)`).join(", ")
-          : "");
+    `In ${year}, India exported $${usdM(total)}M of HS ${args.hsCode} globally. ` +
+    (top.length
+      ? `Top destinations: ` +
+        top.map((c) => `${c.name} ($${c.valueUsdM}M, ${c.sharePct}%)`).join(", ")
+      : "");
 
   return {
     ok: true,
@@ -245,6 +399,7 @@ export async function getIndiaExports(
       totalIndiaExportsUsd: total,
       totalIndiaExportsUsdM: usdM(total),
       topDestinations: top,
+      source: "direct",
     },
   };
 }
@@ -348,8 +503,15 @@ export async function getTopExporters(
 
 export interface GetTradeTrendArgs {
   hsCode: string;
-  reporterIso: string; // e.g. "IND"
-  partnerIso: string;  // e.g. "DEU"
+  reporterIso: string; // e.g. "DEU" — the country whose trade we're tracking
+  /**
+   * Optional counterparty, e.g. "IND". Omit (or pass "WLD") to trend the
+   * reporter's TOTAL trade with the world — i.e. overall market demand, which
+   * is usually what a manufacturer actually wants to know ("is demand for my
+   * product growing in Germany?") and is far better covered in the data than
+   * any single bilateral pair.
+   */
+  partnerIso?: string;
   years?: number;      // How many recent years. Default 5.
   flow?: "X" | "M";
 }
@@ -376,14 +538,29 @@ export async function getTradeTrend(
 ): Promise<ToolResult<TradeTrendData>> {
   const { COUNTRIES: _c } = await import("./countries");
   const reporter = _c.find((c) => c.iso3 === args.reporterIso.toUpperCase());
-  const partner = _c.find((c) => c.iso3 === args.partnerIso.toUpperCase());
-  if (!reporter || !partner) {
+  if (!reporter) {
     return {
       ok: false,
       error: "Unknown country code",
-      narrative: `I could not resolve one of those countries. Use ISO-3 codes like IND, USA, DEU.`,
+      narrative: `I could not resolve that country. Use ISO-3 codes like IND, USA, DEU.`,
     };
   }
+
+  // No partner (or explicit "WLD") → trend against the whole world.
+  const wantsWorld =
+    !args.partnerIso ||
+    ["WLD", "WORLD", "ALL"].includes(args.partnerIso.toUpperCase());
+  const partner = wantsWorld
+    ? null
+    : _c.find((c) => c.iso3 === args.partnerIso!.toUpperCase());
+  if (!wantsWorld && !partner) {
+    return {
+      ok: false,
+      error: "Unknown country code",
+      narrative: `I could not resolve that partner country. Use ISO-3 codes like IND, USA, DEU — or omit it to see total market demand.`,
+    };
+  }
+  const partnerName = partner ? partner.name : "World";
 
   const yearsBack = args.years ?? 5;
   const endYear = currentDataYear();
@@ -391,7 +568,7 @@ export async function getTradeTrend(
 
   const res = await comtradeQuery({
     reporterCode: reporter.m49,
-    partnerCode: partner.m49,
+    partnerCode: partner ? partner.m49 : 0,
     cmdCode: args.hsCode,
     period: years,
     flowCode: args.flow ?? "X",
@@ -430,10 +607,17 @@ export async function getTradeTrend(
       ? Math.round((Math.pow(last / first, 1 / (points.length - 1)) - 1) * 1000) / 10
       : null;
 
+  const flowWord = (args.flow ?? "X") === "M" ? "imports of" : "exports of";
+  const label = wantsWorld
+    ? `${reporter.name} total ${flowWord} HS ${args.hsCode}`
+    : `${reporter.name} → ${partnerName}, HS ${args.hsCode}`;
+
   const narrative =
     points.length === 0
-      ? `I did not find trade trend data for HS ${args.hsCode} between ${reporter.name} and ${partner.name}.`
-      : `${reporter.name} → ${partner.name}, HS ${args.hsCode}: ` +
+      ? `I did not find trade trend data for HS ${args.hsCode} for ${reporter.name}${
+          wantsWorld ? "" : ` with ${partnerName}`
+        }.`
+      : `${label}: ` +
         points.map((p) => `${p.year}: $${p.valueUsdM}M`).join(", ") +
         (totalGrowthPct !== null ? ` (${totalGrowthPct}% total growth)` : "");
 
@@ -444,7 +628,7 @@ export async function getTradeTrend(
     data: {
       hsCode: args.hsCode,
       reporter: reporter.name,
-      partner: partner.name,
+      partner: partnerName,
       flow: args.flow ?? "X",
       points,
       totalGrowthPct,
@@ -478,7 +662,7 @@ export const TRADE_TOOLS = [
   {
     name: "getIndiaExports",
     description:
-      "Get India's total exports of an HS code and the top destination countries. Answers: how much does India export of X and to whom?",
+      "Get India's total exports of an HS code and the top destination countries. Answers: how much does India export of X and to whom? Falls back automatically to mirror statistics (what partner countries report importing from India) when India's own filings are missing — the result's `source` field says which was used.",
     parameters: {
       type: "object",
       properties: {
@@ -507,27 +691,30 @@ export const TRADE_TOOLS = [
   {
     name: "getTradeTrend",
     description:
-      "Get multi-year trade flow between a specific reporter (exporter) and partner (importer) for a given HS code. Answers: how has demand grown?",
+      "Get a multi-year trade trend for an HS code. Best use: market demand growth — set reporterIso to the MARKET you care about with flow='M' and NO partnerIso, e.g. 'is demand for my product growing in Germany?' → reporterIso='DEU', flow='M'. Optionally pass partnerIso for a specific bilateral pair.",
     parameters: {
       type: "object",
       properties: {
         hsCode: { type: "string" },
         reporterIso: {
           type: "string",
-          description: "ISO-3 code of the exporting country. Usually 'IND'.",
+          description:
+            "ISO-3 code of the country whose trade to track. For market-demand questions this is the destination market, e.g. 'DEU', 'USA'.",
         },
         partnerIso: {
           type: "string",
-          description: "ISO-3 code of the importing country. E.g. 'DEU', 'USA'.",
+          description:
+            "OPTIONAL counterparty ISO-3. Omit it to trend total trade with the world (recommended — much better data coverage than any single bilateral pair).",
         },
         years: { type: "number", description: "How many recent years. Default 5." },
         flow: {
           type: "string",
           enum: ["X", "M"],
-          description: "X = exports (default), M = imports.",
+          description:
+            "M = the reporter's imports (use for market demand), X = the reporter's exports. Default X.",
         },
       },
-      required: ["hsCode", "reporterIso", "partnerIso"],
+      required: ["hsCode", "reporterIso"],
     },
   },
 ] as const;

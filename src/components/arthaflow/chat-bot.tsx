@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Sparkles, Loader2, Globe } from "lucide-react";
+import { X, Send, Sparkles, Loader2, Globe } from "lucide-react";
+import { TradeCharts, type TradeToolCall } from "./trade-chart";
+
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  toolCalls?: TradeToolCall[];
+};
 
 export function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Array<{role: 'user' | 'assistant'; content: string}>>([
-    { role: 'assistant', content: 'Hi! I am the ArthaFlow AI Assistant. How can I help you with your export journey today?' }
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: 'assistant', content: "Namaste! I'm Export Saathi. Tell me your product and I'll show you where the world is buying it — top markets, India's competition, and where demand is growing. What do you make?" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,6 +31,13 @@ export function ChatBot() {
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
+    // Build the history we send: prior turns + this new user message.
+    // (The greeting is a client-only intro, so we skip the very first entry.)
+    const history = [
+      ...messages.slice(1),
+      { role: "user" as const, content: userMessage },
+    ];
+
     setInput("");
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
@@ -32,17 +46,33 @@ export function ChatBot() {
     fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify({ messages: history }),
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        if (!response.ok) {
+          // Prefer the server's own explanation (rate limits, message too
+          // long, at-capacity) over a generic failure string.
+          const detail = await response
+            .json()
+            .then((d) => (typeof d?.error === "string" ? d.error : null))
+            .catch(() => null);
+          throw new Error(detail || `Something went wrong (${response.status}).`);
+        }
         const data = await response.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response || "Sorry, I couldn't generate a response." }]);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.response || "Sorry, I couldn't generate a response.",
+          toolCalls: Array.isArray(data.toolCalls) ? data.toolCalls : undefined,
+        }]);
       })
       .catch((err) => {
         console.error('Chat error:', err);
-        setMessages(prev => [...prev, { role: 'assistant', content: "Connection interrupted. Please try again." }]);
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const msg =
+          err instanceof Error && err.message
+            ? err.message
+            : "Connection interrupted. Please try again.";
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
+        setError(null);
       })
       .finally(() => {
         setLoading(false);
@@ -103,8 +133,8 @@ export function ChatBot() {
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 className="font-bold tracking-wide text-white">ArthaFlow AI</h3>
-              <p className="text-[11px] text-white/50">Always active</p>
+              <h3 className="font-bold tracking-wide text-white">Export Saathi</h3>
+              <p className="text-[11px] text-white/50">Trade intelligence advisor</p>
             </div>
           </div>
           <button 
@@ -124,14 +154,15 @@ export function ChatBot() {
                 msg.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
-              <div 
+              <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed shadow-sm ${
-                  msg.role === 'user' 
-                    ? 'rounded-br-sm bg-gradient-to-br from-artha-gold to-yellow-600 text-navy font-medium' 
+                  msg.role === 'user'
+                    ? 'rounded-br-sm bg-gradient-to-br from-artha-gold to-yellow-600 text-navy font-medium'
                     : 'rounded-bl-sm border border-white/10 bg-white/5 text-white/90'
                 }`}
               >
                 {msg.content}
+                {msg.role === 'assistant' && <TradeCharts toolCalls={msg.toolCalls} />}
               </div>
             </div>
           ))}
@@ -163,7 +194,7 @@ export function ChatBot() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about compliance, HS codes..."
+              placeholder="e.g. Where can I export leather bags?"
               disabled={loading}
               className="w-full rounded-full border border-white/10 bg-navy px-5 py-3.5 pr-12 text-sm text-white placeholder-white/40 shadow-inner outline-none transition-all focus:border-artha-gold/50 focus:ring-1 focus:ring-artha-gold/50 disabled:opacity-50"
             />

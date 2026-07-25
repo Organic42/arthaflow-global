@@ -18,7 +18,7 @@
  *   - Values arrive in THOUSANDS of USD.
  */
 
-import { createClient as createSupabase } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { COUNTRIES } from "@/lib/comtrade/countries";
 
 const BASE =
@@ -124,7 +124,9 @@ export type WitsResult =
 
 async function readCache(key: string): Promise<WitsExportsData | null> {
   try {
-    const supabase = await createSupabase();
+    // Service role only — see comtrade/client.ts and lib/supabase/admin.ts.
+    const supabase = createAdminClient();
+    if (!supabase) return null;
     const { data } = await supabase
       .from("trade_cache")
       .select("payload, expires_at")
@@ -140,7 +142,8 @@ async function readCache(key: string): Promise<WitsExportsData | null> {
 
 async function writeCache(key: string, payload: WitsExportsData) {
   try {
-    const supabase = await createSupabase();
+    const supabase = createAdminClient();
+    if (!supabase) return;
     const expires = new Date();
     expires.setDate(expires.getDate() + 30);
     await supabase

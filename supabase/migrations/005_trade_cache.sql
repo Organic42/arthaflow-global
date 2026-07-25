@@ -18,8 +18,18 @@ CREATE INDEX IF NOT EXISTS trade_cache_expires_idx
 -- no manufacturer user should touch it directly.
 ALTER TABLE public.trade_cache ENABLE ROW LEVEL SECURITY;
 
--- Deny all reads/writes for authenticated users (server bypasses RLS
--- when using the service key, so app code still works).
+-- Deny all reads/writes for anon and authenticated roles.
+--
+-- IMPORTANT: the service role bypasses RLS, so app code reaches this table
+-- ONLY via a client built with SUPABASE_SERVICE_ROLE_KEY — see
+-- src/lib/supabase/admin.ts. The ordinary anon-key client (lib/supabase/
+-- server.ts) is subject to these policies and will silently read/write
+-- nothing. If SUPABASE_SERVICE_ROLE_KEY is unset, caching is simply
+-- disabled and every lookup hits the upstream API.
+--
+-- Deliberately NOT opening this to anon: the anon key ships to the browser,
+-- and a publicly writable cache lets anyone seed false trade figures that
+-- Saathi would then repeat as fact.
 DO $$
 BEGIN
   IF NOT EXISTS (

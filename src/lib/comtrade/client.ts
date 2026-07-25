@@ -169,10 +169,21 @@ export async function comtradeQuery(q: ComtradeQuery): Promise<ComtradeResult> {
   const clCode = q.clCode ?? "HS";
   const url = new URL(`${BASE_URL}/${typeCode}/${freqCode}/${clCode}`);
 
-  // Convert array params to comma-separated strings (Comtrade convention)
+  // Convert array params to comma-separated strings (Comtrade convention).
+  //
+  // partner2Code / motCode / customsCode = 0/C00 collapse each reporter's
+  // trade into ONE fully-aggregated row. Without them, Comtrade returns the
+  // flow split across dozens of sub-rows (by second-partner, mode of
+  // transport, and customs procedure) — and any per-reporter aggregation that
+  // isn't a careful SUM will massively undercount (e.g. Germany's $4B of
+  // HS 4202 imports shows up as a single $8M sub-row). Requesting the
+  // aggregate directly is both correct and lighter on the record quota.
   const params: Record<string, string> = {
     reporterCode: [q.reporterCode].flat().join(","),
     partnerCode: [q.partnerCode ?? 0].flat().join(","),
+    partner2Code: "0",
+    motCode: "0",
+    customsCode: "C00",
     period: [q.period].flat().join(","),
     maxRecords: String(q.maxRecords ?? 500),
     format: "JSON",

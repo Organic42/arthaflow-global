@@ -1,6 +1,8 @@
 import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
+import { runSaathi, type SaathiContext } from "@/lib/saathi/agent";
 
 // Ensure this route is always evaluated at request time, never during the
 // static build's page-data collection (which has no env vars).
@@ -8,47 +10,84 @@ export const dynamic = "force-dynamic";
 
 // Guardrails: keep costs and abuse in check.
 const MAX_MESSAGE_CHARS = 1000; // one long paragraph, ~250 tokens
+const MAX_HISTORY = 12; // trailing turns kept as context
 const RATE_LIMIT = { scope: "chat", limit: 15, windowMs: 60_000 }; // 15/min/IP
 
-// System prompt to give context about ArthaFlow
-const SYSTEM_PROMPT = `
-You are Saathi, ArthaFlow's AI export advisor. You help Indian manufacturers navigate their entire export journey.
-You have deep knowledge about:
+type ChatTurn = { role: "user" | "assistant"; content: string };
 
-1. ArthaFlow Platform:
-   - AI-powered export infrastructure for Indian manufacturers
-   - Helps export products to 50+ countries
-   - Features: AI document generation, buyer matching, logistics orchestration, compliance tracking
-   - Solves documentation nightmare, no buyer access, logistics overwhelm
-   - 4-step process: Onboard business, AI generates documents, find buyers & ship, get paid in dollars
+/**
+ * Normalize the request body into a conversation history whose last entry is
+ * the newest user message. Accepts either:
+ *   { messages: [{role, content}, ...] }   (multi-turn — preferred)
+ *   { message: "..." }                      (single-turn — backward compatible)
+ */
+function parseHistory(body: unknown): ChatTurn[] | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as { messages?: unknown; message?: unknown };
 
-2. Key Features:
-   - AI Document Generator: Product sheets, HS codes, proforma invoices in 30 seconds
-   - HS Code Classifier: AI classification with rationale
-   - Export Readiness Score: Gamified 100-point compliance score
-   - Buyer Matching: Curated international buyer connections
-   - Logistics Orchestration: Freight quotes, customs, insurance through partner network
-   - Document Vault: Secure cloud storage for certificates and licenses
-   - Compliance Tracker: IEC registration, AD code setup, DGFT guidance
-   - Saathi (you): AI export advisor available across the platform
+  if (Array.isArray(b.messages)) {
+    const turns: ChatTurn[] = [];
+    for (const m of b.messages) {
+      if (!m || typeof m !== "object") continue;
+      const role = (m as { role?: unknown }).role;
+      const content = (m as { content?: unknown }).content;
+      if (
+        (role === "user" || role === "assistant") &&
+        typeof content === "string" &&
+        content.trim()
+      ) {
+        turns.push({ role, content: content.trim() });
+      }
+    }
+    return turns.length ? turns.slice(-MAX_HISTORY) : null;
+  }
 
-3. Pricing Plans:
-   - Starter (Free): 3 AI document generations/month, HS Code Classifier, Document Vault (5 docs), Export Readiness Score
-   - Growth (Rs 9,999/mo): Everything in Starter + unlimited AI documents, buyer inquiry access, WhatsApp notifications, priority support
-   - Managed (Rs 29,999/mo): Everything in Growth + dedicated export manager, logistics orchestration, compliance handholding, quarterly business reviews
+  if (typeof b.message === "string" && b.message.trim()) {
+    return [{ role: "user", content: b.message.trim() }];
+  }
 
-4. Target Audience:
-   - Indian manufacturers (especially MSMEs)
-   - Looking to export globally without overhead
-   - Need help with documentation, finding buyers, logistics
+  return null;
+}
 
-5. Tone:
-   - Professional yet approachable
-   - Confident, helpful, knowledgeable
-   - Simple language; avoid jargon unless the user is clearly experienced
+/**
+ * Load the signed-in manufacturer's profile + products so Saathi can
+ * personalize. Anonymous callers (public site widget) get an empty context —
+ * Saathi still works, just without the "your catalogue" reasoning.
+ */
+async function loadContext(language?: string | null): Promise<SaathiContext> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { language };
 
-Keep responses concise, helpful, and focused on export-related queries. If asked about something outside your knowledge base, politely say you're specialized in export assistance and suggest contacting support at info@arthaflowglobal.com for other inquiries.
-`;
+    const [{ data: profile }, { data: products }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("business_name")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("products")
+        .select("name, hs_code")
+        .eq("user_id", user.id)
+        .limit(20),
+    ]);
+
+    return {
+      language,
+      companyName: profile?.business_name ?? null,
+      products: (products ?? []).map((p) => ({
+        name: p.name as string,
+        hsCode: (p.hs_code as string | null) ?? null,
+      })),
+    };
+  } catch {
+    // Never let a context-load failure break the chat.
+    return { language };
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -68,19 +107,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = (await request.json().catch(() => null)) as
-      | { message?: unknown }
-      | null;
-    const message =
-      typeof body?.message === "string" ? body.message.trim() : "";
+    const body = (await request.json().catch(() => null)) as unknown;
+    const history = parseHistory(body);
 
-    if (!message) {
+    if (!history) {
       return NextResponse.json(
         { error: "Message is required" },
         { status: 400 }
       );
     }
-    if (message.length > MAX_MESSAGE_CHARS) {
+
+    // Guard the newest user message length (last entry).
+    const latest = history[history.length - 1];
+    if (latest.content.length > MAX_MESSAGE_CHARS) {
       return NextResponse.json(
         {
           error: `Message too long. Please keep it under ${MAX_MESSAGE_CHARS} characters.`,
@@ -89,7 +128,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if Groq API key is configured
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json(
         { error: "AI service not configured" },
@@ -97,36 +135,48 @@ export async function POST(request: Request) {
       );
     }
 
+    // Optional language hint from the client (e.g. "hi" for Hindi).
+    const language =
+      typeof (body as { language?: unknown })?.language === "string"
+        ? ((body as { language: string }).language)
+        : null;
+
     // Instantiate the client lazily, INSIDE the handler — the Groq SDK throws
     // in its constructor when the key is missing, so creating it at module
     // scope crashed the production build. Now it only runs at request time.
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    // Call Groq API
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: message },
-      ],
-      model: "llama-3.1-8b-instant", // or another suitable model
-      temperature: 0.7,
-      max_tokens: 1024,
-      top_p: 1,
-      stream: false,
+    const ctx = await loadContext(language);
+    const result = await runSaathi(groq, history, ctx);
+
+    // `response` is kept for backward compatibility with the existing widget;
+    // `toolCalls` exposes the structured trade data for chart rendering.
+    //
+    // Only successful results are surfaced. Failed ones carry internal
+    // diagnostics (missing env-var names, upstream rate-limit notices) that
+    // shouldn't reach the browser, and the UI has nothing to draw from them —
+    // the user-facing explanation is already in `response`.
+    return NextResponse.json({
+      response: result.text,
+      toolCalls: result.toolCalls.filter((t) => t.result.ok),
     });
+  } catch (error) {
+    console.error("Saathi error:", error);
 
-    const response = chatCompletion.choices[0]?.message?.content;
-
-    if (!response) {
+    // Upstream capacity problems are not the user's fault and are temporary —
+    // surface something actionable instead of a bare 500. (Groq returns 429
+    // both for per-minute limits and for the daily token cap.)
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 429 || status === 503) {
       return NextResponse.json(
-        { error: "Failed to generate response" },
-        { status: 500 }
+        {
+          error:
+            "Saathi is at capacity right now. Please try again in a few minutes.",
+        },
+        { status: 503, headers: { "Retry-After": "120" } }
       );
     }
 
-    return NextResponse.json({ response });
-  } catch (error) {
-    console.error("Groq API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

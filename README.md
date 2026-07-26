@@ -3,238 +3,232 @@
 </p>
 
 <p align="center">
-  <em>Your AI-powered export department — without the overhead.</em>
+  <em>Tech-enabled export infrastructure for India's MSME manufacturers.</em>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Stage-Pre--Seed-blue" alt="Stage" />
-  <img src="https://img.shields.io/badge/Stack-Next.js_16_%7C_Tailwind_%7C_Supabase-black" alt="Stack" />
-  <img src="https://img.shields.io/badge/Screens-14%2F14-brightgreen" alt="Screens" />
+  <img src="https://github.com/Organic42/arthaflow-global/actions/workflows/webpack.yml/badge.svg" alt="Build" />
+  <img src="https://img.shields.io/badge/Next.js-16.2-black" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React-19.2-149eca" alt="React" />
+  <img src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ecf8e" alt="Supabase" />
   <img src="https://img.shields.io/badge/License-Proprietary-red" alt="License" />
 </p>
 
 ---
 
-## The Idea
+India has **57M+ registered MSMEs**. Fewer than **0.3% export** — not because their
+products aren't good, but because international trade is a wall of HS codes, compliance
+documents, buyer discovery and logistics decisions. A traditional export consultant
+costs upwards of ₹2 lakh a year and still works manually.
 
-India has **57 million registered MSMEs**. Only **0.3% export**. Not because their products aren't good enough — because the export infrastructure doesn't exist.
+ArthaFlow removes that wall: classify the product correctly, generate every export
+document, and tell the manufacturer where in the world their product is actually in
+demand.
 
-**ArthaFlow Global** is a tech-enabled export infrastructure platform that acts as the outsourced export department for Indian manufacturers. We remove every barrier between a manufacturer making a product and getting paid in dollars.
-
-Using AI-powered document generation, HS code classification, automated compliance workflows, curated buyer matching, and logistics orchestration — ArthaFlow transforms any domestic manufacturer into an export-ready business in **days, not months**.
-
-### Core Value Proposition
-
-| For Manufacturers | For Buyers |
-|---|---|
-| Zero export expertise needed | Verified, quality-checked suppliers |
-| AI generates all documentation in 30 seconds | Structured product catalogues with specs |
-| End-to-end logistics handled | Transparent pricing and timelines |
-| Get paid in dollars to your bank account | Single point of contact for procurement |
+> **For full business, architecture and data context, read [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md).**
+> It is the single source of truth, written to brief a new engineer — or an AI
+> assistant — from cold.
 
 ---
 
-## Market Opportunity
+## Quick start
 
-| Metric | Value |
-|--------|-------|
-| Registered MSMEs in India | 57 Million |
-| Currently Exporting | 0.3% (1.73 Lakh) |
-| India's Total Exports (FY25) | $821 Billion |
-| MSME Export Growth (4-year) | 3x |
-| MSMEs with Export-Ready Products | ~5 Million |
-| MSMEs with Export Awareness | ~500K |
-
-**The gap is infrastructure, not capability.** There are 5 million manufacturers with products viable for international markets who don't export because they can't navigate IEC registration, HS codes, shipping bills, buyer discovery, freight forwarding, customs clearance, and international payments.
-
-### Target Segments
-
-- **Primary:** Engineering goods manufacturers (CNC, hydraulics, auto components, forgings) in Maharashtra, Gujarat, Tamil Nadu
-- **Secondary:** Textiles, chemicals, handicrafts, agricultural products
-- **Geography:** Tier 2/3 industrial cities — Pune, Nashik, Coimbatore, Rajkot, Ludhiana
-
----
-
-## How It Works
-
-```
-[1] Onboard        [2] AI Generates       [3] We Match &        [4] Get Paid
-Your Business  -->  Export Documents  -->   Ship for You    -->   in Dollars
-                                                        
-Register, upload    Product sheets,        Verified buyer        Secure international
-docs, add products  HS codes, invoices     connections +         payments to your
-in 10 minutes       in 30 seconds          end-to-end logistics  bank account
-```
-
-### Platform Workflow
-
-1. **Manufacturer Onboarding** — Company info, product catalogue, certifications, IEC verification
-2. **AI Document Generation** — Product export sheets, HS code classification, proforma invoices generated automatically
-3. **Export Readiness Scoring** — Gamified 100-point compliance score tracking registration, certifications, and documentation
-4. **Buyer Matching** — Curated international buyer connections from verified trade channels (buyer details revealed only after mutual interest)
-5. **Shipment Tracking** — Real-time timeline from order confirmation through customs clearance to delivery
-6. **Document Vault** — Secure cloud storage for all certificates, licenses, and AI-generated documents
-
----
-
-## Business Model
-
-### Three-Phase Evolution
-
-| Phase | Model | Revenue Mechanism |
-|-------|-------|-------------------|
-| **Phase 1 — Service** | Tech-enabled export agency | Monthly retainer + success fees per shipment |
-| **Phase 2 — Platform** | SaaS + buyer marketplace | Subscription tiers + transaction fees + network effects |
-| **Phase 3 — Trading** | Proprietary trading house | Buy ex-factory, sell CIF internationally under ArthaFlow brand |
-
-### Pricing Tiers
-
-| Plan | Price | For |
-|------|-------|-----|
-| **Starter** | Free | Manufacturers exploring exports — 3 AI docs/month, HS classifier, readiness score |
-| **Growth** | ₹9,999/mo | Active exporters — unlimited AI docs, buyer inquiries, WhatsApp notifications |
-| **Managed** | ₹29,999/mo | Full-service — dedicated export manager, logistics orchestration, compliance handholding |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 16 (App Router), React 19, TypeScript |
-| **UI** | Tailwind CSS 4, shadcn/ui, Lucide Icons |
-| **Fonts** | Space Grotesk (headings), DM Sans (body), JetBrains Mono (code) |
-| **Backend** | Supabase (Auth, PostgreSQL, Storage, Edge Functions) |
-| **AI** | Claude API for document generation |
-| **Deployment** | Vercel (preview + production) |
-| **Design System** | Navy #0B1D3A + Action Blue #2563EB + Artha Gold #D4A843 |
-
-### Architecture
-
-```
-app/
-├── (public)/           # Marketing pages (Homepage, Pricing, Blog)
-│   └── layout.tsx      # PublicNav + Footer
-├── (auth)/             # Login/Register, Onboarding
-│   └── layout.tsx      # No nav/footer
-├── (dashboard)/        # All authenticated app screens
-│   └── layout.tsx      # DashNav wrapper
-├── (admin)/            # Internal ops dashboard
-│   └── layout.tsx      # Sidebar nav
-└── not-found.tsx       # 404 page
-```
-
----
-
-## Development Phases
-
-### Phase 1 — Foundation + UI (Weeks 1-2) ✅ Complete
-
-- [x] Next.js project scaffold with TypeScript + Tailwind + shadcn/ui
-- [x] Design system: ArthaFlow color palette, typography, spacing tokens
-- [x] Core components: Button variants, Badge, Input, ProgressBar, StatCard, HoverCard, EmptyState
-- [x] Layout components: PublicNav, DashNav, Footer with dark mode toggle
-- [x] All 14 screens built with mock data
-- [x] Responsive breakpoints (1100px, 900px, 640px)
-- [x] Dark/light mode with localStorage persistence
-
-### Phase 2 — Auth + Database (Weeks 3-4) 🔜 Next
-
-- [ ] Supabase project setup + environment variables
-- [ ] Database schema: profiles, products, documents tables with RLS
-- [ ] Auth: email/password + Google OAuth via Supabase Auth
-- [ ] 4-step onboarding writing to real database
-- [ ] Document upload to Supabase Storage
-- [ ] Auth middleware + route protection
-
-### Phase 3 — Core Features (Weeks 4-5)
-
-- [ ] Dashboard with real Supabase data (counts, activity log)
-- [ ] Product Catalogue CRUD
-- [ ] Document Vault with real file management
-
-### Phase 4 — AI + Business Logic (Weeks 5-6)
-
-- [ ] AI Document Generator via Claude API (real generation)
-- [ ] PDF export for generated documents
-- [ ] Buyer Inquiries with real inquiry management
-- [ ] Shipment Tracker with live status updates
-
-### Phase 5 — Polish + Admin (Weeks 6-7)
-
-- [ ] Mobile PWA with service worker
-- [ ] Admin dashboard with role-based access
-- [ ] Empty states wired into all screens
-- [ ] Error boundaries + loading skeletons
-
-### Phase 6 — Production (Weeks 7-8)
-
-- [ ] Vercel deployment with custom domain
-- [ ] SEO: metadata, OpenGraph, sitemap
-- [ ] Email notifications (verification, inquiry alerts)
-- [ ] Analytics + event tracking
-- [ ] Smoke tests for core user flow
-
----
-
-## Screens
-
-| # | Screen | Route | Description |
-|---|--------|-------|-------------|
-| 1 | Homepage | `/` | Hero, stats, problem cards, features grid, testimonial, CTA |
-| 2 | Pricing | `/pricing` | 3-tier pricing cards, FAQ accordion |
-| 3 | Blog | `/blog` | Featured article, knowledge hub grid |
-| 4 | Login/Register | `/login` | Split layout, Google OAuth, form toggle |
-| 5 | Onboarding | `/onboarding` | 4-step wizard (Company, Products, Readiness, Documents) |
-| 6 | Dashboard | `/dashboard` | Stat cards, activity feed, readiness sidebar |
-| 7 | AI Doc Generator | `/documents/generate` | Product selector, skeleton loading, document preview |
-| 8 | Document Vault | `/documents` | Category tabs, search, status table, pagination |
-| 9 | Buyer Inquiries | `/inquiries` | Split panel, filter tabs, requirements, interest actions |
-| 10 | Shipment Tracker | `/shipments` | Timeline visualization, shipment details, attached docs |
-| 11 | Product Catalogue | `/products` | Product cards grid, status badges, add product |
-| 12 | Mobile Dashboard | `/mobile` | PWA layout, circular progress ring, bottom nav |
-| 13 | Admin/Ops | `/admin` | Sidebar nav, task list, onboardings table |
-| 14 | Empty States | `/states` | 404, welcome, no-data states gallery |
-
----
-
-## Getting Started
+**Prerequisites:** Node.js 22+, npm, and a Supabase project.
 
 ```bash
-# Clone the repo
 git clone https://github.com/Organic42/arthaflow-global.git
 cd arthaflow-global
-
-# Install dependencies
 npm install
-
-# Run development server
-npm run dev
+cp .env.example .env.local   # fill in the values
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the app.
+### Environment variables
 
-### Environment Variables (for Phase 2+)
+| Variable | Required | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | Supabase anon key (browser-safe) |
+| `GROQ_API_KEY` | yes | LLM inference — Saathi and document generation |
+| `COMTRADE_API_KEY` | yes | UN Comtrade trade data ([register free](https://comtradeplus.un.org)) |
+| `SUPABASE_SERVICE_ROLE_KEY` | no | Enables trade-data caching. **Server-only — never prefix with `NEXT_PUBLIC_`** |
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-ANTHROPIC_API_KEY=your_claude_api_key
-```
+Without `GROQ_API_KEY` the chat and document endpoints return 500. Without
+`COMTRADE_API_KEY` the trade tools degrade gracefully and report data as unavailable —
+they never fabricate figures.
+
+### Database
+
+Apply the migrations in [`supabase/migrations/`](./supabase/migrations) in order, via the
+Supabase SQL Editor or CLI. They create 7 tables, 29 RLS policies, 3 functions and 1
+trigger.
 
 ---
 
-## Summary
+## Scripts
 
-ArthaFlow Global sits at the intersection of **AI**, **trade infrastructure**, and **India's manufacturing boom**. The platform turns the complex, fragmented export process into a single streamlined workflow — from factory floor to international payment.
+| Command | Description |
+|---|---|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `ANALYZE=true npm run build` | Bundle composition report |
+| `node scripts/build-hs-codes.mjs` | Regenerate the bundled HS nomenclature |
 
-**The moat:** Every manufacturer onboarded, every document generated, every shipment tracked creates proprietary data that makes the platform smarter, the buyer matching more accurate, and the logistics more efficient. The compounding data advantage deepens with each transaction.
+---
 
-**The opportunity:** 5 million Indian manufacturers with export-ready products, zero infrastructure to reach global markets. ArthaFlow is that infrastructure.
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | **Next.js 16** (App Router), React 19, TypeScript |
+| UI | Tailwind CSS 4, shadcn-style components, Lucide icons |
+| Type | Space Grotesk (headings), DM Sans (body), JetBrains Mono (code) |
+| Auth / DB / Storage | Supabase — Postgres with Row Level Security |
+| LLM | **Groq** — `llama-3.3-70b-versatile` |
+| Trade data | UN Comtrade + World Bank WITS |
+| Visuals | `cobe` (WebGL globe), `motion` |
+| Hosting | Vercel |
+
+> **Next.js 16 is not the Next.js you may know.** It carries breaking changes to APIs,
+> conventions and file structure. Consult `node_modules/next/dist/docs/` before writing
+> framework code rather than relying on memory — see [`AGENTS.md`](./AGENTS.md).
+
+---
+
+## Architecture
+
+```
+src/
+├── app/
+│   ├── (public)/          Homepage, pricing, blog, privacy, terms
+│   ├── (auth)/            Login, onboarding
+│   ├── (dashboard)/       Dashboard, products, documents, shipments, inquiries…
+│   ├── (admin)/           Internal ops
+│   └── api/
+│       ├── chat/              Export Saathi — the trade-intelligence agent
+│       ├── generate-document/ AI export document generation
+│       └── tools/trade/       Auth-gated trade-tool harness
+├── components/
+│   ├── arthaflow/         Product components (chat-bot, trade-chart, globe, navs…)
+│   └── ui/                Primitives
+├── lib/
+│   ├── saathi/agent.ts    Tool-calling agent loop
+│   ├── hs/                HS classification — nomenclature, search, aliases
+│   ├── comtrade/          UN Comtrade client + trade tools
+│   ├── wits/              World Bank fallback for India data
+│   ├── supabase/          Browser, SSR and service-role clients
+│   └── rate-limit.ts      In-memory sliding window
+├── proxy.ts               Auth middleware — holds `publicRoutes`
+└── supabase/migrations/   Schema
+```
+
+**Adding a public page?** Add its path to `publicRoutes` in `src/proxy.ts`, or the auth
+proxy will redirect it to `/login`.
+
+---
+
+## Export Saathi
+
+The flagship. Saathi answers the question that comes *before* "help me export" —
+**"where does the world actually want my product?"**
+
+It is a tool-calling agent ([`src/lib/saathi/agent.ts`](./src/lib/saathi/agent.ts)) that
+selects a tool, queries real trade data, reasons over the numbers, and renders them as
+charts inline in the chat.
+
+| Tool | Answers |
+|---|---|
+| `classifyProduct` | "What's the HS code for my product?" |
+| `lookupHs` | "Is this code real, and what does it cover?" |
+| `getTopImporters` | "Where can I sell this?" |
+| `getTopExporters` | "Who am I competing against?" |
+| `getTradeTrend` | "Is demand growing in this market?" |
+| `getIndiaExports` | "Who buys this from India?" |
+
+### Design rules
+
+Each of these exists because of a real failure caught in testing. **Do not weaken them.**
+
+1. **No fabrication.** Every country, ranking and figure must come from a successful
+   tool result in that conversation. If a tool fails, the model may not name a country
+   at all — it says the data is unavailable.
+2. **Sources are disclosed.** Mirror statistics and World Bank group-level figures are
+   labelled as such, never passed off as exact HS-line data.
+3. **HS codes are never recalled from memory** — see below.
+4. **Never "live" or "real-time" data.** Trade sources lag by months to years.
+
+---
+
+## HS classification
+
+Saathi used to pick HS codes from model memory. For one product it variously produced
+`4202`, `420222`, `4201` and `4102` — and 4102 is *raw sheep hides*. Since every trade
+figure derives from the code, a wrong guess yields a confidently wrong answer the
+manufacturer has no way to detect.
+
+Classification is now **retrieve-then-choose**: search the real HS 2022 nomenclature
+(6,939 entries, vendored from UN Comtrade's own reference, so any resolved code is
+guaranteed valid there), hand the model a shortlist, and let it choose — it cannot
+invent a code. The chosen code is always shown to the user for correction.
+
+An alias layer ([`src/lib/hs/aliases.ts`](./src/lib/hs/aliases.ts)) bridges how
+manufacturers speak and how the nomenclature is written, including Indic scripts — so
+`"चमड़े के बैग"` resolves to `420221`.
+
+---
+
+## Trade data
+
+**UN Comtrade** for world demand, competitors and trends. Queries must request
+pre-aggregated rows; without that, flows arrive split across sub-rows and naive
+aggregation undercounts by ~500×.
+
+**World Bank WITS** for India's own export figures — because **India is absent from UN
+Comtrade entirely** (no rows as reporter *or* partner; its only holdings are 1962–74
+SITC). That is a data-availability fact, not a subscription tier. `getIndiaExports`
+falls back `direct → mirror → WITS` and labels which source produced the answer.
+
+---
+
+## Security
+
+- **RLS is the boundary.** Postgres policies guarantee at the database level that one
+  manufacturer can never read another's rows.
+- **Rate limiting** on public AI endpoints — 15/min per IP on chat, 20/hour per user on
+  document generation, with `Retry-After` on 429.
+- **Input validation** — message length caps, and client-supplied `system` roles are
+  stripped so the prompt cannot be hijacked via the messages array.
+- Internal diagnostics never reach the browser, and upstream capacity errors surface as
+  `503` with `Retry-After` rather than a bare 500.
+- Secrets live only in `.env.local` (gitignored). Never `NEXT_PUBLIC_` a server secret.
+
+---
+
+## Deployment
+
+Hosted on **Vercel**, deploying from `main`. Set the environment variables above under
+Project → Settings → Environment Variables.
+CI ([`.github/workflows/webpack.yml`](./.github/workflows/webpack.yml)) verifies every
+push builds cleanly, using placeholder env values.
+
+---
+
+## Contributing
+
+- Match the surrounding code — comment density, naming, idiom.
+- **Comments explain *why*, not *what*.** Several in the data layer encode hard-won
+  facts (the ×500 undercount, India's absence from Comtrade). Keep them.
+- **Never let the product overclaim.** No "live" trade data; always disclose data
+  provenance; if something is unavailable, say so rather than filling the gap with a
+  plausible guess. This applies to marketing copy as much as to Saathi's output.
+- Verify against the real API before asserting data-layer behaviour — failures here have
+  been silent and large.
+- Run `npm run lint` and `npm run build` before opening a PR.
 
 ---
 
 <p align="center">
-  <strong>ArthaFlow Global</strong> — Export. Simplified.<br/>
-  <em>Pre-Seed Stage | Mumbai, India | May 2026</em>
+  <sub>ArthaFlow Global · Pune, India · © All rights reserved — proprietary.</sub>
 </p>

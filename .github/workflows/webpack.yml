@@ -2,9 +2,9 @@ name: build
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["main"]
   pull_request:
-    branches: ["main", "master"]
+    branches: ["main"]
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
         run: npm run build
         env:
           # Placeholder values so the production build can complete in CI.
-          # Real secrets live in Netlify — this job only verifies the build compiles.
+          # Real secrets live in Vercel — this job only verifies the build compiles.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           NEXT_TELEMETRY_DISABLED: "1"

@@ -211,10 +211,42 @@ These exist because each was a real failure caught in testing. **Do not weaken t
 
 | Tool | Answers | Status |
 |---|---|---|
+| `classifyProduct` | "What's the HS code for X?" | ✅ Works (bundled nomenclature) |
+| `lookupHs` | "Is this code real, what is it?" | ✅ Works |
 | `getTopImporters` | "Where can I sell this?" | ✅ Works (Comtrade) |
 | `getTopExporters` | "Who competes with India?" | ✅ Works (Comtrade) |
 | `getTradeTrend` | "Is demand growing in X?" | ✅ Works (Comtrade) |
 | `getIndiaExports` | "Who buys this from India?" | ✅ Works (via WITS fallback) |
+
+### HS grounding — read before touching classification
+
+Saathi used to pick HS codes from model memory. For one product ("leather bags")
+it variously produced 4202, 420222, 4201 and **4102 (raw sheep hides)**. Since every
+trade figure derives from the code, a wrong guess yields a confidently wrong answer
+the manufacturer cannot detect.
+
+Now it is **retrieve-then-choose**: `src/lib/hs/classify.ts` searches the real
+nomenclature (6,939 entries, HS 2022, bundled at `src/lib/hs/hs-codes.json`,
+regenerate via `scripts/build-hs-codes.mjs`) and the model may only pick from the
+returned shortlist. Three things worth knowing:
+
+- **Subheadings inherit their heading's words for matching.** HS headings define the
+  scope their subheadings subdivide, so 830241 legitimately "means" 8302's text too.
+  Without this, "brass door **handles**" misses 8302's children entirely — only the
+  4-digit heading mentions doors.
+- **Chapter 99 is excluded from search results.** It is "commodities not specified
+  according to kind" — a real code (so `lookupHs` still resolves it) but never a
+  correct answer for a product, and querying trade data with it returns vast
+  unclassified totals that look like real product figures.
+- **`isValidHsCode` is deliberately strict** (exact match, no walking up to the
+  parent). Comtrade silently ignores a `cmdCode` it doesn't recognise and returns
+  TOTAL trade instead — so a bogus code produces a plausible, product-specific-looking
+  answer that is actually the country's entire trade. All four trade tools guard on it.
+
+**Known limitation:** keyword search cannot bridge vocabulary gaps — HS says "base
+metal" where a manufacturer says "brass". The model can re-search with better wording,
+and the user sees the chosen code and can correct it, but closing this properly needs
+Phase 2 (pgvector embeddings + an Indian trade-vernacular alias table).
 
 `getTradeTrend`: leave `partnerIso` **empty** for market-demand questions — it then
 trends the country's total trade with the world, which has far better coverage than
@@ -357,14 +389,23 @@ before any investor demo or launch.
 (the model intermittently emits `"limit": "5"` as a string). `completeResiliently()`
 retries with a type-correction nudge, then drops tools rather than failing.
 
-**5. The WebGL globe blocks headless screenshots.** Use Chrome DevTools Protocol with
+**⚠️ 5. Hindi replies degenerate.** Asked in Hindi, Saathi understands correctly and
+calls the right tools — but when writing Devanagari **after a long English tool
+context** it loops: one run produced 4,747 characters built from 10 distinct symbols
+and zero Devanagari. The model is not the limit — called directly it writes Devanagari
+fine — so this is a decoding failure, not a capability one. `frequency_penalty: 0.3`
+is in place as the standard mitigation but is **UNVERIFIED** (quota ran out). If it
+proves insufficient, the fix is a different model for non-Latin output. Multilingual
+is a flagship claim, so treat this as blocking for that promise.
+
+**6. The WebGL globe blocks headless screenshots.** Use Chrome DevTools Protocol with
 scroll-through (to fire `whileInView` reveals) rather than `--screenshot`.
 
-**6. Copy discrepancy — reconcile before launch.** The homepage says *"Trusted by 50+
+**7. Copy discrepancy — reconcile before launch.** The homepage says *"Trusted by 50+
 manufacturers across Maharashtra"* while investor materials say **5 pilot
 manufacturers**. Pick one truthful number.
 
-**7. Site copy still reflects v1 positioning** ("AI-Powered Export Infrastructure",
+**8. Site copy still reflects v1 positioning** ("AI-Powered Export Infrastructure",
 feature-led) while the investor narrative has moved to the wedge-first framing in §1.
 
 ---

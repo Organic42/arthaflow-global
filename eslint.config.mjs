@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated deploy output, not source. `next lint` excluded build
+    // directories implicitly; the ESLint CLI that replaced it in Next 16 does
+    // not, and these alone contributed 8,705 of 8,737 reported problems.
+    ".netlify/**",
+    ".vercel/**",
   ]),
 ]);
 

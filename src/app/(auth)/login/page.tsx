@@ -21,7 +21,7 @@ function GoogleIcon() {
 
 const bullets = [
   "AI-generated export documents in 30 seconds",
-  "Verified buyer connections in 50+ countries",
+  "Market demand from official UN Comtrade and World Bank data",
   "End-to-end logistics orchestration",
 ];
 
@@ -157,7 +157,7 @@ function LoginContent() {
             ))}
           </div>
           <p className="text-[13px] text-white/40">
-            Trusted by 50+ manufacturers in Maharashtra
+            Live with 5 pilot manufacturers in Pune
           </p>
         </div>
       </div>

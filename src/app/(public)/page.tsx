@@ -142,7 +142,7 @@ export default function HomePage() {
               </MagneticButton>
             </div>
             <p className="mt-5 text-[13px] text-white/45">
-              Trusted by 50+ manufacturers across Maharashtra
+              Live with 5 pilot manufacturers in Pune
             </p>
           </div>
 
@@ -500,7 +500,7 @@ export default function HomePage() {
             </div>
           </div>
           <p className="mt-8 text-[13px] text-text-muted">
-            Trusted by manufacturers in Pune · Mumbai · Nashik · Aurangabad
+            Working with manufacturers across Pune&apos;s industrial belt
           </p>
         </div>
       </section>
@@ -513,8 +513,8 @@ export default function HomePage() {
             Ready to Start Exporting?
           </h2>
           <p className="mb-8 text-[17px] text-white/70">
-            Join 50+ manufacturers already growing their business
-            internationally with ArthaFlow.
+            We are onboarding our first manufacturers now. Start free — no card,
+            no commitment.
           </p>
           <MagneticButton>
             <Link href="/login">

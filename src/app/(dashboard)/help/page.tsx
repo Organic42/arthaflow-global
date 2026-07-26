@@ -102,12 +102,12 @@ const faqSections: FAQSection[] = [
     bg: "bg-gold-bg",
     faqs: [
       {
-        q: "How does ArthaFlow find buyers for my products?",
-        a: "ArthaFlow maintains a network of verified international buyers across 50+ countries. Our matching algorithm connects buyers' requirements (product type, specifications, quantity, certifications) with manufacturers in our network. When a buyer's needs match your products, you'll receive an inquiry notification.",
+        q: "How does ArthaFlow help me find buyers?",
+        a: "We start with demand, not contacts. ArthaFlow classifies your product to its HS code and then uses official UN Comtrade and World Bank trade data to show which countries import it, in what volume, and whether that demand is growing — so you know which markets are worth pursuing. Direct buyer introductions are being built out with our early customers and are not live yet.",
       },
       {
-        q: "Are the buyers verified?",
-        a: "Yes. All buyers on ArthaFlow go through a verification process that includes business registration check, trade history verification, and credit assessment. You'll see verification badges and buyer details (sector, years active, country) on each inquiry to help you make informed decisions.",
+        q: "Do you have a verified buyer network?",
+        a: "Not yet, and we would rather say so than imply otherwise. We are an early-stage company building this with our first pilot manufacturers. What is live today is market intelligence: which countries buy your product, at what value, and who your competition is — all traceable to official trade sources. Buyer verification is on the roadmap and we will describe exactly how it works when it ships.",
       },
       {
         q: "What happens when I click 'I'm Interested' on an inquiry?",

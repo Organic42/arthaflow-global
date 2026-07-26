@@ -14,9 +14,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated deploy output, not source. `next lint` excluded build
     // directories implicitly; the ESLint CLI that replaced it in Next 16 does
-    // not, and these alone contributed 8,705 of 8,737 reported problems.
-    ".netlify/**",
+    // not, so they have to be listed.
     ".vercel/**",
+    // Agent worktrees are full checkouts of this repo. Without this, every
+    // problem in src/ is reported twice — once here, once in the copy.
+    ".claude/**",
   ]),
 ]);
 

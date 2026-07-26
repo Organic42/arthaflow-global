@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ChatBot } from "@/components/arthaflow/chat-bot";
 import { JsonLdScript } from "@/components/arthaflow/json-ld";
 import { organizationSchema, websiteSchema } from "@/lib/seo/structured-data";
@@ -76,6 +77,7 @@ export default function RootLayout({
         {children}
         <ChatBot />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

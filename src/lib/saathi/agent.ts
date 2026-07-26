@@ -33,6 +33,7 @@ import {
   getTradeTrend,
   type ToolResult,
 } from "@/lib/comtrade/tools";
+import { HS_TOOLS, classifyProduct, lookupHs } from "@/lib/hs/tool";
 
 // A 70B model handles multi-step tool reasoning far better than the 8B chat
 // model the old endpoint used. Still fast and cheap on Groq.
@@ -52,10 +53,16 @@ const TOOL_FNS: Record<string, AnyToolFn> = {
   getIndiaExports,
   getTopExporters,
   getTradeTrend,
+  // HS lookups are synchronous and served from bundled data; wrap so the
+  // dispatch loop can await them uniformly.
+  classifyProduct: async (a) => classifyProduct(a),
+  lookupHs: async (a) => lookupHs(a),
 };
 
+const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS];
+
 // Adapt our plain schemas to Groq's { type:"function", function:{...} } shape.
-const GROQ_TOOLS: ChatCompletionTool[] = TRADE_TOOLS.map((t) => ({
+const GROQ_TOOLS: ChatCompletionTool[] = ALL_TOOLS.map((t) => ({
   type: "function",
   function: {
     name: t.name,
@@ -84,7 +91,14 @@ function buildSystemPrompt(ctx: SaathiContext): string {
     "LANGUAGE — always reply in the SAME language the user wrote to you in. Hindi in → reply in natural Hindi (Devanagari). Marathi, Gujarati, Tamil, Bengali etc. likewise. Only use English if the user wrote in English. Whatever the language, keep HS codes, country names and currency figures accurate and unchanged. Take extra care to identify the product correctly when the message is not in English — translate the product to its English trade term first, then pick the HS code.",
     "Your job: turn real global trade data into clear, confident, factory-floor-friendly guidance about WHERE in the world a manufacturer can sell their product, WHO their competition is, and WHETHER demand is growing.",
     "",
-    "TOOLS — you can call trade-data tools to get real UN Comtrade figures. Use them whenever a question is about markets, demand, destinations, competitors, or trends. When a manufacturer names a product but not an HS code, infer the most likely HS code, tell them which code you used, and offer to refine it.",
+    "TOOLS — you can call trade-data tools to get real UN Comtrade figures. Use them whenever a question is about markets, demand, destinations, competitors, or trends.",
+    "",
+    "HS CODES — NEVER write an HS code from your own knowledge. You are frequently wrong about them, and every trade figure you report is derived from the code, so a wrong code produces a confidently wrong answer. The rules:",
+    "  1. When the user names a product rather than a code, call classifyProduct FIRST and pick one code from the list it returns. You may not use any code that is not in that list.",
+    "  2. When the user supplies a code themselves, call lookupHs to confirm it exists and means what they think.",
+    "  3. If none of the candidates fit, say so plainly and ask for the material and the product's use — do not settle for the closest-looking option. You may call classifyProduct again with better wording (e.g. the formal trade term, or the material rather than the alloy: HS says 'base metal' where a manufacturer says 'brass').",
+    "  4. Always tell the user which code you used and what it covers, e.g. 'using HS 420221 — leather handbags'. Invite them to correct it; they know their product better than the nomenclature does.",
+    "  5. These are 6-digit international codes. India's ITC-HS is 8 digits, and the last two (the Indian tariff line) are NOT something you can determine — say they must be confirmed with DGFT or a customs broker. Never invent them.",
     "",
     "ABSOLUTE RULE — every country name, market ranking, dollar figure, share, or growth number you state MUST come from a successful tool result in THIS conversation. You are strictly forbidden from listing export markets, competitors, or trade figures from your own training knowledge. If a tool returns an error or no data, you MUST NOT substitute a guess — do not name any countries at all. Instead, tell the user the trade data is temporarily unavailable and ask them to try again shortly (or suggest a broader HS code / different year). It is far better to say 'I couldn't pull that data right now' than to give a plausible-sounding but unverified answer.",
     "",
@@ -231,6 +245,12 @@ export async function runSaathi(
       messages,
       temperature: 0.4,
       max_tokens: 1200,
+      // Guards against degenerate repetition. Writing Devanagari after a long
+      // English tool context reliably sent the model into a loop — it emitted
+      // 4,700 characters built from 10 distinct symbols. The model produces
+      // Hindi fine in isolation, so this is a decoding failure, not a
+      // capability one, and a frequency penalty is the standard remedy.
+      frequency_penalty: 0.3,
       tools: lastRound ? undefined : GROQ_TOOLS,
       tool_choice: lastRound ? undefined : "auto",
     });

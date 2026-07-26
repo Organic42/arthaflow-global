@@ -12,6 +12,7 @@
 import { comtradeQuery, type ComtradeResult, type ComtradeRecord } from "./client";
 import { findByM49, COUNTRIES } from "./countries";
 import { witsIndiaExports } from "@/lib/wits/client";
+import { isValidHsCode } from "@/lib/hs/classify";
 
 // ── Common shapes ────────────────────────────────────────────────────────────
 
@@ -67,6 +68,22 @@ function errorNarrative(res: Extract<ComtradeResult, { ok: false }>): string {
   }
 }
 
+/**
+ * Reject codes that don't exist in the nomenclature before spending an API
+ * call on them. A bogus code otherwise returns NO_DATA, which reads as "no
+ * trade happens here" rather than "that code isn't real".
+ */
+function badHsCode(hsCode: string): ToolError | null {
+  if (isValidHsCode(hsCode)) return null;
+  return {
+    ok: false,
+    error: `HS ${hsCode} is not a valid code.`,
+    narrative:
+      `HS ${hsCode} does not exist in the HS 2022 nomenclature. Call classifyProduct ` +
+      `to find the right code for the product instead of guessing.`,
+  };
+}
+
 function currentDataYear(): number {
   // Comtrade annual data lags: the most recent year is usually incomplete or
   // unpublished across most reporters. Year-minus-2 is the sweet spot where
@@ -103,6 +120,9 @@ export interface TopImportersData {
 export async function getTopImporters(
   args: GetTopImportersArgs
 ): Promise<ToolResult<TopImportersData>> {
+  const invalid = badHsCode(args.hsCode);
+  if (invalid) return invalid;
+
   const year = args.year ?? currentDataYear();
   const limit = args.limit ?? 5;
 
@@ -344,6 +364,9 @@ async function indiaExportsViaMirror(
 export async function getIndiaExports(
   args: GetIndiaExportsArgs
 ): Promise<ToolResult<IndiaExportsData>> {
+  const invalid = badHsCode(args.hsCode);
+  if (invalid) return invalid;
+
   const year = args.year ?? currentDataYear();
   const limit = args.limit ?? 5;
 
@@ -429,6 +452,9 @@ export interface TopExportersData {
 export async function getTopExporters(
   args: GetTopExportersArgs
 ): Promise<ToolResult<TopExportersData>> {
+  const invalid = badHsCode(args.hsCode);
+  if (invalid) return invalid;
+
   const year = args.year ?? currentDataYear();
   const limit = args.limit ?? 5;
 
@@ -536,6 +562,9 @@ export interface TradeTrendData {
 export async function getTradeTrend(
   args: GetTradeTrendArgs
 ): Promise<ToolResult<TradeTrendData>> {
+  const invalid = badHsCode(args.hsCode);
+  if (invalid) return invalid;
+
   const { COUNTRIES: _c } = await import("./countries");
   const reporter = _c.find((c) => c.iso3 === args.reporterIso.toUpperCase());
   if (!reporter) {

@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# ...but the placeholder template is safe to commit and helps onboarding.
+!.env.example

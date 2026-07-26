@@ -3,6 +3,8 @@ import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { ChatBot } from "@/components/arthaflow/chat-bot";
+import { JsonLdScript } from "@/components/arthaflow/json-ld";
+import { organizationSchema, websiteSchema } from "@/lib/seo/structured-data";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-heading",
@@ -22,14 +24,16 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+const SITE_DESCRIPTION =
+  "Tech-enabled export infrastructure for India's MSME manufacturers. Classify HS codes, generate export documents, and find the markets that want your product.";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://arthaflowglobal.com"),
   title: {
-    default: "ArthaFlow Global — AI-Powered Export Infrastructure",
+    default: "ArthaFlow Global — Export Infrastructure for Indian Manufacturers",
     template: "%s | ArthaFlow Global",
   },
-  description:
-    "Your AI-powered export department — without the overhead. We help Indian manufacturers export products to 50+ countries.",
+  description: SITE_DESCRIPTION,
   keywords: [
     "export",
     "MSME",
@@ -39,10 +43,12 @@ export const metadata: Metadata = {
     "export compliance",
     "buyer matching",
   ],
+  // Every page resolves its own canonical against metadataBase. Without this
+  // the apex and www forms of a URL can both be indexed as separate pages.
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "ArthaFlow Global — AI-Powered Export Infrastructure",
-    description:
-      "Your AI-powered export department — without the overhead. We help Indian manufacturers export products to 50+ countries.",
+    title: "ArthaFlow Global — Export Infrastructure for Indian Manufacturers",
+    description: SITE_DESCRIPTION,
     url: "https://arthaflowglobal.com",
     siteName: "ArthaFlow Global",
     locale: "en_IN",
@@ -50,9 +56,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ArthaFlow Global — AI-Powered Export Infrastructure",
-    description:
-      "Your AI-powered export department — without the overhead. We help Indian manufacturers export products to 50+ countries.",
+    title: "ArthaFlow Global — Export Infrastructure for Indian Manufacturers",
+    description: SITE_DESCRIPTION,
   },
 };
 
@@ -67,6 +72,7 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
     >
       <body className="min-h-screen bg-background text-text-body">
+        <JsonLdScript data={[organizationSchema, websiteSchema]} />
         {children}
         <ChatBot />
         <Analytics />

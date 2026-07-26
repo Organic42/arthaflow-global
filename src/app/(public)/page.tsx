@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLdScript } from "@/components/arthaflow/json-ld";
+import { softwareSchema } from "@/lib/seo/structured-data";
 import { Button } from "@/components/ui/button";
 import { HoverCard } from "@/components/arthaflow/hover-card";
 import { ProgressBar } from "@/components/arthaflow/progress-bar";
@@ -91,9 +94,20 @@ const features = [
   { icon: <Shield size={20} />, title: "Compliance Tracker", desc: "Step-by-step IEC registration, AD code setup, DGFT compliance guidance", bg: "bg-gold-bg", color: "text-[#92710A]" },
 ];
 
+export const metadata: Metadata = {
+  // Leads on the problem rather than the company: the searcher does not know
+  // our name yet, they know they cannot export.
+  title:
+    "Export Infrastructure for Indian Manufacturers — HS Codes, Documents, Markets",
+  description:
+    "India has 57M+ MSMEs and fewer than 0.3% export. ArthaFlow classifies your HS code, generates every export document, and shows you which markets want your product.",
+  alternates: { canonical: "/" },
+};
+
 export default function HomePage() {
   return (
     <>
+      <JsonLdScript data={softwareSchema} />
       {/* GLOBE HERO */}
       <section className="relative overflow-hidden bg-navy">
         <div className="relative mx-auto max-w-[840px] px-6 pt-14 sm:px-8">
@@ -107,8 +121,9 @@ export default function HomePage() {
               <span className="text-artha-gold">Without The Overhead</span>
             </h1>
             <p className="mb-7 max-w-[540px] text-base leading-relaxed text-white/70 sm:text-lg">
-              We help Indian manufacturers export products to 50+ countries. AI
-              documentation, buyer matching, logistics — all handled.
+              India has 57M+ MSMEs and fewer than 0.3% export. We classify your
+              HS code, generate every export document, and show you which
+              markets actually want your product.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <MagneticButton>

@@ -243,10 +243,34 @@ returned shortlist. Three things worth knowing:
   TOTAL trade instead — so a bogus code produces a plausible, product-specific-looking
   answer that is actually the country's entire trade. All four trade tools guard on it.
 
-**Known limitation:** keyword search cannot bridge vocabulary gaps — HS says "base
-metal" where a manufacturer says "brass". The model can re-search with better wording,
-and the user sees the chosen code and can correct it, but closing this properly needs
-Phase 2 (pgvector embeddings + an Indian trade-vernacular alias table).
+**The alias layer** (`src/lib/hs/aliases.ts`) bridges two gaps keyword search alone
+cannot:
+
+- **Language.** HS text is English only, and the tokeniser used to strip everything
+  non-ASCII — so Devanagari input produced *zero* tokens and matched nothing, failing
+  exactly the users the multilingual promise targets. Indic scripts now survive
+  tokenisation and the alias table translates them: "चमड़े के बैग" → 420221.
+- **Vocabulary.** A manufacturer says "brass"; the nomenclature says "base metal".
+  Single-word aliases carry `ALIAS_WEIGHT` (0.55), below the user's literal words.
+- **Function vs material.** HS classifies many goods by what they *do*, not what they
+  are made of, and a material word drags the search the wrong way. `PHRASE_ALIASES`
+  matches adjacent token pairs ("door handle", "auto part") at `PHRASE_WEIGHT` (0.85),
+  since a two-word product name is stronger evidence than either word alone.
+
+Add entries when a lookup visibly fails — that is the signal. Expansions are weighted
+below literal matches precisely so the table broadens recall without hijacking queries.
+
+**Known limitation:** for a query like "brass door handles" the raw-copper codes still
+outrank 8302 (builders' fittings) on lexical grounds, because "brass" appears literally
+in the chapter-74 descriptions. The correct family does reach the shortlist (rank ~7 of
+8), so the model can still choose it — this is why `classifyProduct` returns a
+shortlist rather than one answer. Closing it properly needs embeddings.
+
+**Phase 2 remainder — NOT built.** pgvector semantic search is blocked twice over: the
+migration cannot be applied (see §9.2, same service-role gap as `trade_cache`), and no
+embedding provider is configured (Groq serves no embedding endpoint, so it needs a new
+key). When both are resolved, embeddings on the same data would subsume most of the
+alias table.
 
 `getTradeTrend`: leave `partnerIso` **empty** for market-demand questions — it then
 trends the country's total trade with the world, which has far better coverage than

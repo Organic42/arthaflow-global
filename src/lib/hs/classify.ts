@@ -22,6 +22,12 @@
  */
 
 import raw from "./hs-codes.json";
+import {
+  aliasesFor,
+  phraseAliasesFor,
+  ALIAS_WEIGHT,
+  PHRASE_WEIGHT,
+} from "./aliases";
 
 interface RawEntry {
   c: string; // code
@@ -62,12 +68,24 @@ const STOPWORDS = new Set([
   "make", "makes", "making", "manufacture", "manufacturing", "produce",
 ]);
 
+/**
+ * Ranges kept alongside a-z0-9 so vernacular product names survive
+ * tokenisation: Devanagari (Hindi/Marathi), Bengali, Gujarati, Tamil, Telugu,
+ * Kannada, Malayalam. Previously everything non-ASCII was replaced with
+ * whitespace, so a Hindi query produced zero tokens and matched nothing.
+ *
+ * These characters never appear in the English nomenclature, so they only ever
+ * enter a query — where the alias table translates them.
+ */
+const KEEP =
+  /[^a-z0-9ऀ-ॿঀ-৿઀-૿஀-௿ఀ-౿ಀ-೿ഀ-ൿ\s]/g;
+
 function tokenize(s: string): string[] {
   return s
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(KEEP, " ")
     .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+    .filter((w) => w.length > 1 && !STOPWORDS.has(w));
 }
 
 /**
@@ -140,6 +158,53 @@ function buildIndex() {
   OWN_TERMS = own;
 }
 
+// ── Query expansion ──────────────────────────────────────────────────────────
+
+interface QueryTerm {
+  term: string;
+  weight: number;
+}
+
+/**
+ * Turn a raw user query into weighted search terms, bringing in vernacular and
+ * vocabulary bridges from the alias table.
+ *
+ * "brass door handles" contributes brass/door/handle at full weight plus
+ * copper, zinc, base, metal, mounting, fitting at ALIAS_WEIGHT — which is what
+ * lets it reach 8302, whose text shares no word with the query.
+ * "चमड़े के बैग" contributes only aliases, since none of its characters occur
+ * in the English nomenclature.
+ */
+function expandQuery(query: string): QueryTerm[] {
+  const out = new Map<string, number>();
+  const add = (t: string, w: number) => {
+    const k = fold(t);
+    if (k.length < 2) return;
+    out.set(k, Math.max(out.get(k) ?? 0, w)); // strongest weight wins
+  };
+
+  const tokens = tokenize(query);
+
+  // Phrases first — they are stronger evidence than either word alone, and
+  // decide material-vs-function cases like "door handle".
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const pair =
+      phraseAliasesFor(tokens[i], tokens[i + 1]) ??
+      phraseAliasesFor(fold(tokens[i]), fold(tokens[i + 1]));
+    if (pair) for (const e of pair) add(e, PHRASE_WEIGHT);
+  }
+
+  for (const raw of tokens) {
+    add(raw, 1);
+    // Try the token as typed and its folded form, so both "handles" and
+    // "handle" resolve against the table.
+    const expansions = aliasesFor(raw) ?? aliasesFor(fold(raw));
+    if (expansions) for (const e of expansions) add(e, ALIAS_WEIGHT);
+  }
+
+  return [...out].map(([term, weight]) => ({ term, weight }));
+}
+
 // ── Search ───────────────────────────────────────────────────────────────────
 
 export interface SearchOptions {
@@ -164,23 +229,29 @@ export function searchHsCodes(
   buildIndex();
   const limit = opts.limit ?? 12;
 
-  const qTokens = [...new Set(tokenize(query).map(fold))];
-  if (qTokens.length === 0) return [];
+  const qTerms = expandQuery(query);
+  if (qTerms.length === 0) return [];
+
+  // Only terms the nomenclature actually contains can contribute. Coverage is
+  // measured against these, not the raw query — otherwise a Hindi word (which
+  // never appears in the English text) would permanently depress every score.
+  const effective = qTerms.filter((q) => INDEX!.has(q.term));
+  if (effective.length === 0) return [];
+  const totalWeight = effective.reduce((s, q) => s + q.weight, 0);
 
   const N = ENTRIES.length;
   const scores = new Map<number, number>();
   const matched = new Map<number, number>();
 
-  for (const t of qTokens) {
-    const postings = INDEX!.get(t);
-    if (!postings || postings.length === 0) continue;
+  for (const { term, weight } of effective) {
+    const postings = INDEX!.get(term)!;
     // Rare terms discriminate; common ones barely move the needle.
     const idf = Math.log(1 + N / postings.length);
     for (const i of postings) {
       // Own-text hits outrank hits inherited from an ancestor heading.
-      const w = OWN_TERMS![i].has(t) ? 1 : INHERITED_WEIGHT;
-      scores.set(i, (scores.get(i) ?? 0) + idf * w);
-      matched.set(i, (matched.get(i) ?? 0) + w);
+      const docW = OWN_TERMS![i].has(term) ? 1 : INHERITED_WEIGHT;
+      scores.set(i, (scores.get(i) ?? 0) + idf * docW * weight);
+      matched.set(i, (matched.get(i) ?? 0) + docW * weight);
     }
   }
 
@@ -202,7 +273,7 @@ export function searchHsCodes(
     let s = base;
 
     // Reward covering more of what the user actually said.
-    s *= 0.5 + 0.5 * ((matched.get(i) ?? 0) / qTokens.length);
+    s *= 0.5 + 0.5 * ((matched.get(i) ?? 0) / totalWeight);
 
     // Shorter descriptions matching the same terms are more specific.
     const len = DOC_TOKENS![i].length || 1;
@@ -214,7 +285,7 @@ export function searchHsCodes(
 
     // Direct phrase appearance is a strong signal.
     const descLower = e.t.toLowerCase();
-    for (const t of qTokens) if (descLower.includes(t)) s *= 1.05;
+    for (const { term } of effective) if (descLower.includes(term)) s *= 1.05;
 
     ranked.push({ i, s });
   }

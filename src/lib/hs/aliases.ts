@@ -57,6 +57,39 @@ export const PHRASE_ALIASES: Record<string, string[]> = {
 /** Weight for a matched phrase — above a single-word alias, below a literal term. */
 export const PHRASE_WEIGHT = 0.85;
 
+/**
+ * Words marking an entry as a raw or semi-finished MATERIAL rather than a
+ * finished article: unwrought metal, wire, bar, tube, sheet, scrap.
+ *
+ * These exist to undo damage done by the material aliases above. "brass"
+ * expands to copper/zinc/base/metal/alloy so that "brass door handles" can
+ * reach 8302, whose text never says "brass". But those same expansions match
+ * chapter 74 far more strongly — "Copper; copper-zinc base alloys (brass)
+ * unwrought" contains almost every expanded term in a very short description,
+ * so it outscores the correct answer. Measured on "brass door handles", the
+ * five top hits were all raw copper and the right code ranked seventh.
+ *
+ * The signal that resolves it: a matched PHRASE means the user described a
+ * finished article by its function. Nobody types "door handle" meaning wire
+ * stock. So when a phrase matches, raw-form entries are demoted — see
+ * RAW_FORM_DEMOTION. Terms are stored folded (plural stripped) to match how
+ * the index keys them.
+ */
+export const RAW_FORM_TERMS = new Set([
+  "unwrought", "wire", "bar", "rod", "profile", "strip", "plate", "sheet",
+  "foil", "tube", "pipe", "powder", "flake", "granule", "waste", "scrap",
+  "ingot", "billet", "block", "lump", "matte", "alloy", "unrefined",
+  "refined", "wrought",
+]);
+
+/**
+ * Multiplier applied to a raw-material entry when the query carried a phrase
+ * alias. Deliberately a demotion, not an exclusion: a manufacturer really can
+ * sell brass bar, and if they typed something that matched no phrase this
+ * never fires at all.
+ */
+export const RAW_FORM_DEMOTION = 0.45;
+
 /** Map of user term → nomenclature terms it should also match. */
 export const ALIASES: Record<string, string[]> = {
   // ── Devanagari (Hindi / Marathi) ──────────────────────────────────────────

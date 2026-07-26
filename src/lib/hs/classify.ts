@@ -27,6 +27,8 @@ import {
   phraseAliasesFor,
   ALIAS_WEIGHT,
   PHRASE_WEIGHT,
+  RAW_FORM_TERMS,
+  RAW_FORM_DEMOTION,
 } from "./aliases";
 
 interface RawEntry {
@@ -175,8 +177,9 @@ interface QueryTerm {
  * "चमड़े के बैग" contributes only aliases, since none of its characters occur
  * in the English nomenclature.
  */
-function expandQuery(query: string): QueryTerm[] {
+function expandQuery(query: string): { terms: QueryTerm[]; phraseMatched: boolean } {
   const out = new Map<string, number>();
+  let phraseMatched = false;
   const add = (t: string, w: number) => {
     const k = fold(t);
     if (k.length < 2) return;
@@ -191,7 +194,10 @@ function expandQuery(query: string): QueryTerm[] {
     const pair =
       phraseAliasesFor(tokens[i], tokens[i + 1]) ??
       phraseAliasesFor(fold(tokens[i]), fold(tokens[i + 1]));
-    if (pair) for (const e of pair) add(e, PHRASE_WEIGHT);
+    if (pair) {
+      phraseMatched = true;
+      for (const e of pair) add(e, PHRASE_WEIGHT);
+    }
   }
 
   for (const raw of tokens) {
@@ -202,7 +208,10 @@ function expandQuery(query: string): QueryTerm[] {
     if (expansions) for (const e of expansions) add(e, ALIAS_WEIGHT);
   }
 
-  return [...out].map(([term, weight]) => ({ term, weight }));
+  return {
+    terms: [...out].map(([term, weight]) => ({ term, weight })),
+    phraseMatched,
+  };
 }
 
 // ── Search ───────────────────────────────────────────────────────────────────
@@ -229,7 +238,7 @@ export function searchHsCodes(
   buildIndex();
   const limit = opts.limit ?? 12;
 
-  const qTerms = expandQuery(query);
+  const { terms: qTerms, phraseMatched } = expandQuery(query);
   if (qTerms.length === 0) return [];
 
   // Only terms the nomenclature actually contains can contribute. Coverage is
@@ -286,6 +295,18 @@ export function searchHsCodes(
     // Direct phrase appearance is a strong signal.
     const descLower = e.t.toLowerCase();
     for (const { term } of effective) if (descLower.includes(term)) s *= 1.05;
+
+    // A matched phrase means the user described a finished article by what it
+    // DOES. Raw and semi-finished material entries are then almost certainly
+    // wrong, however well their words happen to line up — see RAW_FORM_TERMS.
+    if (phraseMatched) {
+      for (const t of OWN_TERMS![i]) {
+        if (RAW_FORM_TERMS.has(t)) {
+          s *= RAW_FORM_DEMOTION;
+          break;
+        }
+      }
+    }
 
     ranked.push({ i, s });
   }

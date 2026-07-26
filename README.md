@@ -73,6 +73,7 @@ trigger.
 | `npm run build` | Production build |
 | `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
+| `npm run test:hs` | HS retrieval regression check — run after touching `src/lib/hs/` |
 | `ANALYZE=true npm run build` | Bundle composition report |
 | `node scripts/build-hs-codes.mjs` | Regenerate the bundled HS nomenclature |
 

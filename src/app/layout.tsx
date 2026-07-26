@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ChatBot } from "@/components/arthaflow/chat-bot";
 
 const spaceGrotesk = Space_Grotesk({
@@ -70,6 +71,7 @@ export default function RootLayout({
         {children}
         <ChatBot />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -73,22 +73,29 @@ export const softwareSchema: JsonLd = {
   offers: [
     {
       "@type": "Offer",
-      name: "Starter",
+      name: "Free",
       price: "0",
       priceCurrency: "INR",
-      description: "For manufacturers exploring exports.",
+      description: "See if your product has a market.",
+    },
+    {
+      "@type": "Offer",
+      name: "Starter",
+      price: "1500",
+      priceCurrency: "INR",
+      description: "For manufacturers taking the first step.",
     },
     {
       "@type": "Offer",
       name: "Growth",
-      price: "9999",
+      price: "3500",
       priceCurrency: "INR",
-      description: "For active exporters.",
+      description: "For manufacturers actively exporting.",
     },
     {
       "@type": "Offer",
-      name: "Managed",
-      price: "29999",
+      name: "Enterprise",
+      price: "8000",
       priceCurrency: "INR",
       description: "Full-service export partner.",
     },
@@ -102,15 +109,23 @@ export const pricingFaqSchema: JsonLd = {
   mainEntity: [
     {
       q: "Is there really a free plan?",
-      a: "Yes. The Starter plan is free forever and includes 3 AI document generations per month, HS code classification, and your export readiness score. No credit card required.",
+      a: "Yes. The Free plan stays free and includes 3 AI document generations a month, HS code classification, your export readiness score, and 10 Export Saathi questions. No credit card required.",
+    },
+    {
+      q: "Why are you more expensive than a lookup tool?",
+      a: "Because we do a different job. Tools that cost a few hundred rupees a month answer a question — a code, a duty rate. We produce the output: the classified product, every compliance document, and the market analysis behind where to sell it, in your own language. Our subscription is also the entry point rather than the whole relationship — as you begin shipping, we handle freight, insurance and trade finance alongside you.",
     },
     {
       q: 'What counts as an "AI Document"?',
-      a: "Product export sheets, HS code classification reports, and proforma invoices. Each generation counts as one document on the Starter plan; Growth and Managed are unlimited.",
+      a: "Product export sheets, HS code classification reports, and proforma invoices. Each generation counts as one document on the Free and Starter plans; Growth and Enterprise are unlimited.",
     },
     {
-      q: "How does buyer matching work?",
-      a: "We match your verified product catalogue against international buyer demand sourced from trade channels. Available on Growth and Managed plans.",
+      q: "How does Export Saathi find markets for my product?",
+      a: "Saathi classifies your product against the real customs nomenclature, then queries official UN Comtrade and World Bank trade data to show which countries import it, at what value, and whether that demand is growing. Every figure is traceable to its source. It works in Hindi and regional languages.",
+    },
+    {
+      q: "Do you offer one-time help instead of a subscription?",
+      a: "Yes. A one-time self-export consultation is ₹15,000 — classification, documentation and your first shipment, without an ongoing plan.",
     },
     {
       q: "Can I change plans later?",

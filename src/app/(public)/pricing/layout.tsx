@@ -8,9 +8,9 @@ import { pricingFaqSchema } from "@/lib/seo/structured-data";
  * it — and the FAQ markup, which has to render server-side to be crawlable.
  */
 export const metadata: Metadata = {
-  title: "Pricing — Free to Start, ₹9,999/mo to Scale",
+  title: "Pricing — Free to Start, ₹1,500/mo to Export",
   description:
-    "ArthaFlow pricing for Indian exporters. Start free with 3 AI documents a month, HS code classification and an export readiness score. No credit card required.",
+    "ArthaFlow pricing for Indian exporters. Start free with 3 AI documents a month, HS code classification and an export readiness score. Paid plans from ₹1,500/month. No credit card required.",
   alternates: { canonical: "/pricing" },
 };
 

@@ -181,7 +181,7 @@ export default function PricingPage() {
         </div>
 
         {/* FAQ */}
-        <div className="mx-auto mt-18 max-w-[720px]">
+        <div className="mx-auto mt-18 max-w-[720px]" id="faq">
           <h2 className="mb-8 text-center text-2xl font-extrabold tracking-tight text-text-heading">
             Frequently Asked Questions
           </h2>

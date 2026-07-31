@@ -9,6 +9,9 @@ import { ThemeToggle } from "@/components/arthaflow/theme-toggle";
 
 const links = [
   { href: "/#how-it-works", label: "How It Works" },
+  // Placed before Pricing on purpose: it is free, needs no sign-up, and is the
+  // fastest way for a manufacturer to see whether we are useful to them.
+  { href: "/calculator", label: "Calculator" },
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
 ];

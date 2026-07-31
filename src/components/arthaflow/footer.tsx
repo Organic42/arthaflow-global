@@ -7,10 +7,12 @@ const productLinks = [
   { label: "Logistics", href: "/shipments" },
 ];
 const resourceLinks = [
+  { label: "Landed Cost Calculator", href: "/calculator" },
   { label: "Blog", href: "/blog" },
-  { label: "Export Guide", href: "#" },
-  { label: "HS Code Lookup", href: "#" },
-  { label: "FAQ", href: "#" },
+  // "HS Code Lookup" and "Export Guide" pointed at "#". The calculator now does
+  // the lookup, so the dead links are gone rather than left promising pages
+  // that do not exist.
+  { label: "FAQ", href: "/pricing#faq" },
 ];
 const companyLinks = [
   { label: "Contact", href: "mailto:info@arthaflowglobal.com" },

@@ -134,15 +134,19 @@ export default function HomePage() {
                 </Link>
               </MagneticButton>
               <MagneticButton strength={0.2}>
-                <Link href="/pricing">
+                {/* Better second action than pricing, which is already in the
+                    nav: this one proves the product works before asking for
+                    anything. */}
+                <Link href="/calculator">
                   <Button size="lg" variant="outline" className="border-white/50 bg-white/10 text-white hover:bg-white/20 hover:border-white/70">
-                    View Pricing
+                    Try the free calculator
                   </Button>
                 </Link>
               </MagneticButton>
             </div>
             <p className="mt-5 text-[13px] text-white/45">
-              Live with 5 pilot manufacturers in Pune
+              Live with 5 pilot manufacturers in Pune · No sign-up needed for the
+              calculator
             </p>
           </div>
 

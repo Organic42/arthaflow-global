@@ -43,10 +43,25 @@ BEGIN
   END IF;
 END $$;
 
--- Optional: cleanup helper (call periodically or via cron)
+-- Optional: cleanup helper (call periodically or via cron).
+--
+-- SECURITY DEFINER because it must delete from a table that RLS denies to
+-- everyone. That makes the search_path a privilege-escalation vector: without
+-- pinning it, a caller could point `public` at a schema of their own and have
+-- this function run their DELETE with the owner's rights. Pinning it to the
+-- empty string forces every reference to be schema-qualified, which is why the
+-- table name below is fully qualified.
 CREATE OR REPLACE FUNCTION public.trade_cache_cleanup()
-RETURNS void AS $$
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
   DELETE FROM public.trade_cache WHERE expires_at < NOW();
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+-- Functions are executable by PUBLIC by default. This one only removes expired
+-- rows, but a SECURITY DEFINER function should never be broader than it needs.
+REVOKE EXECUTE ON FUNCTION public.trade_cache_cleanup() FROM PUBLIC;

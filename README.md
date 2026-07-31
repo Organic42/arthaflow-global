@@ -277,8 +277,31 @@ exported and asserted in the test suite for exactly that reason.
 
 Every caveat that materially moves the number travels **with** the number rather
 than being buried: MFN vs preferential, the duty basis, an unapplied RoDTEP cap,
-excluded destination VAT (often larger than the duty), and an ambiguous drawback
-heading. It is an estimate, never a quote, and the tool result says so.
+and an ambiguous drawback heading. It is an estimate, never a quote, and the tool
+result says so.
+
+### Import VAT — and why it is reported separately
+
+[`vat.ts`](./src/lib/tariff/vat.ts) holds standard VAT/GST rates for 40
+destinations. Two details decide whether this helps or misleads:
+
+**VAT is charged on CIF plus duty**, so it compounds on the duty rather than
+sitting beside it. On our ₹5L shipment to Germany the duty is ₹16,500 and the
+VAT is **₹1,07,635 — 6.5× the duty.** Omitting it was the largest gap in the
+estimate.
+
+**VAT is normally recoverable.** A VAT-registered business buyer reclaims import
+VAT as input tax credit, so for the B2B buyers our manufacturers sell to it is a
+cash-flow cost, not a cost of goods. We therefore report `landedCostInr` (the
+competitiveness number) separately from `cashAtBorderInr` (what the buyer
+fronts), and the agent is forbidden from telling a manufacturer their price is
+uncompetitive because of recoverable VAT. Where it genuinely sticks — Malaysia's
+SST is a sales tax, not a credit-and-refund VAT — `recoverable` is false and the
+narrative says so.
+
+Countries with no import VAT (United States, Hong Kong, Qatar, Kuwait) return
+null **with a reason**, which is a different answer from a country we simply
+hold no rate for.
 
 ---
 

@@ -21,6 +21,7 @@
  */
 
 import { destinationDuty, type DestinationDuty } from "./destination";
+import { assessVat, vatAbsenceReason, VAT_SOURCE, type VatAssessment } from "./vat";
 import { lookupRodtep } from "@/lib/hs/rodtep";
 import { drawbackForHsCode } from "@/lib/hs/drawback";
 
@@ -79,9 +80,17 @@ export interface LandedCostBreakdown {
     dutyBasisValueInr: number;
     dutyRatePct: number;
     dutyInr: number;
+    /**
+     * CIF plus duty. This is the competitiveness number for a B2B sale, because
+     * a VAT-registered buyer reclaims the VAT below.
+     */
     landedCostInr: number;
     /** Landed cost as a multiple of the invoice — the competitiveness number. */
     upliftPct: number;
+    /** Import VAT/GST, or null where the destination levies none. */
+    vat: VatAssessment | null;
+    /** What the buyer actually fronts at the border, VAT included. */
+    cashAtBorderInr: number;
   };
   /** What comes back to the exporter. */
   exporter: {
@@ -170,10 +179,29 @@ export async function landedCost(
   caveats.push(
     `Duty calculated on ${dutyBasis}, which is how ${duty.data.country} assesses it.`
   );
+  // VAT is charged on CIF plus duty — it compounds on the duty rather than
+  // sitting beside it.
+  const vat = assessVat(iso, landed);
+  if (vat) {
+    caveats.push(
+      `${vat.label} of ${vat.ratePct}% applies on top, charged on CIF plus duty, ` +
+        `not on the goods alone. ` +
+        (vat.recoverable
+          ? "A VAT-registered business buyer normally reclaims this as input tax credit, so it is " +
+            "a cash-flow cost rather than a cost of goods — do NOT treat it as making the price " +
+            "uncompetitive."
+          : "This is a sales tax rather than a credit-and-refund VAT, so the buyer cannot reclaim it.") +
+        ` Standard rate only; many countries apply a reduced rate to specific goods. ` +
+        `Source: ${VAT_SOURCE}.`
+    );
+    if (vat.note) caveats.push(vat.note);
+  } else {
+    const reason = vatAbsenceReason(iso);
+    if (reason) caveats.push(reason);
+  }
+
   caveats.push(
-    "Excludes the destination's import VAT or GST, which is often larger than the duty " +
-      "(around 19-21% across the EU, 5% in the UAE), and excludes port, customs-clearance " +
-      "and inland delivery charges."
+    "Excludes port, customs-clearance, demurrage and inland delivery charges at the destination."
   );
 
   // ── Exporter side ──────────────────────────────────────────────────────────
@@ -253,6 +281,8 @@ export async function landedCost(
       dutyInr: inr(dutyAmount),
       landedCostInr: inr(landed),
       upliftPct: inr(((landed - fob) / fob) * 100),
+      vat,
+      cashAtBorderInr: inr(landed + (vat?.amountInr ?? 0)),
     },
     exporter: {
       fobInr: inr(fob),
@@ -285,6 +315,19 @@ export function describe(d: LandedCostBreakdown): string {
     `Made up of ${money(b.fobInr)} goods + ${money(b.freightInr)} freight + ` +
     `${money(b.insuranceInr)} insurance + ${money(b.dutyInr)} duty ` +
     `(${b.dutyRatePct}% on ${b.dutyBasis} of ${money(b.dutyBasisValueInr)}). `;
+
+  if (b.vat) {
+    // Deliberately reported as cash at the border, separate from landed cost.
+    // Folding recoverable VAT into a price comparison makes a competitive quote
+    // look uncompetitive.
+    s +=
+      `${b.vat.label} of ${b.vat.ratePct}% on ${money(b.vat.baseInr)} adds ` +
+      `${money(b.vat.amountInr)}, so the buyer fronts ${money(b.cashAtBorderInr)} at the border` +
+      (b.vat.recoverable
+        ? ` — but reclaims the ${b.vat.label} if VAT-registered, so their real cost stays ` +
+          `${money(b.landedCostInr)}. `
+        : `, and cannot reclaim it. `);
+  }
 
   s += `For the exporter: `;
   if (e.rodtepInr !== null) {

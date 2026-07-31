@@ -34,6 +34,11 @@ import {
   dutyBasisFor,
   landedCost,
 } from "../src/lib/tariff/landed-cost.ts";
+import {
+  assessVat,
+  vatAbsenceReason,
+  vatCoverage,
+} from "../src/lib/tariff/vat.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -282,6 +287,48 @@ check(
   "landed cost refuses a zero or missing invoice value",
   badFob.ok === false,
   "it accepted an invalid FOB"
+);
+
+// ── Destination VAT ──────────────────────────────────────────────────────────
+check(
+  `VAT coverage looks right (${vatCoverage()} countries)`,
+  vatCoverage() > 35,
+  `only ${vatCoverage()} countries`
+);
+
+// VAT compounds on the duty. Charging it on CIF alone understates it by the
+// VAT rate applied to the duty — a silent shortfall on every estimate.
+const deVat = assessVat("DEU", 566500);
+check(
+  "VAT is charged on CIF plus duty, at the right rate",
+  !!deVat && deVat.ratePct === 19 && Math.round(deVat.amountInr) === 107635,
+  `got ${JSON.stringify(deVat)}`
+);
+
+// A recoverable tax must never be reported like a price increase.
+check(
+  "EU VAT is marked recoverable",
+  deVat?.recoverable === true,
+  "German VAT was not marked recoverable"
+);
+check(
+  "Malaysian SST is marked NOT recoverable",
+  assessVat("MYS", 100000)?.recoverable === false,
+  "SST was wrongly marked recoverable"
+);
+
+// "No VAT" and "we don't know" are different answers.
+check(
+  "USA levies no import VAT and says why",
+  assessVat("USA", 100000) === null &&
+    /no VAT/i.test(vatAbsenceReason("USA")),
+  `got "${vatAbsenceReason("USA")}"`
+);
+check(
+  "an unrecorded country is not silently treated as zero-VAT",
+  assessVat("ZZZ", 100000) === null &&
+    /not recorded/i.test(vatAbsenceReason("ZZZ")),
+  `got "${vatAbsenceReason("ZZZ")}"`
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

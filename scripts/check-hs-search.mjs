@@ -26,6 +26,10 @@ import {
   describeDrawback,
   drawbackHeadingCount,
 } from "../src/lib/hs/drawback.ts";
+import {
+  WITS_REPORTERS,
+  supportedDestinations,
+} from "../src/lib/tariff/destination.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -206,6 +210,45 @@ check(
   drawbackForHsCode("7306")?.heading === "7306" &&
     drawbackForHsCode("730630")?.heading === "7306",
   "heading resolution differs by input length"
+);
+
+// ── Destination import duty ──────────────────────────────────────────────────
+// Offline checks only: the country map is the part that silently breaks, and
+// it must not be validated against a live API in a regression run.
+check(
+  `destination coverage looks right (${supportedDestinations().length})`,
+  supportedDestinations().length > 40,
+  `only ${supportedDestinations().length} destinations`
+);
+
+// WITS does not use Comtrade's M49 codes. USA is the one that bites: Comtrade
+// says 842, WITS rejects it and wants 840.
+check(
+  "USA uses the WITS code 840, not Comtrade's 842",
+  WITS_REPORTERS.USA?.code === 840,
+  `got ${WITS_REPORTERS.USA?.code}`
+);
+check(
+  "India resolves to 356",
+  WITS_REPORTERS.IND?.code === 356,
+  `got ${WITS_REPORTERS.IND?.code}`
+);
+
+// Countries TRAINS held no rate for are deliberately absent rather than
+// present-and-broken, so an unsupported destination fails loudly.
+check(
+  "countries with no TRAINS data are omitted, not guessed",
+  !("BEL" in WITS_REPORTERS) && !("AUS" in WITS_REPORTERS),
+  "an unverified country is in the map"
+);
+
+// Every code must be a plausible numeric country code.
+check(
+  "every destination code is a positive integer",
+  Object.values(WITS_REPORTERS).every(
+    (r) => Number.isInteger(r.code) && r.code > 0 && r.code < 1000
+  ),
+  "a code is out of range"
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

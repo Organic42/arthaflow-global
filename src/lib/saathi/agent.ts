@@ -39,6 +39,7 @@ import {
   lookupHs,
   getIndianTariffLines,
 } from "@/lib/hs/tool";
+import { TARIFF_TOOLS, getImportDuty } from "@/lib/tariff/tool";
 
 // A 70B model handles multi-step tool reasoning far better than the 8B chat
 // model the old endpoint used. Still fast and cheap on Groq.
@@ -63,9 +64,10 @@ const TOOL_FNS: Record<string, AnyToolFn> = {
   classifyProduct: async (a) => classifyProduct(a),
   lookupHs: async (a) => lookupHs(a),
   getIndianTariffLines: async (a) => getIndianTariffLines(a),
+  getImportDuty,
 };
 
-const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS];
+const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS, ...TARIFF_TOOLS];
 
 // Adapt our plain schemas to Groq's { type:"function", function:{...} } shape.
 const GROQ_TOOLS: ChatCompletionTool[] = ALL_TOOLS.map((t) => ({
@@ -107,6 +109,8 @@ function buildSystemPrompt(ctx: SaathiContext): string {
     "  5. classifyProduct returns 6-digit international codes. India's ITC-HS is 8 digits. To get the last two, call getIndianTariffLines with the 6-digit code — never invent them, and never state an 8-digit code that did not come from that tool.",
     "  6. CRITICAL — trade-data tools take the 6-DIGIT code only. Passing an 8-digit code to getTopImporters, getTopExporters, getTradeTrend or getIndiaExports is wrong: UN Comtrade does not recognise it and silently returns TOTAL trade for the whole country, which looks like a real product figure and is off by orders of magnitude. Use 8-digit codes only for tariff lines, export policy and documentation.",
     "  7. EXPORT POLICY — when getIndianTariffLines reports a line as Restricted, Prohibited or STE, you MUST say so prominently and quote the condition. A manufacturer planning a shipment of a prohibited good needs to hear that before anything else. Note that DGFT amends this by notification, so tell them to confirm current status before shipping.",
+    "",
+    "IMPORT DUTIES — getImportDuty returns what the DESTINATION country charges the overseas buyer, which is what decides whether your user's price is competitive there. It is NOT India's customs duty, and our user is an exporter, so never answer a duty question with India's rates. The figure is an MFN rate: charged before any trade agreement. India has agreements with the UAE, Japan, Korea, ASEAN and others under which the real rate may be lower or zero, so you MUST label it as MFN, say a preferential rate may apply, and never call it the landed cost. If the destination is not covered, say so and offer one that is — do not estimate.",
     "",
     "ABSOLUTE RULE — every country name, market ranking, dollar figure, share, or growth number you state MUST come from a successful tool result in THIS conversation. You are strictly forbidden from listing export markets, competitors, or trade figures from your own training knowledge. If a tool returns an error or no data, you MUST NOT substitute a guess — do not name any countries at all. Instead, tell the user the trade data is temporarily unavailable and ask them to try again shortly (or suggest a broader HS code / different year). It is far better to say 'I couldn't pull that data right now' than to give a plausible-sounding but unverified answer.",
     "",

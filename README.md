@@ -147,6 +147,7 @@ charts inline in the chat.
 | `classifyProduct` | "What's the HS code for my product?" |
 | `lookupHs` | "Is this code real, and what does it cover?" |
 | `getIndianTariffLines` | "What 8-digit code goes on my shipping bill, and can I legally export it?" |
+| `getImportDuty` | "What duty will my buyer pay to land this in Germany?" |
 | `getTopImporters` | "Where can I sell this?" |
 | `getTopExporters` | "Who am I competing against?" |
 | `getTradeTrend` | "Is demand growing in this market?" |
@@ -232,6 +233,32 @@ leather bags. Attaching a drawback rate to an 8-digit ITC-HS code is a fabricate
 join. We resolve to the heading and return every item under it: **781 headings
 carry a single rate** and answer precisely; the rest return a shortlist with the
 mismatch disclosed, and the tool result forbids the model from picking one.
+
+---
+
+## Destination import duty
+
+**What the buyer pays to land the goods** ([`src/lib/tariff/`](./src/lib/tariff)) —
+the number that decides whether an export is worth making. Germany charges 3% on
+leather handbags; Türkiye charges 33%.
+
+We deliberately do **not** build India's own BCD and IGST. That is what an
+*importer* pays bringing goods into India, and our user is an exporter. It is the
+panel competitors ship because they also serve importers.
+
+Source is UNCTAD TRAINS via WITS — the same service as the India fallback,
+different datasource. 44 destinations, verified individually against a live query.
+
+**WITS does not use Comtrade's country codes.** It wants `840` for the United
+States where Comtrade uses `842`, and rejects ISO-3 outright. Every code in
+`WITS_REPORTERS` was confirmed by a query that returned a real rate; countries
+TRAINS had no data for are omitted rather than guessed, so an unsupported
+destination fails loudly instead of silently returning nothing.
+
+**Rates are MFN** — before any trade agreement. India has agreements with the
+UAE, Japan, Korea, ASEAN and others under which the real rate may be zero, so the
+tool result labels it MFN, says a preference may apply, and forbids presenting it
+as landed cost.
 
 ---
 

@@ -1,0 +1,309 @@
+/**
+ * Landed cost for the buyer, and net realisation for the exporter.
+ *
+ * Everything built in Phases 1 and 2 exists to answer two questions a
+ * manufacturer asks when deciding whether a shipment is worth making:
+ *
+ *   "What will it cost my buyer to land this?"   -> are we price-competitive?
+ *   "What do I actually take home?"              -> is it worth doing?
+ *
+ * The first needs the destination's import duty; the second needs RoDTEP and
+ * Duty Drawback coming back the other way. Competitors answer neither, and the
+ * ones that show a duty show India's — which is what an importer pays, not an
+ * exporter.
+ *
+ * WHAT THIS IS AND IS NOT
+ * It is an estimate built from inputs the user supplies. It is not a quote, not
+ * a customs valuation, and not a substitute for a broker. Every caveat that
+ * materially changes the number is returned with the number rather than buried:
+ * MFN vs preferential, the duty basis, an unapplied RoDTEP cap, destination
+ * VAT, and local charges we do not model.
+ */
+
+import { destinationDuty, type DestinationDuty } from "./destination";
+import { lookupRodtep } from "@/lib/hs/rodtep";
+import { drawbackForHsCode } from "@/lib/hs/drawback";
+
+/**
+ * Whether a country assesses duty on CIF or on FOB.
+ *
+ * Most of the world charges duty on CIF — goods plus freight plus insurance.
+ * The United States and Canada assess on transaction value, which for a normal
+ * export excludes international freight and insurance, so charging duty on CIF
+ * would overstate their duty by several percent of freight. Only countries we
+ * are confident about are listed; everything else defaults to CIF, and the
+ * result says which basis was used.
+ */
+const FOB_BASIS_COUNTRIES = new Set(["USA", "CAN"]);
+
+/**
+ * Which value a destination charges duty on.
+ *
+ * Exported so it can be asserted without a network call — the basis is the
+ * quietest way this calculation can go wrong. Charging Germany's rate on FOB,
+ * or America's on CIF, produces a plausible number that is simply incorrect.
+ */
+export function dutyBasisFor(iso3: string): "CIF" | "FOB" {
+  return FOB_BASIS_COUNTRIES.has(iso3.trim().toUpperCase()) ? "FOB" : "CIF";
+}
+
+export interface LandedCostArgs {
+  /** 6-digit HS code, from classifyProduct. */
+  hsCode: string;
+  /** ISO-3 of the destination, e.g. "DEU". */
+  destinationIso: string;
+  /** Invoice value of the goods, ex-works/FOB, in INR. */
+  fobInr: number;
+  /** International freight in INR. Optional; omitted means CIF cannot be formed. */
+  freightInr?: number;
+  /** Marine insurance in INR. Optional. */
+  insuranceInr?: number;
+  /**
+   * Units shipped. Only needed to apply RoDTEP's per-unit cap — without it the
+   * rebate is computed uncapped and flagged as possibly overstated.
+   */
+  quantity?: number;
+  /** 8-digit ITC-HS line, if known — gives a precise RoDTEP rate. */
+  itcCode?: string;
+}
+
+export interface LandedCostBreakdown {
+  /** What the buyer pays to get the goods to their door, before local taxes. */
+  buyer: {
+    fobInr: number;
+    freightInr: number;
+    insuranceInr: number;
+    cifInr: number;
+    /** The value duty was charged on — CIF or FOB, per the destination. */
+    dutyBasis: "CIF" | "FOB";
+    dutyBasisValueInr: number;
+    dutyRatePct: number;
+    dutyInr: number;
+    landedCostInr: number;
+    /** Landed cost as a multiple of the invoice — the competitiveness number. */
+    upliftPct: number;
+  };
+  /** What comes back to the exporter. */
+  exporter: {
+    fobInr: number;
+    rodtepInr: number | null;
+    rodtepRatePct: number | null;
+    /** True when the per-unit cap could not be applied for want of a quantity. */
+    rodtepCapUnapplied: boolean;
+    drawbackInr: number | null;
+    drawbackRatePct: number | null;
+    /** Set when the drawback heading holds several rates and we refused to pick. */
+    drawbackAmbiguous: boolean;
+    netRealisationInr: number;
+  };
+  destination: DestinationDuty;
+  /** Every caveat that materially moves these numbers. */
+  caveats: string[];
+}
+
+export type LandedCostResult =
+  | {
+      ok: true;
+      data: LandedCostBreakdown;
+      narrative: string;
+      /** True when the destination duty came from cache; the arithmetic is always fresh. */
+      cached: boolean;
+    }
+  | { ok: false; error: string; narrative: string };
+
+const inr = (n: number) => Math.round(n * 100) / 100;
+
+export async function landedCost(
+  args: LandedCostArgs
+): Promise<LandedCostResult> {
+  const fob = Number(args?.fobInr);
+  if (!Number.isFinite(fob) || fob <= 0) {
+    return {
+      ok: false,
+      error: "Invalid FOB value.",
+      narrative:
+        "I need the invoice value of the goods in rupees before I can work out a landed cost.",
+    };
+  }
+
+  const duty = await destinationDuty({
+    destinationIso: args.destinationIso,
+    hsCode: args.hsCode,
+  });
+  if (!duty.ok) {
+    // Propagate the refusal rather than substituting a rate. The destination
+    // module already phrases this as a TOOL_ERROR the model must not paper over.
+    return duty;
+  }
+
+  const caveats: string[] = [];
+
+  const freight = Number(args?.freightInr);
+  const insurance = Number(args?.insuranceInr);
+  const hasFreight = Number.isFinite(freight) && freight >= 0;
+  const hasInsurance = Number.isFinite(insurance) && insurance >= 0;
+
+  const freightVal = hasFreight ? freight : 0;
+  const insuranceVal = hasInsurance ? insurance : 0;
+  const cif = fob + freightVal + insuranceVal;
+
+  if (!hasFreight) {
+    caveats.push(
+      "No freight cost supplied, so this is not a true CIF landed cost — the real figure will be higher."
+    );
+  }
+  if (!hasInsurance) {
+    caveats.push("No marine insurance cost supplied.");
+  }
+
+  // ── Buyer side ─────────────────────────────────────────────────────────────
+  const iso = args.destinationIso.trim().toUpperCase();
+  const dutyBasis = dutyBasisFor(iso);
+  const dutyBase = dutyBasis === "FOB" ? fob : cif;
+  const dutyAmount = (dutyBase * duty.data.mfnRatePct) / 100;
+  const landed = cif + dutyAmount;
+
+  caveats.push(
+    `Duty is the MFN rate (${duty.data.mfnRatePct}%, reported ${duty.data.year}). ` +
+      "India has trade agreements under which the real rate may be lower or zero."
+  );
+  caveats.push(
+    `Duty calculated on ${dutyBasis}, which is how ${duty.data.country} assesses it.`
+  );
+  caveats.push(
+    "Excludes the destination's import VAT or GST, which is often larger than the duty " +
+      "(around 19-21% across the EU, 5% in the UAE), and excludes port, customs-clearance " +
+      "and inland delivery charges."
+  );
+
+  // ── Exporter side ──────────────────────────────────────────────────────────
+  let rodtepInr: number | null = null;
+  let rodtepRatePct: number | null = null;
+  let rodtepCapUnapplied = false;
+
+  const itc = String(args?.itcCode ?? "").replace(/\D/g, "");
+  const rate = itc.length === 8 ? lookupRodtep(itc) : null;
+
+  if (rate) {
+    rodtepRatePct = rate.notifiedRatePct;
+    const uncapped = (fob * rate.notifiedRatePct) / 100;
+    const qty = Number(args?.quantity);
+
+    if (rate.capPerUnitInr !== null) {
+      if (Number.isFinite(qty) && qty > 0) {
+        rodtepInr = Math.min(uncapped, rate.capPerUnitInr * qty);
+      } else {
+        rodtepInr = uncapped;
+        rodtepCapUnapplied = true;
+        caveats.push(
+          `RoDTEP on this line is capped at Rs ${rate.capPerUnitInr} per ${rate.unit || "unit"}. ` +
+            "Without a quantity the cap could not be applied, so the rebate shown may be too high."
+        );
+      }
+    } else {
+      rodtepInr = uncapped;
+    }
+
+    caveats.push(
+      "RoDTEP shown is the NOTIFIED rate. DGFT currently limits benefits to 50% of notified " +
+        "rates and value caps — confirm whether that limitation still applies before relying on it."
+    );
+  } else if (itc.length === 8) {
+    caveats.push(`No RoDTEP rate is scheduled for tariff line ${itc}.`);
+  } else {
+    caveats.push(
+      "No 8-digit tariff line supplied, so RoDTEP could not be calculated. Call " +
+        "getIndianTariffLines to resolve it."
+    );
+  }
+
+  let drawbackInr: number | null = null;
+  let drawbackRatePct: number | null = null;
+  let drawbackAmbiguous = false;
+
+  const dbk = drawbackForHsCode(args.hsCode);
+  if (dbk) {
+    if (dbk.unambiguous) {
+      drawbackRatePct = dbk.items[0].ratePct;
+      drawbackInr = (fob * drawbackRatePct) / 100;
+    } else {
+      // The drawback schedule subdivides differently from ITC-HS. Picking one
+      // rate here would invent a mapping that does not exist.
+      drawbackAmbiguous = true;
+      const rates = dbk.items.map((i) => i.ratePct);
+      caveats.push(
+        `Duty Drawback for heading ${dbk.heading} spans ${Math.min(...rates)}%-${Math.max(...rates)}% ` +
+          "across several drawback items, which do not map one-to-one to ITC-HS lines. " +
+          "It is excluded from this calculation — a customs broker must confirm which item applies."
+      );
+    }
+  }
+
+  const netRealisation = fob + (rodtepInr ?? 0) + (drawbackInr ?? 0);
+
+  const data: LandedCostBreakdown = {
+    buyer: {
+      fobInr: inr(fob),
+      freightInr: inr(freightVal),
+      insuranceInr: inr(insuranceVal),
+      cifInr: inr(cif),
+      dutyBasis,
+      dutyBasisValueInr: inr(dutyBase),
+      dutyRatePct: duty.data.mfnRatePct,
+      dutyInr: inr(dutyAmount),
+      landedCostInr: inr(landed),
+      upliftPct: inr(((landed - fob) / fob) * 100),
+    },
+    exporter: {
+      fobInr: inr(fob),
+      rodtepInr: rodtepInr === null ? null : inr(rodtepInr),
+      rodtepRatePct,
+      rodtepCapUnapplied,
+      drawbackInr: drawbackInr === null ? null : inr(drawbackInr),
+      drawbackRatePct,
+      drawbackAmbiguous,
+      netRealisationInr: inr(netRealisation),
+    },
+    destination: duty.data,
+    caveats,
+  };
+
+  return { ok: true, data, narrative: describe(data), cached: duty.cached };
+}
+
+function money(n: number): string {
+  return `Rs ${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+}
+
+export function describe(d: LandedCostBreakdown): string {
+  const b = d.buyer;
+  const e = d.exporter;
+
+  let s =
+    `Landed cost for the buyer in ${d.destination.country}: ${money(b.landedCostInr)} ` +
+    `on goods invoiced at ${money(b.fobInr)} — that is ${b.upliftPct}% above invoice. ` +
+    `Made up of ${money(b.fobInr)} goods + ${money(b.freightInr)} freight + ` +
+    `${money(b.insuranceInr)} insurance + ${money(b.dutyInr)} duty ` +
+    `(${b.dutyRatePct}% on ${b.dutyBasis} of ${money(b.dutyBasisValueInr)}). `;
+
+  s += `For the exporter: `;
+  if (e.rodtepInr !== null) {
+    s += `RoDTEP ${money(e.rodtepInr)} at ${e.rodtepRatePct}%`;
+  } else {
+    s += `no RoDTEP calculated`;
+  }
+  if (e.drawbackInr !== null) {
+    s += `, Duty Drawback ${money(e.drawbackInr)} at ${e.drawbackRatePct}%`;
+  } else if (e.drawbackAmbiguous) {
+    s += `, Duty Drawback excluded (several rates apply to this heading)`;
+  }
+  s += `, giving a net realisation of ${money(e.netRealisationInr)}. `;
+
+  s +=
+    `MANDATORY: present this as an ESTIMATE, never a quote. You MUST state these caveats: ` +
+    d.caveats.map((c) => `(${c})`).join(" ") +
+    ` Tell the user the figures depend on the freight and insurance they supplied, and that ` +
+    `their buyer's customs broker should confirm the duty for the actual shipment.`;
+
+  return s;
+}

@@ -30,6 +30,10 @@ import {
   WITS_REPORTERS,
   supportedDestinations,
 } from "../src/lib/tariff/destination.ts";
+import {
+  dutyBasisFor,
+  landedCost,
+} from "../src/lib/tariff/landed-cost.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -249,6 +253,35 @@ check(
     (r) => Number.isInteger(r.code) && r.code > 0 && r.code < 1000
   ),
   "a code is out of range"
+);
+
+// ── Landed cost ──────────────────────────────────────────────────────────────
+// The duty basis is the quietest way this calculation goes wrong: charging
+// Germany's rate on FOB, or America's on CIF, yields a plausible wrong number.
+check(
+  "USA and Canada assess duty on FOB",
+  dutyBasisFor("USA") === "FOB" && dutyBasisFor("CAN") === "FOB",
+  `USA=${dutyBasisFor("USA")}, CAN=${dutyBasisFor("CAN")}`
+);
+check(
+  "everyone else defaults to CIF",
+  dutyBasisFor("DEU") === "CIF" &&
+    dutyBasisFor("ARE") === "CIF" &&
+    dutyBasisFor("JPN") === "CIF",
+  "a country defaulted to the wrong basis"
+);
+check(
+  "duty basis is case- and whitespace-insensitive",
+  dutyBasisFor(" usa ") === "FOB",
+  `got ${dutyBasisFor(" usa ")}`
+);
+
+// Input validation must reject before any network call.
+const badFob = await landedCost({ hsCode: "420221", destinationIso: "DEU", fobInr: 0 });
+check(
+  "landed cost refuses a zero or missing invoice value",
+  badFob.ok === false,
+  "it accepted an invalid FOB"
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

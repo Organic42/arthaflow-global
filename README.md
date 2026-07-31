@@ -148,6 +148,7 @@ charts inline in the chat.
 | `lookupHs` | "Is this code real, and what does it cover?" |
 | `getIndianTariffLines` | "What 8-digit code goes on my shipping bill, and can I legally export it?" |
 | `getImportDuty` | "What duty will my buyer pay to land this in Germany?" |
+| `calculateLandedCost` | "What does this shipment cost my buyer, and what do I net?" |
 | `getTopImporters` | "Where can I sell this?" |
 | `getTopExporters` | "Who am I competing against?" |
 | `getTradeTrend` | "Is demand growing in this market?" |
@@ -259,6 +260,25 @@ destination fails loudly instead of silently returning nothing.
 UAE, Japan, Korea, ASEAN and others under which the real rate may be zero, so the
 tool result labels it MFN, says a preference may apply, and forbids presenting it
 as landed cost.
+
+### Landed cost, both directions
+
+[`landed-cost.ts`](./src/lib/tariff/landed-cost.ts) composes everything above to
+answer the two questions a manufacturer actually has:
+
+- **What will my buyer pay to land this?** FOB + freight + insurance + duty
+- **What do I net?** FOB + RoDTEP + Drawback
+
+**Duty basis matters and is easy to get silently wrong.** Most countries charge
+duty on CIF; the United States and Canada assess on transaction value, which
+excludes international freight and insurance. On a ₹5L shipment with ₹50k
+freight, using the wrong basis moves the US duty by ₹4,050. `dutyBasisFor()` is
+exported and asserted in the test suite for exactly that reason.
+
+Every caveat that materially moves the number travels **with** the number rather
+than being buried: MFN vs preferential, the duty basis, an unapplied RoDTEP cap,
+excluded destination VAT (often larger than the duty), and an ambiguous drawback
+heading. It is an estimate, never a quote, and the tool result says so.
 
 ---
 

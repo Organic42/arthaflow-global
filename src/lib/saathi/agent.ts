@@ -39,7 +39,11 @@ import {
   lookupHs,
   getIndianTariffLines,
 } from "@/lib/hs/tool";
-import { TARIFF_TOOLS, getImportDuty } from "@/lib/tariff/tool";
+import {
+  TARIFF_TOOLS,
+  getImportDuty,
+  calculateLandedCost,
+} from "@/lib/tariff/tool";
 
 // A 70B model handles multi-step tool reasoning far better than the 8B chat
 // model the old endpoint used. Still fast and cheap on Groq.
@@ -65,6 +69,7 @@ const TOOL_FNS: Record<string, AnyToolFn> = {
   lookupHs: async (a) => lookupHs(a),
   getIndianTariffLines: async (a) => getIndianTariffLines(a),
   getImportDuty,
+  calculateLandedCost,
 };
 
 const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS, ...TARIFF_TOOLS];
@@ -111,6 +116,8 @@ function buildSystemPrompt(ctx: SaathiContext): string {
     "  7. EXPORT POLICY — when getIndianTariffLines reports a line as Restricted, Prohibited or STE, you MUST say so prominently and quote the condition. A manufacturer planning a shipment of a prohibited good needs to hear that before anything else. Note that DGFT amends this by notification, so tell them to confirm current status before shipping.",
     "",
     "IMPORT DUTIES — getImportDuty returns what the DESTINATION country charges the overseas buyer, which is what decides whether your user's price is competitive there. It is NOT India's customs duty, and our user is an exporter, so never answer a duty question with India's rates. The figure is an MFN rate: charged before any trade agreement. India has agreements with the UAE, Japan, Korea, ASEAN and others under which the real rate may be lower or zero, so you MUST label it as MFN, say a preferential rate may apply, and never call it the landed cost. If the destination is not covered, say so and offer one that is — do not estimate.",
+    "",
+    "LANDED COST — calculateLandedCost answers both 'what will my buyer pay to land this' and 'what do I actually net after RoDTEP and Drawback'. Rules: (a) it is an ESTIMATE built from numbers the user gave you, never a quote — say so every time; (b) ASK for freight and insurance before calling it, because without them the landed cost is understated, and ask for the quantity when you have a tariff line, because RoDTEP caps are per-unit; (c) call getIndianTariffLines first so the 8-digit line is available, otherwise no rebate can be computed; (d) the result carries a `caveats` list — you MUST state those caveats, especially that destination VAT is excluded, since VAT often exceeds the duty; (e) never present the net realisation as guaranteed income.",
     "",
     "ABSOLUTE RULE — every country name, market ranking, dollar figure, share, or growth number you state MUST come from a successful tool result in THIS conversation. You are strictly forbidden from listing export markets, competitors, or trade figures from your own training knowledge. If a tool returns an error or no data, you MUST NOT substitute a guess — do not name any countries at all. Instead, tell the user the trade data is temporarily unavailable and ask them to try again shortly (or suggest a broader HS code / different year). It is far better to say 'I couldn't pull that data right now' than to give a plausible-sounding but unverified answer.",
     "",

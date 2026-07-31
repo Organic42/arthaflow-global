@@ -10,6 +10,7 @@ import {
   supportedDestinations,
   type DestinationDutyArgs,
 } from "./destination";
+import { landedCost, type LandedCostArgs } from "./landed-cost";
 
 export const TARIFF_TOOLS = [
   {
@@ -32,7 +33,47 @@ export const TARIFF_TOOLS = [
       required: ["hsCode", "destinationIso"],
     },
   },
+  {
+    name: "calculateLandedCost",
+    description:
+      "Work out what a shipment costs the buyer to land in a destination country, AND what the exporter nets after RoDTEP and Duty Drawback. Call this when the user asks about landed cost, whether their price is competitive abroad, what a buyer will pay, or what they will actually earn on a shipment. Needs the invoice value; freight and insurance make it accurate, and the 8-digit tariff line enables the RoDTEP rebate.",
+    parameters: {
+      type: "object",
+      properties: {
+        hsCode: { type: "string", description: "6-digit HS code, from classifyProduct." },
+        destinationIso: {
+          type: "string",
+          description: "ISO-3 of the destination, e.g. 'DEU', 'ARE', 'USA'.",
+        },
+        fobInr: {
+          type: "number",
+          description: "Invoice value of the goods in rupees (ex-works or FOB).",
+        },
+        freightInr: {
+          type: "number",
+          description: "International freight in rupees. Ask the user; omitting it understates the landed cost.",
+        },
+        insuranceInr: { type: "number", description: "Marine insurance in rupees." },
+        quantity: {
+          type: "number",
+          description:
+            "Units shipped. Needed only to apply RoDTEP's per-unit cap; without it the rebate may be overstated.",
+        },
+        itcCode: {
+          type: "string",
+          description:
+            "8-digit ITC-HS tariff line from getIndianTariffLines. Without it RoDTEP cannot be calculated.",
+        },
+      },
+      required: ["hsCode", "destinationIso", "fobInr"],
+    },
+  },
 ] as const;
+
+/** Handler for calculateLandedCost. */
+export async function calculateLandedCost(args: LandedCostArgs) {
+  return landedCost(args);
+}
 
 /** Handler, shaped like the other tool handlers the agent dispatches. */
 export async function getImportDuty(args: DestinationDutyArgs) {

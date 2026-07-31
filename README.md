@@ -77,6 +77,7 @@ trigger.
 | `ANALYZE=true npm run build` | Bundle composition report |
 | `node scripts/build-hs-codes.mjs` | Regenerate the bundled HS nomenclature (6-digit, UN Comtrade) |
 | `python scripts/build-itchs.py` | Regenerate India's 8-digit ITC-HS schedule (DGFT). Needs `pdfplumber` |
+| `python scripts/build-rodtep.py` | Regenerate RoDTEP rebate rates (DGFT Appendix 4R). Needs `pdfplumber` |
 
 ---
 
@@ -192,6 +193,23 @@ answers an unrecognised code with TOTAL trade rather than an error — a silent
 overstatement by orders of magnitude. Classification therefore still resolves to 6
 digits ([`classify.ts`](./src/lib/hs/classify.ts)) and the tariff line is a separate
 lookup ([`itchs.ts`](./src/lib/hs/itchs.ts)).
+
+### RoDTEP rebate rates
+
+10,610 rates from DGFT's Appendix 4R ([`rodtep.ts`](./src/lib/hs/rodtep.ts)) — a
+percentage of FOB value, capped per unit, covering ~85% of export lines. This is
+money back on a shipment, so it is the number an exporter asks for first.
+
+The schedule is a base notification plus a chain of amendments, and
+[`build-rodtep.py`](./scripts/build-rodtep.py) replays that chain rather than
+trusting a single file. Its output independently reproduces the official
+amendment counts (142 added, 50 omitted, 2 redescribed), which is how we know
+the parse is right.
+
+**We never state an effective rate.** DGFT currently limits benefits to 50% of
+notified rates, a limitation already extended once. The notified rate and the
+limitation are stored and surfaced as separate facts. Collapsing them into one
+number produces a figure that looks authoritative and rots silently.
 
 ---
 

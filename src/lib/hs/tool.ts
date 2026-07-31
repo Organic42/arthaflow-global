@@ -9,6 +9,7 @@
 
 import { searchHsCodes, lookupHsCode, type HsCandidate } from "./classify";
 import { tariffLinesFor, ITCHS_SOURCE, type TariffLine } from "./itchs";
+import { lookupRodtep, RODTEP_SOURCE, type RodtepRate } from "./rodtep";
 
 export interface ClassifyProductArgs {
   /** Free-text product description, e.g. "leather handbags for women". */
@@ -102,9 +103,18 @@ export interface TariffLineArgs {
  * 8-digit code must never reach it. This is for the shipping bill and the
  * export-policy check, not for market figures.
  */
+export interface TariffLineWithRebate extends TariffLine {
+  /** RoDTEP rebate for this line, or null when the schedule omits it. */
+  rodtep: RodtepRate | null;
+}
+
 export function getIndianTariffLines(
   args: TariffLineArgs
-): HsToolResult<{ hsCode: string; lines: TariffLine[]; source: string }> {
+): HsToolResult<{
+  hsCode: string;
+  lines: TariffLineWithRebate[];
+  source: string;
+}> {
   const hsCode = String(args?.hsCode ?? "").replace(/\D/g, "");
   if (hsCode.length < 6) {
     return {
@@ -127,12 +137,25 @@ export function getIndianTariffLines(
     };
   }
 
+  const enriched: TariffLineWithRebate[] = lines.map((l) => ({
+    ...l,
+    rodtep: lookupRodtep(l.code),
+  }));
+
   const restricted = lines.filter((l) => l.policy !== "Free");
 
   let narrative =
     `Indian tariff lines under HS ${hsCode.slice(0, 6)} (${ITCHS_SOURCE.name}): ` +
-    lines
-      .map((l) => `${l.code} — ${l.description} [${l.policy}]`)
+    enriched
+      .map((l) => {
+        const r = l.rodtep
+          ? `RoDTEP ${l.rodtep.notifiedRatePct}% of FOB` +
+            (l.rodtep.capPerUnitInr !== null
+              ? ` capped at Rs ${l.rodtep.capPerUnitInr}/${l.rodtep.unit || "unit"}`
+              : "")
+          : "no RoDTEP rate in the schedule";
+        return `${l.code} — ${l.description} [${l.policy}] (${r})`;
+      })
       .join(" | ") +
     ". Choose the one matching the product and tell the user which you used.";
 
@@ -146,13 +169,26 @@ export function getIndianTariffLines(
       `verbatim if one applies. Do not describe a Restricted or Prohibited line as exportable.`;
   }
 
+  if (enriched.some((l) => l.rodtep)) {
+    // Stated as an instruction because the notified rate is NOT what an
+    // exporter will actually receive, and a bare percentage reads as a promise.
+    narrative +=
+      ` MANDATORY on RoDTEP: these are NOTIFIED rates. ${RODTEP_SOURCE.rationalisation.description} ` +
+      `${RODTEP_SOURCE.rationalisation.verify} Never quote a single effective percentage — ` +
+      `give the notified rate and say the limitation applies.`;
+  }
+
   narrative += ` ${ITCHS_SOURCE.note}`;
 
   return {
     ok: true,
     cached: true,
     narrative,
-    data: { hsCode: hsCode.slice(0, 6), lines, source: ITCHS_SOURCE.name },
+    data: {
+      hsCode: hsCode.slice(0, 6),
+      lines: enriched,
+      source: ITCHS_SOURCE.name,
+    },
   };
 }
 
@@ -190,7 +226,7 @@ export const HS_TOOLS = [
   {
     name: "getIndianTariffLines",
     description:
-      "Get India's 8-digit ITC-HS tariff lines under a 6-digit HS heading, with each line's export policy (Free, Restricted, Prohibited or STE). Call this when the user asks about the Indian tariff line, the code for a shipping bill, export documentation, or whether a product can legally be exported. Do NOT pass an 8-digit code to any trade-data tool — those need the 6-digit code.",
+      "Get India's 8-digit ITC-HS tariff lines under a 6-digit HS heading, with each line's export policy (Free, Restricted, Prohibited or STE) and its RoDTEP rebate rate. Call this when the user asks about the Indian tariff line, the code for a shipping bill, export documentation, export incentives or rebates, or whether a product can legally be exported. Do NOT pass an 8-digit code to any trade-data tool — those need the 6-digit code.",
     parameters: {
       type: "object",
       properties: {

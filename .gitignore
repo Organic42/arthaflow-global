@@ -45,3 +45,8 @@ next-env.d.ts
 
 # ...but the placeholder template is safe to commit and helps onboarding.
 !.env.example
+
+# Source PDFs cached by scripts/build-rodtep.py and build-itchs.py.
+# The parsed JSON is vendored; the PDFs are large and re-downloadable.
+.rodtep-cache/
+itchs-schedule2.pdf

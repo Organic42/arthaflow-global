@@ -16,6 +16,11 @@ import {
   lookupTariffLine,
   itchsDatasetSize,
 } from "../src/lib/hs/itchs.ts";
+import {
+  lookupRodtep,
+  describeRodtep,
+  rodtepDatasetSize,
+} from "../src/lib/hs/rodtep.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -112,6 +117,50 @@ check(
   "6-digit code is not a valid tariff line",
   lookupTariffLine("420221") === null,
   "6-digit code resolved as an 8-digit line"
+);
+
+// ── RoDTEP rebate rates ──────────────────────────────────────────────────────
+check(
+  `RoDTEP schedule looks complete (${rodtepDatasetSize()})`,
+  rodtepDatasetSize() > 10000,
+  `only ${rodtepDatasetSize()} lines`
+);
+
+const bagRate = lookupRodtep("42022110");
+check(
+  "42022110 has a RoDTEP rate",
+  !!bagRate && bagRate.notifiedRatePct > 0,
+  `got ${JSON.stringify(bagRate)}`
+);
+
+// Rates are percentages of FOB. Anything above ~10% means a parse slipped a
+// column — the schedule's ceiling is well under that.
+const allRatesSane = ["42022110", "73061100", "39172200", "03011100"]
+  .map(lookupRodtep)
+  .filter(Boolean)
+  .every((r) => r.notifiedRatePct > 0 && r.notifiedRatePct <= 10);
+check("sampled rates are within a plausible range", allRatesSane, "a rate is out of range");
+
+check(
+  "6-digit code returns no RoDTEP rate",
+  lookupRodtep("420221") === null,
+  "a 6-digit code resolved a rate"
+);
+
+// A line absent from the schedule must return null, not zero — "no rebate" and
+// "a rebate of nothing" read differently to an exporter.
+check(
+  "unknown tariff line returns null, not a zero rate",
+  lookupRodtep("99999999") === null,
+  "unknown line did not return null"
+);
+
+// The description must never collapse the limitation into one number.
+const described = bagRate ? describeRodtep(bagRate) : "";
+check(
+  "rate description carries the 50% limitation",
+  described.includes("50%") && described.toLowerCase().includes("notified"),
+  `got "${described.slice(0, 90)}"`
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

@@ -24,6 +24,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { agreementFor, describeAgreement } from "./fta";
 
 const BASE = "https://wits.worldbank.org/API/V1/SDMX/V21/datasource/TRN";
 
@@ -289,7 +290,13 @@ export async function destinationDuty(
   };
 }
 
-/** The sentence a caller shows, with the FTA caveat attached. */
+/**
+ * The sentence a caller shows, with the FTA caveat attached.
+ *
+ * Where an agreement is in force the MFN figure is an OVERSTATEMENT of what the
+ * buyer pays, so the agreement note is appended rather than left for the model
+ * to remember.
+ */
 export function describe(d: DestinationDuty): string {
   const spread =
     d.minRatePct !== null &&
@@ -298,15 +305,23 @@ export function describe(d: DestinationDuty): string {
       ? ` (lines range ${d.minRatePct}%–${d.maxRatePct}%)`
       : "";
 
-  return (
+  const fta = agreementFor(d.iso3);
+
+  let s =
     `${d.country} applies an MFN import duty of ${d.mfnRatePct}% on HS ${d.hsCode}${spread}, ` +
     `reported for ${d.year} (UNCTAD TRAINS via World Bank WITS). ` +
-    `MANDATORY: this is the MFN rate, charged before any trade agreement. India has ` +
-    `agreements with the UAE, Japan, Korea, ASEAN and others under which the rate may be ` +
-    `lower or zero. You MUST say the rate is MFN and that a preferential rate may apply, ` +
-    `and that the buyer's customs broker should confirm the rate for their shipment. ` +
-    `Never present this as the landed cost.`
-  );
+    `MANDATORY: this is the MFN rate, charged before any trade agreement. ` +
+    `Never present this as the landed cost. `;
+
+  if (fta) {
+    s += describeAgreement(fta, d.mfnRatePct);
+  } else {
+    s +=
+      `We hold no trade agreement covering ${d.country} for Indian goods, so the MFN rate ` +
+      `is most likely what applies. Say the buyer's customs broker should still confirm it.`;
+  }
+
+  return s;
 }
 
 /** Destinations we can answer for — used by the tool schema and diagnostics. */

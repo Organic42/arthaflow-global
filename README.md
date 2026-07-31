@@ -303,6 +303,33 @@ Countries with no import VAT (United States, Hong Kong, Qatar, Kuwait) return
 null **with a reason**, which is a different answer from a country we simply
 hold no rate for.
 
+### Trade agreements — eligibility, not rates
+
+[`fta.ts`](./src/lib/tariff/fta.ts) says which agreement covers a destination,
+whether it is actually in force, and how to claim it. It deliberately does
+**not** return a preferential rate.
+
+**Because no reachable source has them.** WITS TRAINS serves no preferential
+lines through its SDMX endpoint — verified against USA↔Mexico under USMCA, which
+would certainly carry data if the endpoint served preferential rates at all, on
+both `reported` and `aveestimated` datatypes. India's own CEPA schedules are
+published as annexes; the commerce.gov.in links are dead and the UAE ministry
+copy is blocked. Guessing a rate here would be the worst thing this codebase
+could ship.
+
+The eligibility signal still changes the advice, which is the point:
+
+> The UAE charges **5% MFN**. India–UAE CEPA has been in force since May 2022,
+> so your buyer likely pays less — we don't hold the preferential rate, confirm
+> it with their broker. A Certificate of Origin from DGFT's portal is required;
+> without it the MFN rate applies.
+
+**Status matters.** Only an in-force agreement is claimable; signed and announced
+ones are marked separately, because sending a manufacturer to claim a preference
+that does not yet exist is a real cost to them. And where MFN is already 0%
+(Singapore), the wording says a preference changes nothing rather than claiming
+the duty is overstated.
+
 ---
 
 ## Trade data

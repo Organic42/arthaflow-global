@@ -39,6 +39,11 @@ import {
   vatAbsenceReason,
   vatCoverage,
 } from "../src/lib/tariff/vat.ts";
+import {
+  agreementFor,
+  describeAgreement,
+  agreementCoverage,
+} from "../src/lib/tariff/fta.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -329,6 +334,55 @@ check(
   assessVat("ZZZ", 100000) === null &&
     /not recorded/i.test(vatAbsenceReason("ZZZ")),
   `got "${vatAbsenceReason("ZZZ")}"`
+);
+
+// ── Trade agreements ─────────────────────────────────────────────────────────
+// This module states eligibility, never a preferential rate — WITS serves none
+// and the official schedules are unreachable. These checks pin that boundary.
+check(
+  `agreement coverage looks right (${agreementCoverage()})`,
+  agreementCoverage() >= 8,
+  `only ${agreementCoverage()} agreements`
+);
+
+const uae = agreementFor("ARE");
+check(
+  "UAE CEPA is in force and claimable",
+  uae?.claimable === true && uae.agreement.inForceSince === "2022-05-01",
+  `got ${JSON.stringify(uae?.agreement)}`
+);
+
+// Germany has no bilateral agreement with India in force.
+check(
+  "a destination with no agreement returns null",
+  agreementFor("DEU") === null && agreementFor("USA") === null,
+  "an agreement was claimed where none exists"
+);
+
+// The whole point: never state or imply a preferential percentage.
+const uaeText = uae ? describeAgreement(uae, 5) : "";
+check(
+  "agreement text refuses to state a preferential rate",
+  /do not hold the preferential rate/i.test(uaeText) &&
+    !/\b0%\s*(under|preferential)/i.test(uaeText),
+  `got "${uaeText.slice(0, 120)}"`
+);
+
+// Claiming the duty is overstated is false when MFN is already zero.
+const sgp = agreementFor("SGP");
+check(
+  "a zero MFN rate does not claim the duty is overstated",
+  sgp !== null &&
+    /already 0%/.test(describeAgreement(sgp, 0)) &&
+    !/likely HIGHER/.test(describeAgreement(sgp, 0)),
+  "zero-rate wording was not adjusted"
+);
+
+// A Certificate of Origin is the mechanism; without it the MFN rate applies.
+check(
+  "the claim process is stated, not assumed",
+  /Certificate of Origin/i.test(uaeText) && /Without it the MFN rate applies/i.test(uaeText),
+  "claim process missing"
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

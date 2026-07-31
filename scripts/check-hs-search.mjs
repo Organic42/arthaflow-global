@@ -21,6 +21,11 @@ import {
   describeRodtep,
   rodtepDatasetSize,
 } from "../src/lib/hs/rodtep.ts";
+import {
+  drawbackForHsCode,
+  describeDrawback,
+  drawbackHeadingCount,
+} from "../src/lib/hs/drawback.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -161,6 +166,46 @@ check(
   "rate description carries the 50% limitation",
   described.includes("50%") && described.toLowerCase().includes("notified"),
   `got "${described.slice(0, 90)}"`
+);
+
+// ── Duty Drawback ────────────────────────────────────────────────────────────
+// Keyed on the 4-digit heading, because that is the only level where the
+// drawback schedule and ITC-HS agree. These guard that we never present a
+// heading-level rate as though it belonged to a tariff line.
+check(
+  `drawback schedule looks complete (${drawbackHeadingCount()} headings)`,
+  drawbackHeadingCount() > 900,
+  `only ${drawbackHeadingCount()} headings`
+);
+
+// 7306 carries a single heading-level rate, so it is answerable precisely.
+const steelDbk = drawbackForHsCode("73063010");
+check(
+  "7306 drawback resolves and is unambiguous",
+  !!steelDbk && steelDbk.unambiguous && steelDbk.heading === "7306",
+  `got heading ${steelDbk?.heading}, unambiguous=${steelDbk?.unambiguous}`
+);
+
+// 4202 splits into several rates, so it must NOT be reported as one number.
+const bagDbk = drawbackForHsCode("42022110");
+check(
+  "4202 drawback is flagged ambiguous",
+  !!bagDbk && !bagDbk.unambiguous && bagDbk.items.length > 1,
+  `got ${bagDbk?.items.length} items, unambiguous=${bagDbk?.unambiguous}`
+);
+
+const bagText = bagDbk ? describeDrawback(bagDbk) : "";
+check(
+  "ambiguous drawback discloses the ITC-HS mismatch",
+  bagText.includes("does NOT align") || bagText.includes("cannot be attributed"),
+  `got "${bagText.slice(0, 100)}"`
+);
+
+check(
+  "drawback resolves via heading regardless of input code length",
+  drawbackForHsCode("7306")?.heading === "7306" &&
+    drawbackForHsCode("730630")?.heading === "7306",
+  "heading resolution differs by input length"
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

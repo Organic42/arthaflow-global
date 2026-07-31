@@ -10,6 +10,11 @@
 import { searchHsCodes, lookupHsCode, type HsCandidate } from "./classify";
 import { tariffLinesFor, ITCHS_SOURCE, type TariffLine } from "./itchs";
 import { lookupRodtep, RODTEP_SOURCE, type RodtepRate } from "./rodtep";
+import {
+  drawbackForHsCode,
+  describeDrawback,
+  type DrawbackResult,
+} from "./drawback";
 
 export interface ClassifyProductArgs {
   /** Free-text product description, e.g. "leather handbags for women". */
@@ -113,6 +118,8 @@ export function getIndianTariffLines(
 ): HsToolResult<{
   hsCode: string;
   lines: TariffLineWithRebate[];
+  /** Keyed on the 4-digit heading, not the tariff line — see drawback.ts. */
+  drawback: DrawbackResult | null;
   source: string;
 }> {
   const hsCode = String(args?.hsCode ?? "").replace(/\D/g, "");
@@ -178,6 +185,19 @@ export function getIndianTariffLines(
       `give the notified rate and say the limitation applies.`;
   }
 
+  const drawback = drawbackForHsCode(hsCode);
+  if (drawback) {
+    narrative += ` DUTY DRAWBACK — ${describeDrawback(drawback)}`;
+    if (!drawback.unambiguous) {
+      // The schedule subdivides differently from ITC-HS, so picking one rate
+      // for the user would be inventing a mapping that does not exist.
+      narrative +=
+        ` You MUST present these as options and say the exact drawback item ` +
+        `needs confirming with a customs broker. Do NOT pick one and state it ` +
+        `as the rate for their tariff line.`;
+    }
+  }
+
   narrative += ` ${ITCHS_SOURCE.note}`;
 
   return {
@@ -187,6 +207,7 @@ export function getIndianTariffLines(
     data: {
       hsCode: hsCode.slice(0, 6),
       lines: enriched,
+      drawback,
       source: ITCHS_SOURCE.name,
     },
   };
@@ -226,7 +247,7 @@ export const HS_TOOLS = [
   {
     name: "getIndianTariffLines",
     description:
-      "Get India's 8-digit ITC-HS tariff lines under a 6-digit HS heading, with each line's export policy (Free, Restricted, Prohibited or STE) and its RoDTEP rebate rate. Call this when the user asks about the Indian tariff line, the code for a shipping bill, export documentation, export incentives or rebates, or whether a product can legally be exported. Do NOT pass an 8-digit code to any trade-data tool — those need the 6-digit code.",
+      "Get India's 8-digit ITC-HS tariff lines under a 6-digit HS heading, with each line's export policy (Free, Restricted, Prohibited or STE) its RoDTEP rebate rate, and the Duty Drawback rate for its heading. Call this when the user asks about the Indian tariff line, the code for a shipping bill, export documentation, export incentives or rebates, or whether a product can legally be exported. Do NOT pass an 8-digit code to any trade-data tool — those need the 6-digit code.",
     parameters: {
       type: "object",
       properties: {

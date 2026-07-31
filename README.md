@@ -78,6 +78,7 @@ trigger.
 | `node scripts/build-hs-codes.mjs` | Regenerate the bundled HS nomenclature (6-digit, UN Comtrade) |
 | `python scripts/build-itchs.py` | Regenerate India's 8-digit ITC-HS schedule (DGFT). Needs `pdfplumber` |
 | `python scripts/build-rodtep.py` | Regenerate RoDTEP rebate rates (DGFT Appendix 4R). Needs `pdfplumber` |
+| `python scripts/build-drawback.py` | Regenerate Duty Drawback rates (CBIC 77/2023-Cus N.T.). Needs `pdfplumber` |
 
 ---
 
@@ -210,6 +211,27 @@ the parse is right.
 notified rates, a limitation already extended once. The notified rate and the
 limitation are stored and surfaced as separate facts. Collapsing them into one
 number produces a figure that looks authoritative and rots silently.
+
+### Duty Drawback — and why it is keyed differently
+
+2,123 rates across 1,014 headings ([`drawback.ts`](./src/lib/hs/drawback.ts)),
+from CBIC Notification 77/2023-Customs (N.T.).
+
+RoDTEP is published against real 8-digit ITC-HS tariff items and joins cleanly.
+**The Drawback Schedule does not.** It carries its own numbering that follows the
+Customs Tariff only to 4 digits, then subdivides on its own terms:
+
+| Drawback code level | Valid as ITC-HS |
+|---|---|
+| 8-digit | **0%** (0 of 340) |
+| 6-digit | 6% (51 of 925) |
+| 4-digit heading | **100%** (419 of 419) |
+
+So drawback item `42020101` is not tariff line `42022110`, though both describe
+leather bags. Attaching a drawback rate to an 8-digit ITC-HS code is a fabricated
+join. We resolve to the heading and return every item under it: **781 headings
+carry a single rate** and answer precisely; the rest return a shortlist with the
+mismatch disclosed, and the tool result forbids the model from picking one.
 
 ---
 

@@ -8,6 +8,7 @@
  */
 
 import { searchHsCodes, lookupHsCode, type HsCandidate } from "./classify";
+import { tariffLinesFor, ITCHS_SOURCE, type TariffLine } from "./itchs";
 
 export interface ClassifyProductArgs {
   /** Free-text product description, e.g. "leather handbags for women". */
@@ -88,6 +89,73 @@ export function lookupHs(args: LookupHsArgs): HsToolResult<{ code: string; descr
   };
 }
 
+export interface TariffLineArgs {
+  /** 6-digit HS code, normally one the model just resolved via classifyProduct. */
+  hsCode: string;
+}
+
+/**
+ * Narrow a 6-digit HS heading to India's 8-digit tariff lines.
+ *
+ * Kept apart from the trade-data tools on purpose. Comtrade speaks 6-digit and
+ * answers an unrecognised code with TOTAL trade rather than an error, so an
+ * 8-digit code must never reach it. This is for the shipping bill and the
+ * export-policy check, not for market figures.
+ */
+export function getIndianTariffLines(
+  args: TariffLineArgs
+): HsToolResult<{ hsCode: string; lines: TariffLine[]; source: string }> {
+  const hsCode = String(args?.hsCode ?? "").replace(/\D/g, "");
+  if (hsCode.length < 6) {
+    return {
+      ok: false,
+      error: "Need a 6-digit HS code.",
+      narrative:
+        "I need the 6-digit HS code first — classify the product before looking up the Indian tariff line.",
+    };
+  }
+
+  const lines = tariffLinesFor(hsCode);
+  if (lines.length === 0) {
+    return {
+      ok: false,
+      error: "No ITC-HS lines for that heading.",
+      narrative:
+        `DGFT's export schedule lists no 8-digit tariff line under HS ${hsCode.slice(0, 6)}. ` +
+        `Tell the user the 6-digit code stands and the tariff line must be confirmed with ` +
+        `DGFT or a customs broker.`,
+    };
+  }
+
+  const restricted = lines.filter((l) => l.policy !== "Free");
+
+  let narrative =
+    `Indian tariff lines under HS ${hsCode.slice(0, 6)} (${ITCHS_SOURCE.name}): ` +
+    lines
+      .map((l) => `${l.code} — ${l.description} [${l.policy}]`)
+      .join(" | ") +
+    ". Choose the one matching the product and tell the user which you used.";
+
+  if (restricted.length > 0) {
+    // Surfaced as an instruction rather than left for the model to notice: a
+    // missed Prohibited status is the most costly thing this tool can get wrong.
+    narrative +=
+      ` MANDATORY: ${restricted
+        .map((l) => `${l.code} is ${l.policy}`)
+        .join(", ")}. You MUST tell the user this and quote the condition ` +
+      `verbatim if one applies. Do not describe a Restricted or Prohibited line as exportable.`;
+  }
+
+  narrative += ` ${ITCHS_SOURCE.note}`;
+
+  return {
+    ok: true,
+    cached: true,
+    narrative,
+    data: { hsCode: hsCode.slice(0, 6), lines, source: ITCHS_SOURCE.name },
+  };
+}
+
 /** Schemas advertised to the model. */
 export const HS_TOOLS = [
   {
@@ -117,6 +185,22 @@ export const HS_TOOLS = [
         code: { type: "string", description: "2, 4, 6 or 8 digit HS code." },
       },
       required: ["code"],
+    },
+  },
+  {
+    name: "getIndianTariffLines",
+    description:
+      "Get India's 8-digit ITC-HS tariff lines under a 6-digit HS heading, with each line's export policy (Free, Restricted, Prohibited or STE). Call this when the user asks about the Indian tariff line, the code for a shipping bill, export documentation, or whether a product can legally be exported. Do NOT pass an 8-digit code to any trade-data tool — those need the 6-digit code.",
+    parameters: {
+      type: "object",
+      properties: {
+        hsCode: {
+          type: "string",
+          description:
+            "The 6-digit HS code, normally the one classifyProduct just resolved.",
+        },
+      },
+      required: ["hsCode"],
     },
   },
 ] as const;

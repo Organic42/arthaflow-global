@@ -75,7 +75,8 @@ trigger.
 | `npm run lint` | ESLint |
 | `npm run test:hs` | HS retrieval regression check — run after touching `src/lib/hs/` |
 | `ANALYZE=true npm run build` | Bundle composition report |
-| `node scripts/build-hs-codes.mjs` | Regenerate the bundled HS nomenclature |
+| `node scripts/build-hs-codes.mjs` | Regenerate the bundled HS nomenclature (6-digit, UN Comtrade) |
+| `python scripts/build-itchs.py` | Regenerate India's 8-digit ITC-HS schedule (DGFT). Needs `pdfplumber` |
 
 ---
 
@@ -143,6 +144,7 @@ charts inline in the chat.
 |---|---|
 | `classifyProduct` | "What's the HS code for my product?" |
 | `lookupHs` | "Is this code real, and what does it cover?" |
+| `getIndianTariffLines` | "What 8-digit code goes on my shipping bill, and can I legally export it?" |
 | `getTopImporters` | "Where can I sell this?" |
 | `getTopExporters` | "Who am I competing against?" |
 | `getTradeTrend` | "Is demand growing in this market?" |
@@ -177,6 +179,19 @@ invent a code. The chosen code is always shown to the user for correction.
 An alias layer ([`src/lib/hs/aliases.ts`](./src/lib/hs/aliases.ts)) bridges how
 manufacturers speak and how the nomenclature is written, including Indic scripts — so
 `"चमड़े के बैग"` resolves to `420221`.
+
+### The Indian tariff line
+
+The international nomenclature stops at 6 digits; a shipping bill carries 8. The last
+two are India's own tariff line, vendored from DGFT's ITC(HS) 2022 Schedule 2
+(12,310 lines) along with each line's **export policy** — 12,087 Free, 130 Restricted,
+93 Prohibited outright.
+
+**8-digit codes must never reach a trade-data tool.** Comtrade speaks 6-digit and
+answers an unrecognised code with TOTAL trade rather than an error — a silent
+overstatement by orders of magnitude. Classification therefore still resolves to 6
+digits ([`classify.ts`](./src/lib/hs/classify.ts)) and the tariff line is a separate
+lookup ([`itchs.ts`](./src/lib/hs/itchs.ts)).
 
 ---
 

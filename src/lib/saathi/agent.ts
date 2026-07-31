@@ -33,7 +33,12 @@ import {
   getTradeTrend,
   type ToolResult,
 } from "@/lib/comtrade/tools";
-import { HS_TOOLS, classifyProduct, lookupHs } from "@/lib/hs/tool";
+import {
+  HS_TOOLS,
+  classifyProduct,
+  lookupHs,
+  getIndianTariffLines,
+} from "@/lib/hs/tool";
 
 // A 70B model handles multi-step tool reasoning far better than the 8B chat
 // model the old endpoint used. Still fast and cheap on Groq.
@@ -57,6 +62,7 @@ const TOOL_FNS: Record<string, AnyToolFn> = {
   // dispatch loop can await them uniformly.
   classifyProduct: async (a) => classifyProduct(a),
   lookupHs: async (a) => lookupHs(a),
+  getIndianTariffLines: async (a) => getIndianTariffLines(a),
 };
 
 const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS];
@@ -98,7 +104,9 @@ function buildSystemPrompt(ctx: SaathiContext): string {
     "  2. When the user supplies a code themselves, call lookupHs to confirm it exists and means what they think.",
     "  3. If none of the candidates fit, say so plainly and ask for the material and the product's use — do not settle for the closest-looking option. You may call classifyProduct again with better wording (e.g. the formal trade term, or the material rather than the alloy: HS says 'base metal' where a manufacturer says 'brass').",
     "  4. Always tell the user which code you used and what it covers, e.g. 'using HS 420221 — leather handbags'. Invite them to correct it; they know their product better than the nomenclature does.",
-    "  5. These are 6-digit international codes. India's ITC-HS is 8 digits, and the last two (the Indian tariff line) are NOT something you can determine — say they must be confirmed with DGFT or a customs broker. Never invent them.",
+    "  5. classifyProduct returns 6-digit international codes. India's ITC-HS is 8 digits. To get the last two, call getIndianTariffLines with the 6-digit code — never invent them, and never state an 8-digit code that did not come from that tool.",
+    "  6. CRITICAL — trade-data tools take the 6-DIGIT code only. Passing an 8-digit code to getTopImporters, getTopExporters, getTradeTrend or getIndiaExports is wrong: UN Comtrade does not recognise it and silently returns TOTAL trade for the whole country, which looks like a real product figure and is off by orders of magnitude. Use 8-digit codes only for tariff lines, export policy and documentation.",
+    "  7. EXPORT POLICY — when getIndianTariffLines reports a line as Restricted, Prohibited or STE, you MUST say so prominently and quote the condition. A manufacturer planning a shipment of a prohibited good needs to hear that before anything else. Note that DGFT amends this by notification, so tell them to confirm current status before shipping.",
     "",
     "ABSOLUTE RULE — every country name, market ranking, dollar figure, share, or growth number you state MUST come from a successful tool result in THIS conversation. You are strictly forbidden from listing export markets, competitors, or trade figures from your own training knowledge. If a tool returns an error or no data, you MUST NOT substitute a guess — do not name any countries at all. Instead, tell the user the trade data is temporarily unavailable and ask them to try again shortly (or suggest a broader HS code / different year). It is far better to say 'I couldn't pull that data right now' than to give a plausible-sounding but unverified answer.",
     "",

@@ -8,9 +8,12 @@
  * competitors?", "is demand growing in Germany?" — instead of guessing.
  *
  * Design:
- * - Groq (OpenAI-compatible) function calling. The tool SCHEMAS already exist
- *   in comtrade/tools.ts (TRADE_TOOLS); we adapt them to Groq's shape and
- *   dispatch the model's calls to the real functions.
+ * - Gemini 2.5 Flash via its OpenAI-compatible function calling (see
+ *   ./model.ts). The tool SCHEMAS already exist in comtrade/tools.ts
+ *   (TRADE_TOOLS); we adapt them to the Chat Completions shape and dispatch the
+ *   model's calls to the real functions. The `groq-sdk` types below are used
+ *   only as the OpenAI-compatible request/response shape — the client points at
+ *   Gemini, not Groq.
  * - We feed the model each tool's friendly `narrative` plus a compact JSON of
  *   its structured `data`, so it can both reason numerically and quote cleanly.
  * - We also collect every successful tool result and return it alongside the
@@ -49,10 +52,12 @@ import {
   isDegenerate,
   LANGUAGE_RETRY_INSTRUCTION,
 } from "@/lib/saathi/language";
+import { SAATHI_MODEL } from "@/lib/saathi/model";
 
-// A 70B model handles multi-step tool reasoning far better than the 8B chat
-// model the old endpoint used. Still fast and cheap on Groq.
-const AGENT_MODEL = "llama-3.3-70b-versatile";
+// Saathi runs on Google Gemini 2.5 Flash, reached through the OpenAI-compatible
+// client built in ./model. See that file for why the groq-sdk client is used
+// as the transport. The whole loop below is provider-agnostic Chat Completions.
+const AGENT_MODEL = SAATHI_MODEL;
 
 // Hard cap on tool round-trips so a confused model can't loop forever
 // (and can't run up the Comtrade quota on one conversation).

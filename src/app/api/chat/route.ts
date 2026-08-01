@@ -1,8 +1,9 @@
-import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
+import type { User, SupabaseClient } from "@supabase/supabase-js";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { runSaathi, type SaathiContext } from "@/lib/saathi/agent";
+import { createSaathiClient } from "@/lib/saathi/model";
 
 // Ensure this route is always evaluated at request time, never during the
 // static build's page-data collection (which has no env vars).
@@ -11,7 +12,11 @@ export const dynamic = "force-dynamic";
 // Guardrails: keep costs and abuse in check.
 const MAX_MESSAGE_CHARS = 1000; // one long paragraph, ~250 tokens
 const MAX_HISTORY = 12; // trailing turns kept as context
-const RATE_LIMIT = { scope: "chat", limit: 15, windowMs: 60_000 }; // 15/min/IP
+// Saathi runs on the Gemini key and is restricted to signed-in users, so the
+// primary limit is keyed per USER and kept tight. A coarse per-IP guard sits in
+// front purely to bounce anonymous floods before they reach Supabase auth.
+const USER_RATE_LIMIT = { scope: "chat-user", limit: 8, windowMs: 60_000 }; // 8/min/user
+const IP_RATE_LIMIT = { scope: "chat-ip", limit: 30, windowMs: 60_000 }; // 30/min/IP
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -51,17 +56,15 @@ function parseHistory(body: unknown): ChatTurn[] | null {
 
 /**
  * Load the signed-in manufacturer's profile + products so Saathi can
- * personalize. Anonymous callers (public site widget) get an empty context —
- * Saathi still works, just without the "your catalogue" reasoning.
+ * personalize. The caller has already authenticated the user (the chat is
+ * signed-in only), so this just enriches the context and never gates access.
  */
-async function loadContext(language?: string | null): Promise<SaathiContext> {
+async function loadContext(
+  supabase: SupabaseClient,
+  user: User,
+  language?: string | null
+): Promise<SaathiContext> {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return { language };
-
     const [{ data: profile }, { data: products }] = await Promise.all([
       supabase
         .from("profiles")
@@ -91,18 +94,15 @@ async function loadContext(language?: string | null): Promise<SaathiContext> {
 
 export async function POST(request: Request) {
   try {
-    // Rate limit BEFORE parsing body so a flood of empty POSTs still bounces.
-    const rl = rateLimit(clientIp(request), RATE_LIMIT);
-    if (!rl.ok) {
+    // Coarse per-IP guard FIRST, before any parsing or Supabase call, so a
+    // flood of empty/anonymous POSTs bounces cheaply.
+    const ipRl = rateLimit(clientIp(request), IP_RATE_LIMIT);
+    if (!ipRl.ok) {
       return NextResponse.json(
         { error: "Too many messages. Please slow down and try again shortly." },
         {
           status: 429,
-          headers: {
-            "Retry-After": String(Math.ceil(rl.resetInMs / 1000)),
-            "X-RateLimit-Limit": String(RATE_LIMIT.limit),
-            "X-RateLimit-Remaining": "0",
-          },
+          headers: { "Retry-After": String(Math.ceil(ipRl.resetInMs / 1000)) },
         }
       );
     }
@@ -128,7 +128,39 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.GROQ_API_KEY) {
+    // Saathi is restricted to signed-in manufacturers — the Gemini key must not
+    // be reachable by anonymous traffic on the public site.
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Please sign in to use Export Saathi. It's free — create an account to start asking about your export markets.",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Tight per-user limit is the real throttle on Gemini usage.
+    const userRl = rateLimit(user.id, USER_RATE_LIMIT);
+    if (!userRl.ok) {
+      return NextResponse.json(
+        { error: "You're sending messages very quickly. Please wait a moment and try again." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(userRl.resetInMs / 1000)),
+            "X-RateLimit-Limit": String(USER_RATE_LIMIT.limit),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
         { error: "AI service not configured" },
         { status: 500 }
@@ -141,13 +173,13 @@ export async function POST(request: Request) {
         ? ((body as { language: string }).language)
         : null;
 
-    // Instantiate the client lazily, INSIDE the handler — the Groq SDK throws
-    // in its constructor when the key is missing, so creating it at module
-    // scope crashed the production build. Now it only runs at request time.
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    // Instantiate the client lazily, INSIDE the handler — the SDK throws in its
+    // constructor when the key is missing, so creating it at module scope
+    // crashed the production build. Now it only runs at request time.
+    const client = createSaathiClient(process.env.GEMINI_API_KEY);
 
-    const ctx = await loadContext(language);
-    const result = await runSaathi(groq, history, ctx);
+    const ctx = await loadContext(supabase, user, language);
+    const result = await runSaathi(client, history, ctx);
 
     // `response` is kept for backward compatibility with the existing widget;
     // `toolCalls` exposes the structured trade data for chart rendering.
@@ -164,8 +196,8 @@ export async function POST(request: Request) {
     console.error("Saathi error:", error);
 
     // Upstream capacity problems are not the user's fault and are temporary —
-    // surface something actionable instead of a bare 500. (Groq returns 429
-    // both for per-minute limits and for the daily token cap.)
+    // surface something actionable instead of a bare 500. (Gemini returns 429
+    // for both per-minute rate limits and the daily quota.)
     const status = (error as { status?: number } | null)?.status;
     if (status === 429 || status === 503) {
       return NextResponse.json(

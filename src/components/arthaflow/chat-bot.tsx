@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Sparkles, Loader2, Globe } from "lucide-react";
+import Link from "next/link";
+import { X, Send, Sparkles, Loader2, Globe, LogIn } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { TradeCharts, type TradeToolCall } from "./trade-chart";
 
 type ChatMessage = {
@@ -9,6 +11,12 @@ type ChatMessage = {
   content: string;
   toolCalls?: TradeToolCall[];
 };
+
+// Saathi's /api/chat endpoint is signed-in only (the Gemini key must not be
+// reachable by anonymous traffic — see src/app/api/chat/route.ts). Checking
+// auth state here lets a logged-out visitor see a "sign in to chat" prompt
+// up front instead of typing a question and getting a 401 back.
+type AuthState = "loading" | "in" | "out";
 
 export function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +26,8 @@ export function ChatBot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [authState, setAuthState] = useState<AuthState>("loading");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to the newest message
@@ -26,9 +35,25 @@ export function ChatBot() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Track sign-in state live, not just on mount: a visitor can log in (or out)
+  // in this same tab — e.g. via /login in another tab, or a session expiring —
+  // while the widget stays mounted across the whole site.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthState(user ? "in" : "out");
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthState(session?.user ? "in" : "out");
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || authState !== "in") return;
 
     const userMessage = input.trim();
     // Build the history we send: prior turns + this new user message.
@@ -189,23 +214,33 @@ export function ChatBot() {
 
         {/* Input Area */}
         <div className="border-t border-white/10 bg-white/5 p-4">
-          <form onSubmit={handleSubmit} className="relative flex items-center">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. Where can I export leather bags?"
-              disabled={loading}
-              className="w-full rounded-full border border-white/10 bg-navy px-5 py-3.5 pr-12 text-sm text-white placeholder-white/40 shadow-inner outline-none transition-all focus:border-artha-gold/50 focus:ring-1 focus:ring-artha-gold/50 disabled:opacity-50"
-            />
-            <button 
-              type="submit" 
-              disabled={loading || !input.trim()}
-              className="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-artha-gold text-navy transition-transform hover:scale-105 disabled:scale-100 disabled:opacity-50"
+          {authState === "out" ? (
+            <Link
+              href="/login"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-artha-gold px-5 py-3.5 text-sm font-semibold text-navy transition-transform hover:scale-[1.02]"
             >
-              <Send size={16} className="ml-0.5" />
-            </button>
-          </form>
+              <LogIn size={16} />
+              Sign in to chat with Saathi — it&apos;s free
+            </Link>
+          ) : (
+            <form onSubmit={handleSubmit} className="relative flex items-center">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="e.g. Where can I export leather bags?"
+                disabled={loading || authState === "loading"}
+                className="w-full rounded-full border border-white/10 bg-navy px-5 py-3.5 pr-12 text-sm text-white placeholder-white/40 shadow-inner outline-none transition-all focus:border-artha-gold/50 focus:ring-1 focus:ring-artha-gold/50 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim() || authState !== "in"}
+                className="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-artha-gold text-navy transition-transform hover:scale-105 disabled:scale-100 disabled:opacity-50"
+              >
+                <Send size={16} className="ml-0.5" />
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </>

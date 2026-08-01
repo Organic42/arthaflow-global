@@ -143,10 +143,16 @@ export default function HomePage() {
                   </Button>
                 </Link>
               </MagneticButton>
+              <MagneticButton strength={0.2}>
+                <Link href="/hsn-search">
+                  <Button size="lg" variant="outline" className="border-white/50 bg-white/10 text-white hover:bg-white/20 hover:border-white/70">
+                    Search HSN codes
+                  </Button>
+                </Link>
+              </MagneticButton>
             </div>
             <p className="mt-5 text-[13px] text-white/45">
-              Live with 5 pilot manufacturers in Mumbai and Pune · No sign-up
-              needed for the calculator
+              Live with 5 pilot manufacturers in Mumbai and Pune
             </p>
           </div>
 

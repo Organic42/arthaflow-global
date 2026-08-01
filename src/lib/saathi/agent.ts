@@ -8,12 +8,12 @@
  * competitors?", "is demand growing in Germany?" — instead of guessing.
  *
  * Design:
- * - Gemini 2.5 Flash via its OpenAI-compatible function calling (see
+ * - Gemini 3.5 Flash via its OpenAI-compatible function calling (see
  *   ./model.ts). The tool SCHEMAS already exist in comtrade/tools.ts
  *   (TRADE_TOOLS); we adapt them to the Chat Completions shape and dispatch the
- *   model's calls to the real functions. The `groq-sdk` types below are used
- *   only as the OpenAI-compatible request/response shape — the client points at
- *   Gemini, not Groq.
+ *   model's calls to the real functions. The `openai` package below supplies
+ *   only the client and its request/response TYPES — the client is constructed
+ *   in ./model.ts pointed at Gemini's endpoint, never OpenAI's.
  * - We feed the model each tool's friendly `narrative` plus a compact JSON of
  *   its structured `data`, so it can both reason numerically and quote cleanly.
  * - We also collect every successful tool result and return it alongside the
@@ -21,13 +21,13 @@
  *   half of the flagship) without a second round-trip.
  */
 
-import { Groq } from "groq-sdk";
+import type OpenAI from "openai";
 import type {
   ChatCompletion,
   ChatCompletionCreateParamsNonStreaming,
   ChatCompletionMessageParam,
   ChatCompletionTool,
-} from "groq-sdk/resources/chat/completions";
+} from "openai/resources/chat/completions";
 import {
   TRADE_TOOLS,
   getTopImporters,
@@ -54,9 +54,9 @@ import {
 } from "@/lib/saathi/language";
 import { SAATHI_MODEL } from "@/lib/saathi/model";
 
-// Saathi runs on Google Gemini 2.5 Flash, reached through the OpenAI-compatible
-// client built in ./model. See that file for why the groq-sdk client is used
-// as the transport. The whole loop below is provider-agnostic Chat Completions.
+// Saathi runs on Google Gemini 3.5 Flash, reached through the OpenAI-compatible
+// client built in ./model. The whole loop below is provider-agnostic Chat
+// Completions — nothing here is Gemini- or OpenAI-specific by name.
 const AGENT_MODEL = SAATHI_MODEL;
 
 // Hard cap on tool round-trips so a confused model can't loop forever
@@ -84,8 +84,8 @@ const TOOL_FNS: Record<string, AnyToolFn> = {
 
 const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS, ...TARIFF_TOOLS];
 
-// Adapt our plain schemas to Groq's { type:"function", function:{...} } shape.
-const GROQ_TOOLS: ChatCompletionTool[] = ALL_TOOLS.map((t) => ({
+// Adapt our plain schemas to Chat Completions' { type:"function", function:{...} } shape.
+const CHAT_TOOLS: ChatCompletionTool[] = ALL_TOOLS.map((t) => ({
   type: "function",
   function: {
     name: t.name,
@@ -216,17 +216,18 @@ function isToolValidationError(e: unknown): boolean {
 }
 
 /**
- * Groq validates tool arguments server-side and rejects the WHOLE request with
- * a 400 when the model emits a wrong type (e.g. `"limit": "5"` instead of 5).
- * That must never surface as a 500, so: nudge the model once about types, and
- * if it still can't comply, drop tools entirely so the user still gets an answer.
+ * Both Groq and Gemini validate tool arguments server-side and reject the
+ * WHOLE request with a 400 when the model emits a wrong type (e.g.
+ * `"limit": "5"` instead of 5). That must never surface as a 500, so: nudge
+ * the model once about types, and if it still can't comply, drop tools
+ * entirely so the user still gets an answer.
  */
 async function completeResiliently(
-  groq: Groq,
+  client: OpenAI,
   params: ChatCompletionCreateParamsNonStreaming
 ): Promise<ChatCompletion> {
   try {
-    return await groq.chat.completions.create(params);
+    return await client.chat.completions.create(params);
   } catch (e) {
     if (!isToolValidationError(e)) throw e;
 
@@ -242,11 +243,11 @@ async function completeResiliently(
       ],
     };
     try {
-      return await groq.chat.completions.create(nudged);
+      return await client.chat.completions.create(nudged);
     } catch (e2) {
       if (!isToolValidationError(e2)) throw e2;
       // Give up on tools; answer in prose rather than failing the request.
-      return await groq.chat.completions.create({
+      return await client.chat.completions.create({
         ...params,
         tools: undefined,
         tool_choice: undefined,
@@ -270,7 +271,7 @@ async function completeResiliently(
  * fires when the answer is already wrong.
  */
 async function enforceLanguage(
-  groq: Groq,
+  client: OpenAI,
   messages: ChatCompletionMessageParam[],
   text: string,
   userText: string
@@ -280,7 +281,7 @@ async function enforceLanguage(
   if (!wrongLanguage && !degenerate) return text;
 
   try {
-    const retry = await groq.chat.completions.create({
+    const retry = await client.chat.completions.create({
       model: AGENT_MODEL,
       messages: [
         ...messages,
@@ -289,9 +290,9 @@ async function enforceLanguage(
       ],
       temperature: 0.4,
       max_tokens: 1200,
-      frequency_penalty: 0.3,
       // No tools: the data is already gathered and in context. This turn is
       // purely a rewrite, and offering tools invites another round of calls.
+      // No frequency_penalty — see the note in the main loop above.
     });
 
     const second = retry.choices[0]?.message?.content?.trim();
@@ -314,7 +315,7 @@ async function enforceLanguage(
  * turns); the newest user message must already be the last entry.
  */
 export async function runSaathi(
-  groq: Groq,
+  client: OpenAI,
   history: Array<{ role: "user" | "assistant"; content: string }>,
   ctx: SaathiContext = {}
 ): Promise<SaathiResult> {
@@ -333,31 +334,38 @@ export async function runSaathi(
     // answer in prose rather than requesting yet another call.
     const lastRound = round === MAX_TOOL_ROUNDS;
 
-    const completion = await completeResiliently(groq, {
+    const completion = await completeResiliently(client, {
       model: AGENT_MODEL,
       messages,
       temperature: 0.4,
       max_tokens: 1200,
-      // Guards against degenerate repetition. Writing Devanagari after a long
-      // English tool context reliably sent the model into a loop — it emitted
-      // 4,700 characters built from 10 distinct symbols. The model produces
-      // Hindi fine in isolation, so this is a decoding failure, not a
-      // capability one, and a frequency penalty is the standard remedy.
-      frequency_penalty: 0.3,
-      tools: lastRound ? undefined : GROQ_TOOLS,
+      // No frequency_penalty: this was the Groq/llama-era guard against
+      // degenerate repetition (writing Devanagari after a long English tool
+      // context reliably sent that model into a loop — 4,700 characters built
+      // from 10 distinct symbols). Gemini's OpenAI-compat endpoint rejects the
+      // field outright with a 400 ("Unknown name \"frequency_penalty\""),
+      // confirmed live during setup. isDegenerate() in enforceLanguage() below
+      // is the same guard applied after the fact instead of during decoding —
+      // kept deliberately, since a different model can still fail differently.
+      tools: lastRound ? undefined : CHAT_TOOLS,
       tool_choice: lastRound ? undefined : "auto",
     });
 
     const choice = completion.choices[0]?.message;
     if (!choice) break;
 
-    const requested = choice.tool_calls ?? [];
+    // Every tool this agent registers is `type: "function"` (see CHAT_TOOLS
+    // above) — "custom" tool calls are a different OpenAI feature we never
+    // opt into — so this narrows the SDK's union type rather than casting it.
+    const requested = (choice.tool_calls ?? []).filter(
+      (c): c is Extract<typeof c, { type: "function" }> => c.type === "function"
+    );
 
     // No tool calls → this is the final answer.
     if (requested.length === 0) {
       const text = choice.content?.trim() || "I could not find an answer to that.";
       return {
-        text: await enforceLanguage(groq, messages, text, userText),
+        text: await enforceLanguage(client, messages, text, userText),
         toolCalls,
         model: AGENT_MODEL,
       };

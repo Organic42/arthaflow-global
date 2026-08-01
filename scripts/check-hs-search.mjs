@@ -44,6 +44,11 @@ import {
   describeAgreement,
   agreementCoverage,
 } from "../src/lib/tariff/fta.ts";
+import {
+  detectScript,
+  replyMatchesInput,
+  isDegenerate,
+} from "../src/lib/saathi/language.ts";
 
 /** [query, expected code, max acceptable rank] — rank is 1-based. */
 const CASES = [
@@ -383,6 +388,64 @@ check(
   "the claim process is stated, not assumed",
   /Certificate of Origin/i.test(uaeText) && /Without it the MFN rate applies/i.test(uaeText),
   "claim process missing"
+);
+
+// ── Language enforcement ─────────────────────────────────────────────────────
+// Measured live, a Hindi question came back in Hindi 1 time in 5. These pin the
+// detection that now catches it, since the retry is only as good as the check.
+check(
+  "Devanagari input is detected",
+  detectScript("मैं चमड़े के बैग बनाता हूँ") === "devanagari",
+  "Hindi read as something else"
+);
+check(
+  "English input is detected",
+  detectScript("Where can I export leather bags?") === "latin",
+  "English read as something else"
+);
+
+// A Hindi question containing English trade terms is still a Hindi question —
+// treating it as English is the exact failure being fixed.
+check(
+  "mixed Hindi with English terms counts as Devanagari",
+  detectScript("मुझे HS code 420221 की जानकारी चाहिए") === "devanagari",
+  "mixed input misread as English"
+);
+
+// An English answer to a Hindi question must be caught.
+check(
+  "English reply to a Hindi question is rejected",
+  replyMatchesInput(
+    "मुझे किस देश में निर्यात करना चाहिए?",
+    "Using HS 420221, the top importers in 2024 were China, the United States and Hong Kong."
+  ) === false,
+  "the wrong-language answer was accepted"
+);
+
+// A real Hindi answer carries HS codes, country names and figures in Latin —
+// that must still pass, or the retry would fire on correct answers.
+check(
+  "Hindi reply containing English terms is accepted",
+  replyMatchesInput(
+    "मुझे किस देश में निर्यात करना चाहिए?",
+    "आपके चमड़े के बैग (HS 420221) के लिए सबसे अच्छे बाजार चीन ($2333.6M), संयुक्त राज्य अमेरिका ($2303.7M) और Hong Kong हैं। क्या मैं demand trend दिखाऊं?"
+  ) === true,
+  "a correct Hindi answer was wrongly rejected"
+);
+
+// English in, English out is the common path and must never trigger a retry.
+check(
+  "English question answered in English is untouched",
+  replyMatchesInput("Where can I export leather bags?", "China, the US and Hong Kong lead.") === true,
+  "the common path would retry"
+);
+
+// The degeneration signature: 4,700 chars from ~10 distinct symbols.
+check(
+  "degenerate output is detected",
+  isDegenerate("क ".repeat(1200)) === true &&
+    isDegenerate("आपके चमड़े के बैग के लिए सबसे अच्छे बाजार चीन और अमेरिका हैं।") === false,
+  "degeneration check is wrong"
 );
 
 console.log(`\n${tariffFailed === 0 ? "all" : "some"} tariff-line checks ${tariffFailed ? "FAILED" : "passed"}`);

@@ -8,10 +8,10 @@ const productLinks = [
 ];
 const resourceLinks = [
   { label: "Landed Cost Calculator", href: "/calculator" },
+  { label: "HSN Code Search", href: "/hsn-search" },
   { label: "Blog", href: "/blog" },
-  // "HS Code Lookup" and "Export Guide" pointed at "#". The calculator now does
-  // the lookup, so the dead links are gone rather than left promising pages
-  // that do not exist.
+  // "Export Guide" pointed at "#" and was removed rather than left promising a
+  // page that doesn't exist.
   { label: "FAQ", href: "/pricing#faq" },
 ];
 const companyLinks = [

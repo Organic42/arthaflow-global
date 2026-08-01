@@ -26,6 +26,7 @@ import {
   describeDrawback,
   drawbackHeadingCount,
 } from "../src/lib/hs/drawback.ts";
+import { lookupGst, describeGst, gstDatasetSize } from "../src/lib/hs/gst.ts";
 import {
   WITS_REPORTERS,
   supportedDestinations,
@@ -229,6 +230,48 @@ check(
   drawbackForHsCode("7306")?.heading === "7306" &&
     drawbackForHsCode("730630")?.heading === "7306",
   "heading resolution differs by input length"
+);
+
+// ── GST rates ─────────────────────────────────────────────────────────────────
+check(
+  `GST dataset looks complete (${gstDatasetSize()} distinct codes)`,
+  gstDatasetSize() > 900,
+  `only ${gstDatasetSize()} distinct codes`
+);
+
+// 0813 (dried fruit) carries a single, unambiguous entry at 5%.
+const driedFruit = lookupGst("08130000");
+check(
+  "0813 GST resolves unambiguous at 5%",
+  driedFruit.unambiguous && !driedFruit.isCatchAll && driedFruit.candidates[0].rate === 5,
+  `got ${JSON.stringify(driedFruit)}`
+);
+
+// Chapter 61 (apparel) genuinely carries two rates in the source notification —
+// this must surface as an ambiguity, never collapse to one number.
+const apparel = lookupGst("61091000");
+check(
+  "chapter 61 apparel is flagged ambiguous with both rates",
+  !apparel.unambiguous &&
+    apparel.candidates.some((c) => c.rate === 5) &&
+    apparel.candidates.some((c) => c.rate === 18),
+  `got ${JSON.stringify(apparel)}`
+);
+
+const apparelText = describeGst(apparel);
+check(
+  "ambiguous GST description discloses both candidate rates",
+  apparelText.includes("5%") && apparelText.includes("18%"),
+  `got "${apparelText}"`
+);
+
+// A code with no entry anywhere in its chapter falls to Schedule II's own
+// catch-all (18%) — this must never read as "no data".
+const unlisted = lookupGst("99999999");
+check(
+  "unlisted code resolves to the Schedule II catch-all at 18%",
+  unlisted.isCatchAll && unlisted.unambiguous && unlisted.candidates[0].rate === 18,
+  `got ${JSON.stringify(unlisted)}`
 );
 
 // ── Destination import duty ──────────────────────────────────────────────────

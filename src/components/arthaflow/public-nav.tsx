@@ -12,6 +12,7 @@ const links = [
   // Placed before Pricing on purpose: it is free, needs no sign-up, and is the
   // fastest way for a manufacturer to see whether we are useful to them.
   { href: "/calculator", label: "Calculator" },
+  { href: "/hsn-search", label: "HSN Search" },
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
 ];

@@ -15,6 +15,7 @@ import {
   describeDrawback,
   type DrawbackResult,
 } from "./drawback";
+import { lookupGst, describeGst, GST_SOURCE, type GstResult } from "./gst";
 
 export interface ClassifyProductArgs {
   /** Free-text product description, e.g. "leather handbags for women". */
@@ -111,6 +112,8 @@ export interface TariffLineArgs {
 export interface TariffLineWithRebate extends TariffLine {
   /** RoDTEP rebate for this line, or null when the schedule omits it. */
   rodtep: RodtepRate | null;
+  /** GST rate for this line — never null; an unmatched code resolves to the notification's own 18% catch-all. */
+  gst: GstResult;
 }
 
 export function getIndianTariffLines(
@@ -147,6 +150,7 @@ export function getIndianTariffLines(
   const enriched: TariffLineWithRebate[] = lines.map((l) => ({
     ...l,
     rodtep: lookupRodtep(l.code),
+    gst: lookupGst(l.code),
   }));
 
   const restricted = lines.filter((l) => l.policy !== "Free");
@@ -161,7 +165,7 @@ export function getIndianTariffLines(
               ? ` capped at Rs ${l.rodtep.capPerUnitInr}/${l.rodtep.unit || "unit"}`
               : "")
           : "no RoDTEP rate in the schedule";
-        return `${l.code} — ${l.description} [${l.policy}] (${r})`;
+        return `${l.code} — ${l.description} [${l.policy}] (${r}) (${describeGst(l.gst)})`;
       })
       .join(" | ") +
     ". Choose the one matching the product and tell the user which you used.";
@@ -185,6 +189,18 @@ export function getIndianTariffLines(
       `give the notified rate and say the limitation applies.`;
   }
 
+  const ambiguousGst = enriched.filter((l) => !l.gst.unambiguous);
+  if (ambiguousGst.length > 0) {
+    // Same discipline as the Restricted/Prohibited block: a value- or
+    // end-use-based rate split is not something the model may resolve on
+    // its own, so it must be surfaced as an instruction, not left as data.
+    narrative +=
+      ` MANDATORY on GST: ${ambiguousGst
+        .map((l) => `${l.code} — ${describeGst(l.gst)}`)
+        .join(" | ")} You MUST present all candidate rates and tell the user ` +
+      `to confirm which applies. Do not state a single GST rate for these lines.`;
+  }
+
   const drawback = drawbackForHsCode(hsCode);
   if (drawback) {
     narrative += ` DUTY DRAWBACK — ${describeDrawback(drawback)}`;
@@ -198,7 +214,7 @@ export function getIndianTariffLines(
     }
   }
 
-  narrative += ` ${ITCHS_SOURCE.note}`;
+  narrative += ` ${ITCHS_SOURCE.note} ${GST_SOURCE.notification}.`;
 
   return {
     ok: true,

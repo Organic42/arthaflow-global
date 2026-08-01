@@ -8,8 +8,9 @@ const publicRoutes = [
   "/login",
   "/privacy",
   "/terms",
-  // Free tool, deliberately usable before sign-up.
+  // Free tools, deliberately usable before sign-up.
   "/calculator",
+  "/hsn-search",
 ];
 const onboardingRoute = "/onboarding";
 

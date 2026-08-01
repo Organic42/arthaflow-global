@@ -50,7 +50,17 @@ const quickActions = [
 
 // ── Readiness score from profile ─────────────────────────────────────────────
 
-function calcReadiness(p: any, productCount: number): number {
+/** The export-readiness fields this calculation reads. */
+interface ReadinessProfile {
+  has_iec?: boolean | null;
+  ad_code_registered?: string | null;
+  gst_number?: string | null;
+}
+
+function calcReadiness(
+  p: ReadinessProfile | null | undefined,
+  productCount: number
+): number {
   const checks = [
     p?.has_iec === true,
     p?.ad_code_registered === "yes",
@@ -110,7 +120,8 @@ export default function MobileDashboardPage() {
   const [notifs, setNotifs] = useState<Notif[]>([]);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // `loading` already starts true and this runs once on mount, so setting
+    // it here only forced an extra synchronous render.
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
@@ -177,6 +188,11 @@ export default function MobileDashboardPage() {
     setLoading(false);
   }, []);
 
+  // The loader is async and every setState in it runs after an await, so no
+  // state is set during the effect's synchronous phase. The rule flags the
+  // call because it cannot see across the await boundary; satisfying it
+  // properly means a data library or Server Components, not a change here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   // Greeting

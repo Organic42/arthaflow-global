@@ -70,8 +70,24 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      // The script below writes to this element before React hydrates, so the
+      // server and client markup differ by design.
+      suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
     >
+      <head>
+        {/*
+          Applies the saved theme before first paint. Without this the page
+          renders light, then the toggle corrects it after hydration — a visible
+          flash of white on every dark-theme reload. Inline and blocking on
+          purpose: deferring it defeats the point.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('arthaflow-theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-background text-text-body">
         <JsonLdScript data={[organizationSchema, websiteSchema]} />
         {children}

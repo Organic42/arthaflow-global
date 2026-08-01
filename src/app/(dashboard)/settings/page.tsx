@@ -109,10 +109,13 @@ export default function SettingsPage() {
   const [exportExperience, setExportExperience] = useState("");
 
   // Track original values for dirty check
-  const [original, setOriginal] = useState<Record<string, any>>({});
+  // Form values only — strings, booleans and numbers. `unknown` keeps the
+  // dirty comparison honest without pretending we know each field's type.
+  const [original, setOriginal] = useState<Record<string, unknown>>({});
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // `loading` already starts true and this runs once on mount, so setting
+    // it here only forced an extra synchronous render.
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -154,7 +157,12 @@ export default function SettingsPage() {
     setLoading(false);
   }, []);
 
+  // The loader is async and every setState in it runs after an await, so no
+  // state is set during the effect's synchronous phase. The rule flags the
+  // call because it cannot see across the await boundary; satisfying it
+  // properly means a data library or Server Components, not a change here.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 

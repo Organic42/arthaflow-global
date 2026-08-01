@@ -318,8 +318,10 @@ export default function OnboardingPage() {
 
       setDirection(1);
       setStep(nextStep);
-    } catch (err: any) {
-      setSaveError(err.message || "Failed to save. Please try again.");
+    } catch (err: unknown) {
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to save. Please try again."
+      );
     } finally {
       setSaving(false);
     }

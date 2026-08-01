@@ -70,8 +70,12 @@ function LoginContent() {
           router.push(redirectTo);
         }
       }
-    } catch (err: any) {
-      setError(err.message || "Login failed. Please check your credentials.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }
@@ -114,8 +118,10 @@ function LoginContent() {
       }
 
       router.push("/onboarding");
-    } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }

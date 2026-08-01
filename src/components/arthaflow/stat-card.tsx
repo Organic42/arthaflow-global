@@ -38,10 +38,11 @@ function CountNumber({
   const [display, setDisplay] = useState(target);
 
   useEffect(() => {
-    if (target === 0) {
-      setDisplay(0);
-      return;
-    }
+    // Nothing to animate towards zero — the render below reads `target`
+    // directly in that case, so setting state here would only have forced an
+    // extra render to reach a value we already know.
+    if (target === 0) return;
+
     let raf = 0;
     const duration = 1100;
     const start = performance.now();
@@ -56,10 +57,14 @@ function CountNumber({
     return () => cancelAnimationFrame(raf);
   }, [target]);
 
+  // Derived, not stored: a zero target renders zero without a state round-trip,
+  // and a stale `display` from a previous non-zero target cannot leak through.
+  const value = target === 0 ? 0 : display;
+
   const formatted =
     decimals > 0
-      ? display.toFixed(decimals)
-      : Math.round(display).toLocaleString("en-IN");
+      ? value.toFixed(decimals)
+      : Math.round(value).toLocaleString("en-IN");
 
   return (
     <span>

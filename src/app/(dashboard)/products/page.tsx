@@ -106,6 +106,11 @@ export default function ProductCataloguePage() {
     setLoading(false);
   };
 
+  // The loader is async and every setState in it runs after an await, so no
+  // state is set during the effect's synchronous phase. The rule flags the
+  // call because it cannot see across the await boundary; satisfying it
+  // properly means a data library or Server Components, not a change here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadProducts(); }, []);
 
   const handleAdd = async () => {

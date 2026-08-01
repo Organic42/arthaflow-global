@@ -69,12 +69,29 @@ function timeAgo(date: string): string {
   return `${days} days ago`;
 }
 
+/** Only the fields this page reads — not the full profiles row. */
+interface DashboardProfile {
+  full_name?: string | null;
+}
+
+/** An activity-feed row as rendered below. */
+interface ActivityRow {
+  id: string;
+  badge: string;
+  badge_color: string;
+  text: string;
+  created_at: string;
+  // Present on every row, nullable rather than optional — that is what the
+  // column is, and the card below expects `string | null`.
+  link_to: string | null;
+}
+
 export default function DashboardPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<DashboardProfile | null>(null);
   const [stats, setStats] = useState({ products: 0, documents: 0, inquiries: 0, shipments: 0 });
-  const [activity, setActivity] = useState<any[]>([]);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [readiness, setReadiness] = useState<{ label: string; pct: number }[]>([]);
 
   useEffect(() => {

@@ -95,7 +95,8 @@ export default function BuyerInquiriesPage() {
 
   // Load inquiries
   const load = useCallback(async () => {
-    setLoading(true);
+    // `loading` already starts true and this runs once on mount, so setting
+    // it here only forced an extra synchronous render.
     setError(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -110,6 +111,11 @@ export default function BuyerInquiriesPage() {
     setLoading(false);
   }, []);
 
+  // The loader is async and every setState in it runs after an await, so no
+  // state is set during the effect's synchronous phase. The rule flags the
+  // call because it cannot see across the await boundary; satisfying it
+  // properly means a data library or Server Components, not a change here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   // Filtered list

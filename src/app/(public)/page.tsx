@@ -114,10 +114,10 @@ export default function HomePage() {
           {/* Value proposition — the first thing a visitor reads */}
           <div className="relative z-10 flex flex-col items-center text-center">
             <div className="mb-4 text-xs font-bold uppercase tracking-[2px] text-artha-gold">
-              AI-Powered Export Infrastructure
+              Tech-Enabled Export Infrastructure
             </div>
             <h1 className="mb-4 max-w-[720px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:text-6xl">
-              Your AI-Powered Export Department —{" "}
+              Your Export Department —{" "}
               <span className="text-artha-gold">Without The Overhead</span>
             </h1>
             <p className="mb-7 max-w-[540px] text-base leading-relaxed text-white/70 sm:text-lg">
@@ -145,8 +145,8 @@ export default function HomePage() {
               </MagneticButton>
             </div>
             <p className="mt-5 text-[13px] text-white/45">
-              Live with 5 pilot manufacturers in Pune · No sign-up needed for the
-              calculator
+              Live with 5 pilot manufacturers in Mumbai and Pune · No sign-up
+              needed for the calculator
             </p>
           </div>
 

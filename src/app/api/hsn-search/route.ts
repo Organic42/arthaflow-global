@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { searchHsCodes, lookupHsCode } from "@/lib/hs/classify";
-import { tariffLinesFor, lookupTariffLine, ITCHS_SOURCE } from "@/lib/hs/itchs";
+import {
+  tariffLinesFor,
+  lookupTariffLine,
+  ITCHS_SOURCE,
+  type TariffLine,
+} from "@/lib/hs/itchs";
 import { lookupRodtep, describeRodtep, RODTEP_SOURCE } from "@/lib/hs/rodtep";
 import { drawbackForHsCode, describeDrawback, DRAWBACK_SOURCE } from "@/lib/hs/drawback";
 import { lookupGst, describeGst, GST_SOURCE } from "@/lib/hs/gst";
@@ -34,6 +39,41 @@ function limited(request: Request) {
   );
 }
 
+/**
+ * The four levels an 8-digit ITC-HS code resolves through, each with the
+ * nomenclature's own wording for that level.
+ *
+ * The split matters and is not cosmetic: the first six digits are the
+ * international HS 2022 nomenclature — the same classification UN Comtrade
+ * answers to — and only the last two are India's own tariff line. Conflating
+ * them is the mistake classify.ts exists to prevent, so the UI is given what it
+ * needs to show the boundary rather than printing one flat string.
+ */
+function codeLevels(line: TariffLine) {
+  const c = line.code;
+  const international = [
+    { digits: c.slice(0, 2), at: c.slice(0, 2), level: "Chapter" },
+    { digits: c.slice(2, 4), at: c.slice(0, 4), level: "Heading" },
+    { digits: c.slice(4, 6), at: c.slice(0, 6), level: "Subheading" },
+  ].map((s) => ({
+    ...s,
+    title: lookupHsCode(s.at)?.description ?? "",
+    indian: false,
+  }));
+
+  return [
+    ...international,
+    {
+      digits: c.slice(6, 8),
+      at: c,
+      level: "Tariff line",
+      // DGFT's own wording for the line, not the international heading's.
+      title: line.description,
+      indian: true,
+    },
+  ];
+}
+
 function lineDetail(code: string) {
   const line = lookupTariffLine(code);
   if (!line) return null;
@@ -47,6 +87,7 @@ function lineDetail(code: string) {
     description: line.description,
     unit: line.unit,
     hsParent: line.hsParent,
+    levels: codeLevels(line),
     policy: line.policy,
     condition: line.condition,
     gst: { ...gst, description: describeGst(gst) },

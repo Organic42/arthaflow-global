@@ -4,23 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowRight, Info, AlertTriangle, HelpCircle } from "lucide-react";
+import { Search, ArrowRight, AlertTriangle } from "lucide-react";
 
 /**
  * Public HSN code search.
  *
- * Same retrieve-then-choose flow as /calculator: search returns a shortlist,
- * the user picks the Indian tariff line, and every figure below it — GST,
- * RoDTEP, Duty Drawback, export policy — comes from bundled government data.
- * Zero live API calls: everything here is a lookup into JSON shipped with the
- * app, not a request to any external service.
+ * Retrieve-then-choose, like /calculator and like Saathi: search returns a
+ * shortlist, the user picks the tariff line, and every figure below is a lookup
+ * into JSON bundled with the app. No live API call, ever.
  *
- * BCD (Basic Customs Duty) is deliberately absent. Unlike GST, which got a
- * single consolidated notification with GST 2.0, BCD has no equivalent — it
- * is spread across ~98 separate chapter notifications that Parliament amends
- * most Budgets, with no one document to build from. Showing a number here
- * would mean showing one we can't stand behind, so the page says so instead
- * of guessing.
+ * THE DESIGN RULE THIS PAGE IS BUILT ON: settled values look singular,
+ * unsettled values look plural. Competitors print one confident number for
+ * everything. Our data layer deliberately refuses to — chapter 61's GST really
+ * is 5% or 18% depending on price, and a drawback rate really cannot be pinned
+ * to an ITC-HS line (see gst.ts and drawback.ts). Rendering those as one big
+ * number with a grey caveat underneath would contradict the data. So an
+ * unsettled figure is never given the single-number treatment; it renders as a
+ * visible set, and you can tell the difference across the room.
+ *
+ * BCD is absent and the page says so rather than omitting it quietly — there is
+ * no consolidated source to build it from.
  */
 
 interface LineSummary {
@@ -34,6 +37,13 @@ interface Candidate {
   lines: LineSummary[];
 }
 
+interface CodeLevel {
+  digits: string;
+  at: string;
+  level: string;
+  title: string;
+  indian: boolean;
+}
 interface GstCandidate {
   rate: number;
   schedule: string;
@@ -67,14 +77,41 @@ interface DrawbackDetail {
 interface LineDetail {
   code: string;
   description: string;
-  unit: string;
-  hsParent: string;
+  levels: CodeLevel[];
   policy: string;
   condition: string;
   gst: GstDetail;
   rodtep: RodtepDetail | null;
   drawback: DrawbackDetail | null;
 }
+
+/** Real starting points, and a demonstration that a bare code works too. */
+const EXAMPLES = ["leather handbags", "basmati rice", "brass door handles", "61091000"];
+
+/**
+ * Badge tones, stated per mode instead of reusing the shared semantic tokens.
+ * Measured, the tokens don't clear WCAG AA at these sizes: --color-warning on
+ * --gold-bg is 3.0:1 in light and 3.5:1 in dark, and --color-success on
+ * --green-bg is 3.6:1, against the 4.5:1 small-text floor. These pairs measure
+ * 6.7-8.1:1 in both modes. The tinted backgrounds are unchanged.
+ */
+const TONE = {
+  ok: "bg-green-bg text-[#065F46] dark:text-[#6EE7B7]",
+  warn: "bg-gold-bg text-[#92400E] dark:text-[#FBBF24]",
+  stop: "bg-red-bg text-[#991B1B] dark:text-[#FCA5A5]",
+} as const;
+
+/** Stated outright rather than left to UA defaults: the base layer restyles
+ *  outline-color globally, and these custom rows are bare buttons. */
+const FOCUS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-artha-gold";
+
+const POLICY_TONE: Record<string, string> = {
+  Free: TONE.ok,
+  Restricted: TONE.warn,
+  STE: TONE.warn,
+  Prohibited: TONE.stop,
+};
 
 export default function HsnSearchPage() {
   const [query, setQuery] = useState("");
@@ -87,25 +124,22 @@ export default function HsnSearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<LineDetail | null>(null);
 
-  async function search(e: React.FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  async function runSearch(raw: string) {
+    if (!raw.trim()) return;
     setSearching(true);
     setError(null);
     setDetail(null);
     setPicked(null);
     setLineCode(null);
     try {
-      const r = await fetch(`/api/hsn-search?q=${encodeURIComponent(query)}`);
+      const r = await fetch(`/api/hsn-search?q=${encodeURIComponent(raw)}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error ?? "Search failed.");
       const list: Candidate[] = d.candidates ?? [];
       setCandidates(list);
-      // A bare code always resolves to exactly one candidate — jump straight
-      // to it instead of making the user click through a shortlist of one.
-      if (list.length === 1) {
-        selectCandidate(list[0]);
-      }
+      // A bare code resolves to exactly one candidate — go straight there
+      // rather than showing a shortlist of one.
+      if (list.length === 1) selectCandidate(list[0]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed.");
     } finally {
@@ -138,280 +172,453 @@ export default function HsnSearchPage() {
     }
   }
 
-  const restricted = detail && detail.policy !== "Free";
-
   return (
     <section className="min-h-[70vh] bg-background px-6 pb-24 pt-14 sm:px-8">
-      <div className="mx-auto max-w-[880px]">
-        <div className="mb-10 text-center">
-          <h1 className="mb-3 text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
-            HSN Code Search
-          </h1>
-          <p className="mx-auto max-w-[560px] text-base text-text-secondary">
-            GST rate, export policy, RoDTEP and Duty Drawback for any product or
-            HSN code. Free, no sign-up, no live lookups — every figure is bundled
-            government data.
+      <div className="mx-auto max-w-[760px]">
+        <header className="mb-9">
+          <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
+            ITC(HS) 2022 · Free · No sign-up
           </p>
-        </div>
+          <h1 className="mb-3 text-3xl font-extrabold leading-[1.1] tracking-tight text-text-heading sm:text-[2.6rem]">
+            Know what your HSN code actually says
+          </h1>
+          <p className="max-w-[52ch] text-base leading-relaxed text-text-secondary">
+            Search a product or paste a code to get the tariff line, its GST rate
+            and what you claim back on export. Where the rules genuinely
+            don&apos;t settle on one number, you get all of them — not a guess.
+          </p>
+        </header>
 
-        {/* ── Step 1: find the code ── */}
+        {/* ── Find the code ── */}
         <div className="mb-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-artha-gold text-[12px] font-bold text-navy">
-              1
-            </span>
-            <h2 className="text-base font-bold text-text-heading">
-              Search a product or an HSN code
-            </h2>
-          </div>
-          <form onSubmit={search} className="flex gap-2">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              runSearch(query);
+            }}
+            className="flex gap-2"
+          >
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. leather handbags, 420221, brass door handles"
-              className="h-10"
+              placeholder="leather handbags — or 42022110"
+              aria-label="Product description or HSN code"
+              className="h-11"
             />
-            <Button type="submit" disabled={searching} className="h-10 shrink-0 gap-1.5">
+            <Button type="submit" disabled={searching} className="h-11 shrink-0 gap-1.5">
               <Search size={15} />
               {searching ? "Searching…" : "Search"}
             </Button>
           </form>
 
+          {!candidates && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-[13px] text-text-muted">Try</span>
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => {
+                    setQuery(ex);
+                    runSearch(ex);
+                  }}
+                  className={`rounded-full border border-border px-3 py-1 font-mono text-[12px] text-text-body transition-colors hover:border-artha-gold hover:bg-gold-bg ${FOCUS}`}
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          )}
+
           {candidates && candidates.length === 0 && (
-            <p className="mt-3 text-sm text-text-secondary">
-              No match. Try the material and what the product is used for, or a
-              2-8 digit HSN code directly.
+            <p className="mt-4 text-sm text-text-secondary">
+              No match. Try the material and what the product is used for — that
+              is how the nomenclature is written — or paste a 2–8 digit code.
             </p>
           )}
 
           {candidates && candidates.length > 1 && (
-            <div className="mt-4">
-              <p className="mb-2 text-[13px] text-text-secondary">
-                Pick the closest match. We never choose for you — every figure
-                below depends on this code.
+            <div className="mt-5">
+              <SectionLabel>Pick the closest match</SectionLabel>
+              <p className="mb-3 text-[13px] text-text-secondary">
+                We never choose for you. Every figure below depends on this code.
               </p>
-              <div className="flex flex-col gap-2">
+              <div className="divide-y divide-border border-y border-border">
                 {candidates.map((c) => (
                   <button
                     key={c.code}
                     type="button"
                     onClick={() => selectCandidate(c)}
-                    className={`rounded-lg border p-3 text-left text-sm transition-colors ${
-                      picked?.code === c.code
-                        ? "border-artha-gold bg-gold-bg"
-                        : "border-border hover:border-artha-gold/50"
+                    className={`flex w-full items-baseline gap-3 py-3 text-left transition-colors hover:bg-hover-gold ${FOCUS} ${
+                      picked?.code === c.code ? "bg-gold-bg" : ""
                     }`}
                   >
-                    <span className="font-mono font-bold text-text-heading">
+                    <span className="shrink-0 font-mono text-[13px] font-bold tabular-nums text-artha-gold">
                       {c.code}
-                    </span>{" "}
-                    <span className="text-text-body">{c.description}</span>
+                    </span>
+                    <span className="text-[13.5px] leading-snug text-text-body">
+                      {c.description}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Indian tariff line picker — only shown when there's a real choice. */}
           {picked && picked.lines.length > 1 && (
-            <div className="mt-4 border-t border-border pt-4">
-              <label className="mb-1.5 block text-[13px] font-medium text-text-heading">
-                Indian tariff line (8-digit, goes on your shipping bill)
-              </label>
-              <select
-                value={lineCode ?? ""}
-                onChange={(e) => loadDetail(e.target.value)}
-                className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <option value="" disabled>
-                  Choose the tariff line…
-                </option>
+            <div className="mt-5">
+              <SectionLabel>Choose the tariff line</SectionLabel>
+              <p className="mb-3 text-[13px] text-text-secondary">
+                The last two digits are India&apos;s. This is what goes on the
+                shipping bill.
+              </p>
+              <div className="divide-y divide-border border-y border-border">
                 {picked.lines.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.code} — {l.description}
-                    {l.policy !== "Free" ? ` [${l.policy}]` : ""}
-                  </option>
+                  <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => loadDetail(l.code)}
+                    className={`flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-hover-gold ${FOCUS} ${
+                      lineCode === l.code ? "bg-gold-bg" : ""
+                    }`}
+                  >
+                    <span className="shrink-0 font-mono text-[13px] font-bold tabular-nums text-text-heading">
+                      <span className="text-text-muted">{l.code.slice(0, 6)}</span>
+                      {l.code.slice(6)}
+                    </span>
+                    <span className="flex-1 text-[13.5px] leading-snug text-text-body">
+                      {l.description}
+                    </span>
+                    {l.policy !== "Free" && (
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          POLICY_TONE[l.policy] ?? TONE.warn
+                        }`}
+                      >
+                        {l.policy}
+                      </span>
+                    )}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
           )}
 
           {picked && picked.lines.length === 0 && (
-            <p className="mt-4 border-t border-border pt-4 text-sm text-text-secondary">
-              DGFT&apos;s export schedule lists no 8-digit tariff line under HS{" "}
-              {picked.code}. The 6-digit code stands; confirm the tariff line
-              with DGFT or a customs broker.
+            <p className="mt-5 text-sm text-text-secondary">
+              DGFT&apos;s export schedule lists no 8-digit line under HS{" "}
+              <span className="font-mono">{picked.code}</span>. The 6-digit code
+              stands; confirm the tariff line with DGFT or a customs broker.
             </p>
           )}
         </div>
 
         {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div className={`mb-6 rounded-xl border border-error/30 p-4 text-sm ${TONE.stop}`}>
             {error}
           </div>
         )}
 
         {loadingDetail && (
-          <p className="mb-6 text-center text-sm text-text-secondary">
-            Looking up…
+          <p className="py-6 text-center font-mono text-[13px] text-text-muted">
+            Resolving…
           </p>
         )}
 
-        {/* ── Step 2: the answer ── */}
-        {detail && (
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-artha-gold text-[12px] font-bold text-navy">
-                2
-              </span>
-              <h2 className="text-base font-bold text-text-heading">
-                HS {detail.code} — {detail.description}
-              </h2>
-            </div>
+        {detail && <Docket detail={detail} />}
 
-            {restricted && (
-              <p className="mb-5 flex items-start gap-1.5 rounded-lg bg-red-50 p-2.5 text-[13px] text-red-800">
-                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-                <span>
-                  This line is <strong>{detail.policy}</strong> for export
-                  {detail.condition ? ` — ${detail.condition}` : ""}. Confirm the
-                  current position with DGFT or a customs broker before shipping;
-                  policy is amended by notification.
-                </span>
-              </p>
-            )}
-
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {/* GST */}
-              <div className="rounded-xl border border-border p-4">
-                <h3 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-text-secondary">
-                  GST rate
-                </h3>
-                {detail.gst.unambiguous ? (
-                  <p className="text-2xl font-extrabold text-text-heading">
-                    {detail.gst.candidates[0].rate}%
-                  </p>
-                ) : (
-                  <p className="text-lg font-extrabold text-text-heading">
-                    {detail.gst.candidates.map((c) => `${c.rate}%`).join(" or ")}
-                  </p>
-                )}
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-text-secondary">
-                  {detail.gst.description}
-                </p>
-              </div>
-
-              {/* RoDTEP */}
-              <div className="rounded-xl border border-border p-4">
-                <h3 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-text-secondary">
-                  RoDTEP rebate
-                </h3>
-                {detail.rodtep ? (
-                  <>
-                    <p className="text-2xl font-extrabold text-text-heading">
-                      {detail.rodtep.notifiedRatePct}%{" "}
-                      <span className="text-sm font-medium text-text-secondary">
-                        of FOB
-                      </span>
-                    </p>
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-text-secondary">
-                      {detail.rodtep.description}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-text-secondary">
-                    No RoDTEP rate notified for this tariff line.
-                  </p>
-                )}
-              </div>
-
-              {/* Duty Drawback */}
-              <div className="rounded-xl border border-border p-4 sm:col-span-2">
-                <h3 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-text-secondary">
-                  Duty Drawback
-                </h3>
-                {detail.drawback ? (
-                  <>
-                    {detail.drawback.unambiguous ? (
-                      <p className="text-2xl font-extrabold text-text-heading">
-                        {detail.drawback.items[0].ratePct}%{" "}
-                        <span className="text-sm font-medium text-text-secondary">
-                          of FOB
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="text-lg font-extrabold text-text-heading">
-                        {detail.drawback.items.map((i) => `${i.ratePct}%`).join(" / ")}
-                      </p>
-                    )}
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-text-secondary">
-                      {detail.drawback.description}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-text-secondary">
-                    No Duty Drawback entry for HS heading {detail.code.slice(0, 4)}.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* BCD — deliberately absent, said plainly rather than omitted silently. */}
-            <div className="mt-5 rounded-xl bg-background p-4">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-text-heading">
-                <HelpCircle size={14} />
-                Basic Customs Duty (BCD) — not shown here
-              </div>
-              <p className="text-[12.5px] leading-relaxed text-text-secondary">
-                Unlike GST, which was consolidated into one notification under
-                GST 2.0, BCD has no single official source — it is spread across
-                roughly 98 separate chapter notifications that Parliament
-                typically amends every Budget. Rather than show a number we
-                can&apos;t stand behind, check your product&apos;s BCD with the{" "}
-                <a
-                  href="https://www.cbic.gov.in/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-artha-gold"
-                >
-                  CBIC customs tariff
-                </a>{" "}
-                or a customs broker. (BCD applies to imports in any case — as an
-                exporter it does not fall on you, though it affects the landed
-                cost of any imported inputs you use.)
-              </p>
-            </div>
-
-            <div className="mt-5 flex items-start gap-1.5 rounded-xl bg-background p-4 text-[12.5px] leading-relaxed text-text-secondary">
-              <Info size={14} className="mt-0.5 shrink-0" />
-              <span>
-                All figures are bundled from official notifications and updated
-                periodically — not fetched live. Rates change by notification;
-                confirm the current position before shipping or filing.
-              </span>
-            </div>
-
-            <div className="mt-5 flex flex-col items-center gap-2 border-t border-border pt-5 text-center">
-              <p className="text-sm text-text-secondary">
-                Want the landed cost in a destination market too?
-              </p>
-              <Link href="/calculator">
-                <Button className="gap-1.5 bg-artha-gold text-navy hover:bg-artha-gold/90">
-                  Open the Landed Cost Calculator <ArrowRight size={15} />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        <p className="mt-8 text-center text-[12px] leading-relaxed text-text-muted">
+        <p className="mt-10 border-t border-border pt-6 text-[12px] leading-relaxed text-text-muted">
           Tariff lines and export policy from DGFT ITC(HS) 2022. GST from
-          Notification 9/2025-Integrated Tax (Rate), effective 22.09.2025.
-          RoDTEP from DGFT Appendix 4R. Duty Drawback from CBIC 77/2023-Cus
-          (N.T.). Rates change by notification — confirm with a customs broker
-          before shipping.
+          Notification 9/2025-Integrated Tax (Rate), effective 22.09.2025. RoDTEP
+          from DGFT Appendix 4R. Duty Drawback from CBIC 77/2023-Cus (N.T.).
+          Bundled and updated periodically, never fetched live. Rates change by
+          notification — confirm before you ship or file.
         </p>
       </div>
     </section>
+  );
+}
+
+/* ── The docket ─────────────────────────────────────────────────────────── */
+
+function Docket({ detail }: { detail: LineDetail }) {
+  const restricted = detail.policy !== "Free";
+  const drawbackRates = detail.drawback
+    ? [...new Set(detail.drawback.items.map((i) => i.ratePct))].sort((a, b) => b - a)
+    : [];
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Masthead: the code as the artefact it is. The first six digits are the
+          world's, the last two are India's — shown, not explained away. */}
+      <div className="border-b border-border px-6 pt-6 pb-5 sm:px-8">
+        <div className="font-mono text-4xl font-bold leading-none tracking-tight tabular-nums sm:text-5xl">
+          <span className="text-text-heading">{detail.code.slice(0, 6)}</span>
+          <span className="text-artha-gold">{detail.code.slice(6)}</span>
+        </div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em]">
+          <span className="text-text-muted">
+            <span className="text-text-secondary">──────</span> International
+          </span>
+          <span className="text-text-muted">
+            <span className="text-artha-gold">──</span> India
+          </span>
+        </div>
+        <p className="mt-4 text-[15px] font-medium leading-snug text-text-body">
+          {detail.description}
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-[12px] font-semibold ${
+              POLICY_TONE[detail.policy] ?? TONE.warn
+            }`}
+          >
+            {restricted ? detail.policy : "Free to export"}
+          </span>
+          {restricted && (
+            <span className="text-[12.5px] text-text-secondary">
+              Confirm with DGFT before shipping — policy moves by notification.
+            </span>
+          )}
+        </div>
+        {restricted && detail.condition && (
+          <p className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-[13px] leading-relaxed ${TONE.stop}`}>
+            <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+            <span>{detail.condition}</span>
+          </p>
+        )}
+      </div>
+
+      {/* Signature: the drill-down. Each pair of digits narrows the meaning. */}
+      <div className="border-b border-border px-6 py-6 sm:px-8">
+        <SectionLabel>How this code narrows</SectionLabel>
+        <ol className="mt-3">
+          {detail.levels.map((lv, i) => (
+            <li
+              key={lv.at}
+              className="hsn-rung flex gap-3 py-2"
+              style={{
+                paddingLeft: `${i * 18}px`,
+                animationDelay: `${i * 70}ms`,
+              }}
+            >
+              <span
+                className={`w-8 shrink-0 font-mono text-[15px] font-bold tabular-nums ${
+                  lv.indian ? "text-artha-gold" : "text-text-heading"
+                }`}
+              >
+                {lv.digits}
+              </span>
+              <div className="min-w-0 border-l border-border pl-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-text-muted">
+                    {lv.level}
+                  </span>
+                  <span className="font-mono text-[11px] tabular-nums text-text-muted">
+                    {lv.at}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[13px] leading-snug text-text-body">
+                  {lv.title}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* GST is a domestic tax. Separating it from the export claims answers the
+          question a manufacturer actually has, instead of listing four rates. */}
+      <div className="border-b border-border px-6 py-6 sm:px-8">
+        <SectionLabel>If you sell it in India</SectionLabel>
+        <div className="mt-3">
+          <Figure
+            name="GST"
+            settled={detail.gst.unambiguous}
+            values={detail.gst.candidates.map((c) => `${c.rate}%`)}
+            note={detail.gst.description}
+          />
+        </div>
+        <p className="mt-4 text-[12.5px] leading-relaxed text-text-secondary">
+          Exporting instead? Exports are zero-rated — under a Letter of
+          Undertaking you don&apos;t charge this at all.
+        </p>
+      </div>
+
+      <div className="px-6 py-6 sm:px-8">
+        <SectionLabel>If you export it</SectionLabel>
+        <div className="mt-3 divide-y divide-border">
+          <div className="pb-4">
+            <Figure
+              name="RoDTEP"
+              settled={detail.rodtep !== null}
+              values={
+                detail.rodtep ? [`${detail.rodtep.notifiedRatePct}%`] : []
+              }
+              unit={detail.rodtep ? "of FOB" : undefined}
+              note={
+                detail.rodtep?.description ??
+                "No rate is notified for this tariff line. That is a real answer, not missing data — about 15% of export lines carry no RoDTEP."
+              }
+            />
+          </div>
+          <div className="pt-4">
+            <Figure
+              name="Duty Drawback"
+              settled={detail.drawback?.unambiguous ?? false}
+              values={drawbackRates.map((r) => `${r}%`)}
+              unit={detail.drawback ? "of FOB" : undefined}
+              note={
+                detail.drawback?.description ??
+                `No Duty Drawback entry for heading ${detail.code.slice(0, 4)}.`
+              }
+            />
+            {detail.drawback && !detail.drawback.unambiguous && (
+              <details className="mt-3 group">
+                <summary className={`cursor-pointer font-mono text-[11.5px] uppercase tracking-[0.12em] text-text-muted transition-colors hover:text-artha-gold ${FOCUS}`}>
+                  {detail.drawback.items.length} drawback items ▾
+                </summary>
+                <ul className="mt-2 divide-y divide-border border-t border-border">
+                  {detail.drawback.items.map((it) => (
+                    <li key={it.drawbackItem} className="flex gap-3 py-2">
+                      <span className="w-16 shrink-0 font-mono text-[12px] tabular-nums text-text-muted">
+                        {it.drawbackItem}
+                      </span>
+                      <span className="w-12 shrink-0 font-mono text-[12px] font-bold tabular-nums text-text-heading">
+                        {it.ratePct}%
+                      </span>
+                      <span className="text-[12.5px] leading-snug text-text-secondary">
+                        {it.description || "—"}
+                        {it.capPerUnitInr !== null && (
+                          <span className="text-text-muted">
+                            {" "}
+                            · cap ₹{it.capPerUnitInr}/{it.unit || "unit"}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Said plainly rather than left as a silent gap. */}
+      <div className="border-t border-border bg-background px-6 py-5 sm:px-8">
+        <SectionLabel>Basic Customs Duty — not shown</SectionLabel>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-text-secondary">
+          GST was consolidated into one notification under GST 2.0. BCD never
+          was — it sits across roughly 98 chapter notifications that get amended
+          most Budgets, so there is no source we could build a reliable lookup
+          from. Check it against the{" "}
+          <a
+            href="https://www.cbic.gov.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-artha-gold underline underline-offset-2 hover:text-text-heading"
+          >
+            CBIC tariff
+          </a>{" "}
+          or your broker. It falls on imports, so as an exporter it reaches you
+          only through the inputs you buy in.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-5 sm:px-8">
+        <p className="text-[13px] text-text-secondary">
+          Need what your buyer pays to land this abroad?
+        </p>
+        <Link href="/calculator">
+          <Button className="gap-1.5 bg-artha-gold text-navy hover:bg-artha-gold/90">
+            Landed cost calculator <ArrowRight size={15} />
+          </Button>
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * One figure, rendered by how settled it is.
+ *
+ * `settled` true  → a single large number: this is the rate, full stop.
+ * `settled` false → every candidate, shown as a set. Deliberately NOT one big
+ *                   number with a caveat under it, because the source genuinely
+ *                   carries more than one answer and the design should say so.
+ * no values       → an em dash and the real reason, never a blank.
+ */
+function Figure({
+  name,
+  settled,
+  values,
+  unit,
+  note,
+}: {
+  name: string;
+  settled: boolean;
+  values: string[];
+  unit?: string;
+  note: string;
+}) {
+  const none = values.length === 0;
+  // A long set stops reading as "a set" and starts reading as noise. Four keeps
+  // the plural signal legible; the rest stay one disclosure away, so nothing is
+  // hidden — the exact items are listed under the figure.
+  const shown = values.slice(0, 4);
+  const rest = values.length - shown.length;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        {/* Not uppercased: RoDTEP is a proper noun and its casing is meaningful. */}
+        <span className="font-mono text-[11px] tracking-[0.14em] text-text-muted">
+          {name}
+        </span>
+        {none ? (
+          <span className="font-mono text-2xl font-bold text-text-muted">—</span>
+        ) : settled ? (
+          <span className="font-mono text-3xl font-bold leading-none tabular-nums text-text-heading">
+            {values[0]}
+            {unit && (
+              <span className="ml-1.5 font-sans text-[13px] font-medium text-text-secondary">
+                {unit}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {shown.map((v, i) => (
+              <span key={v} className="flex items-center gap-2">
+                {i > 0 && <span className="text-text-muted">/</span>}
+                <span className="font-mono text-xl font-bold tabular-nums text-text-heading">
+                  {v}
+                </span>
+              </span>
+            ))}
+            {rest > 0 && (
+              <span className="font-mono text-[13px] text-text-secondary">
+                +{rest} more
+              </span>
+            )}
+            <span className={`ml-1 rounded-full px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.12em] ${TONE.warn}`}>
+              Not settled
+            </span>
+          </span>
+        )}
+      </div>
+      <p className="mt-2 max-w-[62ch] text-[12.5px] leading-relaxed text-text-secondary">
+        {note}
+      </p>
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+      {children}
+    </h2>
   );
 }

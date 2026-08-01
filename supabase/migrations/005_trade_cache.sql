@@ -65,3 +65,11 @@ $$;
 -- Functions are executable by PUBLIC by default. This one only removes expired
 -- rows, but a SECURITY DEFINER function should never be broader than it needs.
 REVOKE EXECUTE ON FUNCTION public.trade_cache_cleanup() FROM PUBLIC;
+
+-- REVOKE ... FROM PUBLIC is not enough on its own: applying this against the
+-- live project showed Supabase grants EXECUTE directly to anon and
+-- authenticated at creation time, a separate grant that survives revoking
+-- PUBLIC. Confirmed via information_schema.role_routine_grants — without this
+-- line the function remained callable with the anon key. The same pattern
+-- already existed on handle_new_user and is_admin in this project.
+REVOKE EXECUTE ON FUNCTION public.trade_cache_cleanup() FROM anon, authenticated;

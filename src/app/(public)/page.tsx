@@ -151,7 +151,7 @@ export default function HomePage() {
                 </Link>
               </MagneticButton>
             </div>
-            <p className="mt-5 text-[13px] text-white/45">
+            <p className="mt-5 text-[13px] text-white/55">
               Live with 5 pilot manufacturers in Mumbai and Pune
             </p>
           </div>
@@ -164,15 +164,12 @@ export default function HomePage() {
       </section>
 
       {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy to-royal-blue px-8 pb-24 pt-22">
+      <section className="relative overflow-hidden bg-gradient-to-br from-navy to-royal-blue px-8 py-20">
         <div className="absolute -right-20 -top-30 h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(212,168,67,0.12),transparent_70%)]" />
         <div className="absolute -bottom-40 -left-24 h-[460px] w-[460px] rounded-full bg-[radial-gradient(circle,rgba(37,99,235,0.18),transparent_70%)]" />
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <div className="mb-5 text-xs font-bold uppercase tracking-[2px] text-artha-gold">
-              The Platform
-            </div>
-            <h2 className="mb-5 max-w-[620px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl">
+            <h2 className="mb-5 max-w-[620px] text-[2rem] font-extrabold leading-[1.08] tracking-tight text-white sm:text-[2.5rem]">
               One Dashboard for the{" "}
               <span className="text-artha-gold">Entire Export Journey</span>
             </h2>
@@ -209,12 +206,12 @@ export default function HomePage() {
                   <div className="mb-3.5 grid grid-cols-2 gap-2">
                     {[
                       ["87", "Readiness", "text-action-blue"],
-                      ["3", "Inquiries", "text-artha-gold"],
-                      ["12", "Docs", "text-success"],
+                      ["3", "Inquiries", "text-[#92710A]"],
+                      ["12", "Docs", "text-[#047857]"],
                       ["2", "Shipments", "text-purple"],
                     ].map(([val, label, color], i) => (
                       <div key={i} className="rounded-lg bg-subtle p-2">
-                        <div className={`text-xl font-bold ${color}`}>{val}</div>
+                        <div className={`font-mono text-xl font-bold tabular-nums ${color}`}>{val}</div>
                         <div className="text-[10px] text-text-secondary">
                           {label}
                         </div>
@@ -229,7 +226,7 @@ export default function HomePage() {
                     <div key={i} className="mb-2">
                       <div className="mb-0.5 flex justify-between text-[10px]">
                         <span className="text-text-body">{label as string}</span>
-                        <span className={`font-semibold ${color === "bg-success" ? "text-success" : "text-artha-gold"}`}>
+                        <span className={`font-mono font-semibold tabular-nums ${color === "bg-success" ? "text-[#047857]" : "text-[#92710A]"}`}>
                           {pct as number}%
                         </span>
                       </div>
@@ -244,14 +241,11 @@ export default function HomePage() {
       </section>
 
       {/* OPPORTUNITY — compact, info-dense */}
-      <section className="bg-card px-8 py-16">
+      <section className="bg-card px-8 py-20">
         <div className="mx-auto max-w-[1100px]">
           {/* Header */}
           <div className="mb-10 flex flex-col items-center text-center">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[2px] text-action-blue">
-              The Opportunity
-            </div>
-            <h2 className="mb-2.5 text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
+            <h2 className="mb-2.5 text-[2rem] font-extrabold tracking-tight text-text-heading sm:text-[2.5rem]">
               India is at an Export Inflection Point
             </h2>
             <p className="max-w-[560px] text-[15px] text-text-secondary">
@@ -271,9 +265,9 @@ export default function HomePage() {
                 <div key={t.year} className="flex flex-1 items-center">
                   <div className="flex-1 text-center">
                     <div
-                      className={`text-2xl font-extrabold tracking-tight sm:text-3xl ${
+                      className={`font-mono text-2xl font-extrabold tabular-nums tracking-tight sm:text-3xl ${
                         t.target
-                          ? "text-artha-gold"
+                          ? "text-[#92710A]"
                           : t.current
                             ? "text-action-blue"
                             : "text-text-muted"
@@ -284,7 +278,7 @@ export default function HomePage() {
                     <div className="mt-0.5 text-xs font-medium text-text-secondary">
                       {t.year}
                       {t.target && (
-                        <span className="ml-1.5 rounded bg-gold-bg px-1.5 py-0.5 text-[10px] font-bold text-[#92710A]">
+                        <span className="ml-1.5 rounded bg-gold-bg px-1.5 py-0.5 text-[10px] font-bold text-[#6B5208]">
                           TARGET
                         </span>
                       )}
@@ -322,7 +316,7 @@ export default function HomePage() {
                           {c.country}
                         </span>
                         <span
-                          className={`font-mono text-xs font-bold ${
+                          className={`font-mono text-xs font-bold tabular-nums ${
                             c.highlight ? "text-action-blue" : "text-text-secondary"
                           }`}
                         >
@@ -363,7 +357,7 @@ export default function HomePage() {
                     <div className="text-[12.5px] font-semibold leading-tight text-text-heading">
                       {s.name}
                     </div>
-                    <div className="text-[11px] font-bold text-success">
+                    <div className="font-mono text-[11px] font-bold tabular-nums text-[#047857]">
                       {s.growth} YoY
                     </div>
                   </div>
@@ -378,10 +372,7 @@ export default function HomePage() {
       <section className="bg-background px-8 py-20">
         <div className="mx-auto max-w-[1200px]">
           <div className="mb-12 text-center">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[2px] text-action-blue">
-              The Problem
-            </div>
-            <h2 className="mb-3 text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
+            <h2 className="mb-3 text-[2rem] font-extrabold tracking-tight text-text-heading sm:text-[2.5rem]">
               99.7% of Indian Manufacturers Don&apos;t Export
             </h2>
             <p className="mx-auto max-w-[560px] text-[17px] text-text-secondary">
@@ -418,10 +409,7 @@ export default function HomePage() {
       <section className="bg-card px-8 py-20" id="how-it-works">
         <div className="mx-auto max-w-[1200px]">
           <div className="mb-14 text-center">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[2px] text-action-blue">
-              How It Works
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
+            <h2 className="text-2xl font-bold tracking-tight text-text-heading sm:text-3xl">
               From Factory Floor to International Payment in 4 Steps
             </h2>
           </div>
@@ -432,11 +420,11 @@ export default function HomePage() {
                   <div className="absolute left-1/2 top-7 hidden h-0.5 w-full bg-border lg:block" />
                 )}
                 <div
-                  className={`relative z-10 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full text-[22px] font-bold text-white shadow-lg ${s.color}`}
+                  className={`relative z-10 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full font-mono text-[22px] font-bold tabular-nums text-white shadow-lg ${s.color}`}
                 >
                   {s.n === "check" ? <Check size={26} /> : s.n}
                 </div>
-                <h3 className="mb-1.5 text-base font-bold text-text-heading">
+                <h3 className="mb-1.5 text-[17px] font-bold text-text-heading">
                   {s.title}
                 </h3>
                 <p className="mx-auto max-w-[220px] text-[13px] leading-snug text-text-secondary">
@@ -452,10 +440,7 @@ export default function HomePage() {
       <section className="bg-background px-8 py-20">
         <div className="mx-auto max-w-[1200px]">
           <div className="mb-12 text-center">
-            <div className="mb-3 text-xs font-bold uppercase tracking-[2px] text-action-blue">
-              Features
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-text-heading sm:text-4xl">
+            <h2 className="text-2xl font-bold tracking-tight text-text-heading sm:text-3xl">
               Everything You Need to Export — In One Platform
             </h2>
           </div>
@@ -471,7 +456,7 @@ export default function HomePage() {
                   >
                     {f.icon}
                   </div>
-                  <h3 className="mb-2 text-base font-bold text-text-heading">
+                  <h3 className="mb-2 text-[17px] font-bold text-text-heading">
                     {f.title}
                   </h3>
                   <p className="text-sm leading-relaxed text-text-secondary">
@@ -516,10 +501,10 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy to-royal-blue px-8 py-18 text-center">
+      <section className="relative overflow-hidden bg-gradient-to-br from-navy to-royal-blue px-8 py-20 text-center">
         <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(212,168,67,0.1),transparent_60%)]" />
         <div className="relative mx-auto max-w-[640px]">
-          <h2 className="mb-4 text-4xl font-extrabold tracking-tight text-white">
+          <h2 className="mb-4 text-[2rem] font-extrabold tracking-tight text-white sm:text-[2.5rem]">
             Ready to Start Exporting?
           </h2>
           <p className="mb-8 text-[17px] text-white/70">
@@ -533,7 +518,7 @@ export default function HomePage() {
               </Button>
             </Link>
           </MagneticButton>
-          <p className="mt-5 text-[13px] text-white/45">
+          <p className="mt-5 text-[13px] text-white/65">
             No credit card required. Free for your first export.
           </p>
         </div>

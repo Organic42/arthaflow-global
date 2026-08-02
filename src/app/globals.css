@@ -118,11 +118,16 @@
   --purple-bg: #F5F3FF;
   --red-bg: #FEF2F2;
 
-  /* ArthaFlow text */
+  /* ArthaFlow text.
+     secondary and muted were one step lighter each (#64748B / #94A3B8).
+     Measured on white, muted came out at 2.56:1 — under WCAG AA's 4.5:1 for
+     body text, and it is used for captions and footnotes site-wide. Each moved
+     one step down the slate ramp: muted now 4.76:1, secondary 7.58:1, and the
+     gap between them is preserved. */
   --text-heading: #0B1D3A;
   --text-body: #334155;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
 
   /* Sidebar */
   --sidebar: #FFFFFF;
@@ -169,10 +174,12 @@
   --purple-bg: rgba(124,58,237,0.15);
   --red-bg: rgba(220,38,38,0.15);
 
+  /* Same correction inverted: dark-mode muted was #64748b, 3.75:1 on the page
+     background. Both move one step lighter. */
   --text-heading: #f1f5f9;
   --text-body: #cbd5e1;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-secondary: #b4c0d0;
+  --text-muted: #94a3b8;
 
   --sidebar: #1e293b;
   --sidebar-foreground: #f1f5f9;

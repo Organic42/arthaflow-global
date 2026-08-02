@@ -50,3 +50,8 @@ next-env.d.ts
 # The parsed JSON is vendored; the PDFs are large and re-downloadable.
 .rodtep-cache/
 itchs-schedule2.pdf
+
+# Agent skills installed via `npx skills add`. Vendored tooling, not project
+# source: ~8MB of CSV rule data and scripts, re-installable from skills-lock.json.
+.claude/skills/
+.agents/

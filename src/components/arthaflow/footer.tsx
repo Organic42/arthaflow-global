@@ -43,7 +43,7 @@ export function Footer() {
             <Link
               key={l.label}
               href={l.href}
-              className="mb-2.5 block text-sm text-white/50 hover:text-white/80"
+              className="mb-2.5 block text-sm text-white/70 hover:text-white"
             >
               {l.label}
             </Link>
@@ -58,7 +58,7 @@ export function Footer() {
             <Link
               key={l.label}
               href={l.href}
-              className="mb-2.5 block text-sm text-white/50 hover:text-white/80"
+              className="mb-2.5 block text-sm text-white/70 hover:text-white"
             >
               {l.label}
             </Link>
@@ -73,7 +73,7 @@ export function Footer() {
             <Link
               key={l.label}
               href={l.href}
-              className="mb-2.5 block text-sm text-white/50 hover:text-white/80"
+              className="mb-2.5 block text-sm text-white/70 hover:text-white"
             >
               {l.label}
             </Link>
@@ -81,7 +81,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 pt-5 text-center text-xs text-white/30">
+      <div className="border-t border-white/10 pt-5 text-center text-xs text-white/55">
         © 2026 ArthaFlow Global. All rights reserved.
       </div>
     </footer>

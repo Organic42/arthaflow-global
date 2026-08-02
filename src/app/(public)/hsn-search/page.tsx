@@ -304,7 +304,10 @@ export default function HsnSearchPage() {
                         >
                           <span className="flex items-baseline gap-2">
                             <span className="font-mono text-[12.5px] font-bold tabular-nums text-text-heading">
-                              <span className="text-text-muted">{h.code.slice(0, 6)}</span>
+                              {/* text-secondary, not -muted: this sits on the
+                                  row's bg-subtle hover state, where -muted
+                                  measured 4.34:1 — just under the 4.5:1 floor. */}
+                              <span className="text-text-secondary">{h.code.slice(0, 6)}</span>
                               {h.code.slice(6)}
                             </span>
                             {h.policy !== "Free" && (
@@ -370,7 +373,7 @@ function Placeholder({ loading }: { loading?: boolean }) {
         <p className="text-center font-mono text-[13px] text-white/60">Resolving…</p>
       ) : (
         <>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/50">
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/65">
             Anatomy of a code
           </p>
           <p className="mt-2 max-w-[40ch] text-[15px] leading-relaxed text-white/75">
@@ -388,7 +391,7 @@ function Placeholder({ loading }: { loading?: boolean }) {
                   {d}
                 </span>
                 <span className="min-w-0 border-l border-white/15 pl-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/50">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/65">
                     {level}
                   </span>
                   <span className="block text-[13px] leading-snug text-white/70">
@@ -521,7 +524,7 @@ function Docket({ detail }: { detail: LineDetail }) {
 
       {/* The drill-down. */}
       <div className="border-t border-white/10 px-6 py-6 sm:px-9">
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/50">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/65">
           How this code narrows
         </p>
         <ol className="mt-3">
@@ -540,10 +543,10 @@ function Docket({ detail }: { detail: LineDetail }) {
               </span>
               <div className="min-w-0 border-l border-white/15 pl-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/50">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/65">
                     {lv.level}
                   </span>
-                  <span className="font-mono text-[10.5px] tabular-nums text-white/50">
+                  <span className="font-mono text-[10.5px] tabular-nums text-white/65">
                     {lv.at}
                   </span>
                 </div>
@@ -555,7 +558,7 @@ function Docket({ detail }: { detail: LineDetail }) {
       </div>
 
       <div className="border-t border-white/10 bg-white/[0.03] px-6 py-5 sm:px-9">
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/50">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/65">
           Basic Customs Duty — not shown
         </p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-white/70">

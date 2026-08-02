@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { landedCost } from "@/lib/tariff/landed-cost";
-import { searchHsCodes } from "@/lib/hs/classify";
-import { tariffLinesFor } from "@/lib/hs/itchs";
+import { searchHsCodes, lookupHsCode } from "@/lib/hs/classify";
+import { tariffLinesFor, lookupTariffLine } from "@/lib/hs/itchs";
 import { supportedDestinations, WITS_REPORTERS } from "@/lib/tariff/destination";
+import { agreementFor } from "@/lib/tariff/fta";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,10 @@ export async function GET(request: Request) {
       destinations: supportedDestinations().map((iso) => ({
         iso3: iso,
         name: WITS_REPORTERS[iso].name,
+        // Lets the destination picker flag FTA-covered markets before a
+        // calculation even runs — cheap, and it's the same fta.ts lookup
+        // landedCost() itself uses, not a separate list to keep in sync.
+        hasFta: agreementFor(iso) !== null,
       })),
     });
   }
@@ -53,7 +58,44 @@ export async function GET(request: Request) {
   const blocked = limited(request);
   if (blocked) return blocked;
 
-  // Product search. Returns the same shortlist Saathi gets — the user picks,
+  // A pasted code — the calculator's placeholder invites exactly this
+  // ("leather handbags — or 42022110") — needs its own path: searchHsCodes()
+  // is a text-token index built from descriptions, so a bare code string
+  // matches nothing in it (confirmed empty before adding this). Ported from
+  // /api/hsn-search's identical bare-code handling.
+  const digits = q.replace(/\D/g, "");
+  const isBareCode = digits.length === q.length && digits.length >= 2;
+
+  if (isBareCode && digits.length === 8) {
+    const line = lookupTariffLine(digits);
+    if (!line) return NextResponse.json({ query: q, candidates: [] });
+    return NextResponse.json({
+      query: q,
+      candidates: [
+        {
+          code: line.hsParent,
+          description: line.description,
+          lines: [{ code: line.code, description: line.description, policy: line.policy }],
+        },
+      ],
+    });
+  }
+
+  if (isBareCode) {
+    const found = lookupHsCode(digits);
+    if (!found) return NextResponse.json({ query: q, candidates: [] });
+    const lines = tariffLinesFor(found.code).map((l) => ({
+      code: l.code,
+      description: l.description,
+      policy: l.policy,
+    }));
+    return NextResponse.json({
+      query: q,
+      candidates: [{ code: found.code, description: found.description, lines }],
+    });
+  }
+
+  // Free text. Returns the same shortlist Saathi gets — the user picks,
   // exactly as the model does, because neither should invent a code.
   const candidates = searchHsCodes(q, { limit: 6 }).map((c) => ({
     code: c.code,

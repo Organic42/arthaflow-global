@@ -22,6 +22,7 @@
 
 import { destinationDuty, type DestinationDuty } from "./destination";
 import { assessVat, vatAbsenceReason, VAT_SOURCE, type VatAssessment } from "./vat";
+import { agreementFor, type FtaStatus } from "./fta";
 import { lookupRodtep } from "@/lib/hs/rodtep";
 import { drawbackForHsCode } from "@/lib/hs/drawback";
 
@@ -106,6 +107,18 @@ export interface LandedCostBreakdown {
     netRealisationInr: number;
   };
   destination: DestinationDuty;
+  /**
+   * The trade agreement covering this destination, if any — see fta.ts. Never
+   * carries a preferential rate (none is verifiable), only whether one exists,
+   * whether it can be claimed today, and since when.
+   */
+  fta: {
+    name: string;
+    status: FtaStatus;
+    claimable: boolean;
+    inForceSince?: string;
+    note?: string;
+  } | null;
   /** Every caveat that materially moves these numbers. */
   caveats: string[];
 }
@@ -173,12 +186,43 @@ export async function landedCost(
   const landed = cif + dutyAmount;
 
   caveats.push(
-    `Duty is the MFN rate (${duty.data.mfnRatePct}%, reported ${duty.data.year}). ` +
-      "India has trade agreements under which the real rate may be lower or zero."
+    `Duty is the MFN rate (${duty.data.mfnRatePct}%, reported ${duty.data.year}).`
   );
   caveats.push(
     `Duty calculated on ${dutyBasis}, which is how ${duty.data.country} assesses it.`
   );
+
+  // Named agreement or an explicit "none" — never the vague "may be lower"
+  // this caveat used to carry, which said nothing a manufacturer could act on.
+  const ftaLookup = agreementFor(iso);
+  const fta: LandedCostBreakdown["fta"] = ftaLookup
+    ? {
+        name: ftaLookup.agreement.name,
+        status: ftaLookup.agreement.status,
+        claimable: ftaLookup.claimable,
+        inForceSince: ftaLookup.agreement.inForceSince,
+        note: ftaLookup.agreement.note,
+      }
+    : null;
+
+  if (fta?.claimable) {
+    caveats.push(
+      `${fta.name} is in force${fta.inForceSince ? ` (since ${fta.inForceSince})` : ""}, ` +
+        "so the duty above likely overstates what your buyer actually pays. We do not hold the " +
+        "preferential rate for this product — confirm it with a customs broker. Claiming it needs " +
+        "a Certificate of Origin, applied for through DGFT's Common Digital Platform for CoO; " +
+        `without it the MFN rate applies. ${fta.note ?? ""}`.trim()
+    );
+  } else if (fta) {
+    caveats.push(
+      `${fta.name} has been ${fta.status} but is not yet in force, so the MFN duty above still applies.`
+    );
+  } else {
+    caveats.push(
+      "We hold no trade agreement covering this destination for Indian goods, so the MFN rate is " +
+        "most likely what applies."
+    );
+  }
   // VAT is charged on CIF plus duty — it compounds on the duty rather than
   // sitting beside it.
   const vat = assessVat(iso, landed);
@@ -295,6 +339,7 @@ export async function landedCost(
       netRealisationInr: inr(netRealisation),
     },
     destination: duty.data,
+    fta,
     caveats,
   };
 

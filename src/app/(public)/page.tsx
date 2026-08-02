@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { JsonLdScript } from "@/components/arthaflow/json-ld";
 import { softwareSchema } from "@/lib/seo/structured-data";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import {
   Folder,
   Shield,
   Check,
-  Star,
   Play,
   TrendingUp,
   Wrench,
@@ -469,58 +469,49 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TESTIMONIAL */}
-      <section className="bg-card px-8 py-20">
-        <div className="mx-auto max-w-[820px] text-center">
-          <div className="mb-6 flex justify-center gap-1 text-artha-gold">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Star key={i} size={20} fill="currentColor" />
-            ))}
-          </div>
-          <p className="mb-6 text-2xl font-medium italic leading-snug tracking-tight text-text-heading">
-            &ldquo;ArthaFlow did in 2 weeks what I couldn&apos;t figure out in 2
-            years. My first shipment to Germany was seamless.&rdquo;
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-action-blue text-[15px] font-bold text-white">
-              RP
-            </div>
-            <div className="text-left">
-              <div className="text-sm font-bold text-text-heading">
-                Rajesh Patel
-              </div>
-              <div className="text-[13px] text-text-secondary">
-                MD, Precision Engineering Works, Pune
-              </div>
-            </div>
-          </div>
-          <p className="mt-8 text-[13px] text-text-muted">
-            Working with manufacturers across Pune&apos;s industrial belt
-          </p>
-        </div>
-      </section>
+      {/* FINAL CTA — replaces the old testimonial + "Ready to Start
+          Exporting?" band. One closing moment instead of two near-identical
+          dark sections back to back. Background is a real port photograph
+          (public/port-dusk-hero.webp), not a stock category shot — served
+          through next/image so Next.js's built-in optimizer (sharp) emits
+          right-sized WebP/AVIF per viewport from the single source file.
+          Source is WebP, not PNG: the original PNG export was 7.2MB (a
+          lossless format on a photograph), WebP q90 is 0.61MB at visually
+          identical quality — the optimizer was re-deriving WebP from that
+          bloated PNG on every uncached request. */}
+      <section className="relative isolate flex min-h-[480px] items-center overflow-hidden px-8 py-20 sm:min-h-[560px]">
+        <Image
+          src="/port-dusk-hero.webp"
+          alt=""
+          fill
+          priority={false}
+          sizes="100vw"
+          className="-z-10 object-cover"
+        />
+        {/* Left-weighted dark wash: photo stays legible as a photo on the
+            right, text sits on a near-solid navy field on the left — the
+            same balance as the reference this section was built from. */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/85 to-navy/30" />
 
-      {/* CTA */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy to-royal-blue px-8 py-20 text-center">
-        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(212,168,67,0.1),transparent_60%)]" />
-        <div className="relative mx-auto max-w-[640px]">
-          <h2 className="mb-4 text-[2rem] font-extrabold tracking-tight text-white sm:text-[2.5rem]">
-            Ready to Start Exporting?
-          </h2>
-          <p className="mb-8 text-[17px] text-white/70">
-            We are onboarding our first manufacturers now. Start free — no card,
-            no commitment.
-          </p>
-          <MagneticButton>
-            <Link href="/login">
-              <Button size="lg" className="bg-artha-gold text-navy hover:bg-artha-gold/90">
-                Get Started Free
-              </Button>
-            </Link>
-          </MagneticButton>
-          <p className="mt-5 text-[13px] text-white/65">
-            No credit card required. Free for your first export.
-          </p>
+        <div className="relative mx-auto w-full max-w-[1200px]">
+          <div className="max-w-[600px]">
+            <h2 className="mb-5 text-[2rem] font-extrabold leading-[1.15] tracking-tight text-white sm:text-[2.75rem]">
+              Your Next Customer Isn&apos;t in Your City.{" "}
+              <span className="text-artha-gold">
+                They&apos;re Somewhere Across the World.
+              </span>
+            </h2>
+            <MagneticButton>
+              <Link href="/login">
+                <Button size="lg" className="gap-1.5 bg-artha-gold text-navy hover:bg-artha-gold/90">
+                  Start Exporting Today <ArrowRight size={17} />
+                </Button>
+              </Link>
+            </MagneticButton>
+            <p className="mt-4 text-[13px] text-white/65">
+              No credit card required · Setup in 10 minutes
+            </p>
+          </div>
         </div>
       </section>
     </>

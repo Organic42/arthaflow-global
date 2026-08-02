@@ -136,10 +136,16 @@ export default function BuyerInquiriesPage() {
   // Update status
   async function updateStatus(id: string, status: "responded" | "closed") {
     setUpdating(true);
+    // Scoped by user_id explicitly, not just the row id — RLS already
+    // enforces this (migrations/001), but a mutation that only trusts RLS
+    // has no backstop if a policy ever regresses.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError("Not authenticated"); setUpdating(false); return; }
     const { error: err } = await supabase
       .from("inquiries")
       .update({ status })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
     if (err) { setError(err.message); setUpdating(false); return; }
     setInquiries((prev) =>
       prev.map((q) => (q.id === id ? { ...q, status } : q))

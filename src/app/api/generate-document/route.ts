@@ -122,9 +122,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch the real product + profile that ground the generation
+    // Fetch the real product + profile that ground the generation. The
+    // product query is also scoped by user_id explicitly — RLS already
+    // enforces this (verified against supabase/migrations/001), but a
+    // SELECT that only trusts RLS has no backstop if a policy ever
+    // regresses or this route is ever called with a service-role client.
     const [{ data: product }, { data: profile }] = await Promise.all([
-      supabase.from("products").select("*").eq("id", productId).single(),
+      supabase.from("products").select("*").eq("id", productId).eq("user_id", user.id).single(),
       supabase.from("profiles").select("*").eq("id", user.id).single(),
     ]);
 

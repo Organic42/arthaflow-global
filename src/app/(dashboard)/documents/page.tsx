@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/arthaflow/empty-state";
-import { Search, Upload, FileText, Download, Share2, Edit, Folder } from "lucide-react";
+import { Search, Upload, FileText, Download, Folder } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AnimatedTabs } from "@/components/arthaflow/animated-tabs";
 
@@ -33,12 +33,6 @@ const statusLabels: Record<string, string> = {
   active: "Active",
 };
 
-const actionIcons: Record<string, React.ReactNode> = {
-  download: <Download size={15} />,
-  share: <Share2 size={15} />,
-  edit: <Edit size={15} />,
-};
-
 interface Doc {
   id: string;
   name: string;
@@ -56,21 +50,29 @@ export default function DocumentVaultPage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [tab, setTab] = useState(0);
   const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("documents")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      setDocs(data || []);
+  async function load() {
+    setError(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error: err } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (err) {
+      setError(err.message);
       setLoading(false);
+      return;
     }
-    load();
-  }, []);
+    setDocs(data || []);
+    setLoading(false);
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, []);
 
   const filtered = docs.filter((d) => {
     const matchesSearch = d.name.toLowerCase().includes(query.toLowerCase());
@@ -84,8 +86,15 @@ export default function DocumentVaultPage() {
 
   const handleDownload = async (doc: Doc) => {
     if (!doc.file_url) return;
-    const { data } = await supabase.storage.from("documents").createSignedUrl(doc.file_url, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    setDownloadError(null);
+    const { data, error: err } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.file_url, 60);
+    if (err || !data?.signedUrl) {
+      setDownloadError(err?.message || `Could not open "${doc.name}". Try again.`);
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
   };
 
   if (loading) {
@@ -99,6 +108,20 @@ export default function DocumentVaultPage() {
 
   return (
     <div className="mx-auto max-w-[1280px] p-8">
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
+          {error}{" "}
+          <button onClick={load} className="ml-2 underline">
+            Retry
+          </button>
+        </div>
+      )}
+      {downloadError && (
+        <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
+          {downloadError}
+        </div>
+      )}
+
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-extrabold tracking-tight text-text-heading">Document Vault</h1>
         <div className="flex items-center gap-3">

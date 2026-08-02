@@ -116,17 +116,24 @@ export default function SettingsPage() {
   const load = useCallback(async () => {
     // `loading` already starts true and this runs once on mount, so setting
     // it here only forced an extra synchronous render.
+    setError(null);
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
     setEmail(user.email || "");
 
-    const { data: p } = await supabase
+    const { data: p, error: err } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
+
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
 
     if (p) {
       setFullName(p.full_name || "");

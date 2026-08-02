@@ -93,57 +93,87 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ products: 0, documents: 0, inquiries: 0, shipments: 0 });
   const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [readiness, setReadiness] = useState<{ label: string; pct: number }[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  async function load() {
+    setError(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      // Load profile
-      const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-      setProfile(p);
+    // Six queries feed this page; a single one failing (say, the activity
+    // feed) must not stop the stats and readiness score the rest of the
+    // page depends on from rendering. Every error is collected instead —
+    // one banner with retry if anything failed, but whatever DID come back
+    // still renders.
+    const failures: string[] = [];
 
-      // Count stats — fetch id arrays (reliable; HEAD count requests get
-      // aborted by React StrictMode's double-mount in dev and return null)
-      const [prodRes, docRes, inqRes, shipRes] = await Promise.all([
-        supabase.from("products").select("id").eq("user_id", user.id),
-        supabase.from("documents").select("id").eq("user_id", user.id),
-        supabase.from("inquiries").select("id").eq("user_id", user.id).eq("status", "new"),
-        supabase.from("shipments").select("id").eq("user_id", user.id),
-      ]);
-      const productCount = prodRes.data?.length || 0;
-      setStats({
-        products: productCount,
-        documents: docRes.data?.length || 0,
-        inquiries: inqRes.data?.length || 0,
-        shipments: shipRes.data?.length || 0,
-      });
+    // Load profile
+    const { data: p, error: profileErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    if (profileErr) failures.push(profileErr.message);
+    setProfile(p);
 
-      // Calculate readiness
-      if (p) {
-        setReadiness([
-          { label: "IEC Registered", pct: p.has_iec ? 100 : 0 },
-          { label: "AD Code Active", pct: p.ad_code_registered === "yes" ? 100 : 0 },
-          { label: "Product Catalogue", pct: productCount > 0 ? 75 : 0 },
-          { label: "Certifications", pct: 50 },
-          { label: "GST Active", pct: p.gst_number ? 100 : 0 },
-          { label: "Bank Verified", pct: 0 },
-        ]);
-      }
-
-      // Load activity
-      const { data: acts } = await supabase
-        .from("activity_log")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      setActivity(acts || []);
-
-      setLoading(false);
+    // Count stats — fetch id arrays (reliable; HEAD count requests get
+    // aborted by React StrictMode's double-mount in dev and return null).
+    // Products also carries `certifications` now — the readiness score
+    // below used to hardcode this at 50% for every user regardless of
+    // their real data; it's computed from the same field mobile/page.tsx
+    // already reads, so the two dashboards can't disagree on it again.
+    const [prodRes, docRes, inqRes, shipRes] = await Promise.all([
+      supabase.from("products").select("id, certifications").eq("user_id", user.id),
+      supabase.from("documents").select("id").eq("user_id", user.id),
+      supabase.from("inquiries").select("id").eq("user_id", user.id).eq("status", "new"),
+      supabase.from("shipments").select("id").eq("user_id", user.id),
+    ]);
+    for (const r of [prodRes, docRes, inqRes, shipRes]) {
+      if (r.error) failures.push(r.error.message);
     }
-    load();
-  }, []);
+    const productCount = prodRes.data?.length || 0;
+    const hasCertifications = (prodRes.data ?? []).some(
+      (p) => Array.isArray(p.certifications) && p.certifications.length > 0
+    );
+    setStats({
+      products: productCount,
+      documents: docRes.data?.length || 0,
+      inquiries: inqRes.data?.length || 0,
+      shipments: shipRes.data?.length || 0,
+    });
+
+    // Calculate readiness
+    if (p) {
+      setReadiness([
+        { label: "IEC Registered", pct: p.has_iec ? 100 : 0 },
+        { label: "AD Code Active", pct: p.ad_code_registered === "yes" ? 100 : 0 },
+        { label: "Product Catalogue", pct: productCount > 0 ? 75 : 0 },
+        { label: "Certifications", pct: hasCertifications ? 100 : 0 },
+        { label: "GST Active", pct: p.gst_number ? 100 : 0 },
+        { label: "Bank Verified", pct: 0 },
+      ]);
+    }
+
+    // Load activity
+    const { data: acts, error: actErr } = await supabase
+      .from("activity_log")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (actErr) failures.push(actErr.message);
+    setActivity(acts || []);
+
+    if (failures.length > 0) {
+      console.error("Dashboard load errors:", failures);
+      setError("Some of your dashboard data couldn't load.");
+    }
+
+    setLoading(false);
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, []);
 
   const readinessScore = readiness.length
     ? Math.round(readiness.reduce((sum, r) => sum + r.pct, 0) / readiness.length)
@@ -152,8 +182,8 @@ export default function DashboardPage() {
   const quickActions = [
     { label: "Upload Document", href: "/documents" },
     { label: "Add Product", href: "/products" },
-    { label: "View HS Codes", href: "/documents/generate" },
-    { label: "Contact ArthaFlow", href: null },
+    { label: "View HS Codes", href: "/hsn-search" },
+    { label: "Contact ArthaFlow", href: "mailto:info@arthaflowglobal.com" },
   ];
 
   if (loading) {
@@ -170,6 +200,14 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1280px] p-8">
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
+          {error}{" "}
+          <button onClick={load} className="ml-2 underline">
+            Retry
+          </button>
+        </div>
+      )}
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* MAIN */}
         <div>

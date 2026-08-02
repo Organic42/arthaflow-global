@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Check, Truck, FileText, Package, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Check, Truck, Folder, Package, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 
@@ -38,15 +39,6 @@ const statusBadge: Record<string, string> = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function DocPlaceholderRow({ name }: { name: string }) {
-  return (
-    <div className="flex w-full items-center gap-2.5 rounded-lg bg-background px-3 py-2.5">
-      <FileText size={16} className="shrink-0 text-text-muted" />
-      <span className="flex-1 text-[13px] font-medium text-text-body">{name}</span>
-      <span className="text-[11px] text-text-muted">Attached</span>
-    </div>
-  );
-}
 
 function EmptyState() {
   return (
@@ -296,18 +288,23 @@ export default function ShipmentTrackerPage() {
                   </div>
                 )}
 
-                {/* Attached documents (static placeholder for now) */}
-                <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                  <h3 className="mb-3.5 text-sm font-bold text-text-heading">
-                    Attached Documents
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {["Bill of Lading", "Commercial Invoice", "Packing List"].map(
-                      (d, i) => (
-                        <DocPlaceholderRow key={i} name={d} />
-                      )
-                    )}
-                  </div>
+                {/* Per-shipment document linking isn't built yet — this used
+                    to show "Bill of Lading / Commercial Invoice / Packing
+                    List" marked Attached for every shipment regardless of
+                    whether they existed. Point to the real vault instead of
+                    showing fabricated attachments. */}
+                <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
+                  <Folder size={22} className="mx-auto mb-2.5 text-text-muted" />
+                  <p className="mb-3 text-[13px] leading-relaxed text-text-secondary">
+                    Documents for this shipment aren&apos;t linked here yet —
+                    check your Document Vault.
+                  </p>
+                  <Link
+                    href="/documents"
+                    className="text-[13px] font-semibold text-action-blue hover:underline"
+                  >
+                    Open Document Vault →
+                  </Link>
                 </div>
               </div>
             </div>

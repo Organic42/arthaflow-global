@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// "/mobile" and "/states" are internal design/QA references (a phone-mockup
+// preview and a gallery of empty/error states), not customer features — kept
+// reachable by direct URL for the team, deliberately not linked here.
 const links = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/products", label: "Products" },
   { href: "/documents", label: "Documents" },
   { href: "/inquiries", label: "Inquiries" },
   { href: "/shipments", label: "Shipments" },
-  { href: "/mobile", label: "Mobile" },
-  { href: "/states", label: "States" },
   { href: "/settings", label: "Settings" },
 ];
 

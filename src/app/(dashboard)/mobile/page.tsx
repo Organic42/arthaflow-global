@@ -44,7 +44,7 @@ const bottomNav = [
 const quickActions = [
   { label: "Generate Docs", icon: <Zap size={15} />,    href: "/documents/generate" },
   { label: "Upload",        icon: <Upload size={15} />, href: "/documents" },
-  { label: "HS Codes",      icon: <Code2 size={15} />,  href: "/documents/generate" },
+  { label: "HS Codes",      icon: <Code2 size={15} />,  href: "/hsn-search" },
   { label: "Help",          icon: <HelpCircle size={15} />, href: "/help" },
 ];
 
@@ -59,13 +59,14 @@ interface ReadinessProfile {
 
 function calcReadiness(
   p: ReadinessProfile | null | undefined,
-  productCount: number
+  productCount: number,
+  hasCertifications: boolean
 ): number {
   const checks = [
     p?.has_iec === true,
     p?.ad_code_registered === "yes",
     productCount > 0,
-    false,               // Certifications – placeholder
+    hasCertifications,   // was a hardcoded `false` — see load()'s query below
     !!p?.gst_number,
     false,               // Bank verified – placeholder
   ];
@@ -133,9 +134,12 @@ export default function MobileDashboardPage() {
       .single();
     if (p?.full_name) setFirstName(p.full_name.split(" ")[0]);
 
-    // Counts (id arrays — avoids HEAD request abort in dev)
+    // Counts (id arrays — avoids HEAD request abort in dev). Products also
+    // carries `certifications`, read by calcReadiness below — matches the
+    // same field dashboard/page.tsx now reads, so the two dashboards can't
+    // silently disagree on this again.
     const [prodRes, docRes, inqRes, shipRes] = await Promise.all([
-      supabase.from("products").select("id").eq("user_id", user.id),
+      supabase.from("products").select("id, certifications").eq("user_id", user.id),
       supabase.from("documents").select("id").eq("user_id", user.id),
       supabase.from("inquiries").select("id").eq("user_id", user.id).eq("status", "new"),
       supabase.from("shipments").select("id").eq("user_id", user.id),
@@ -144,9 +148,12 @@ export default function MobileDashboardPage() {
     const dc = docRes.data?.length ?? 0;
     const ic = inqRes.data?.length ?? 0;
     const sc = shipRes.data?.length ?? 0;
+    const hasCertifications = (prodRes.data ?? []).some(
+      (p) => Array.isArray(p.certifications) && p.certifications.length > 0
+    );
 
     // Readiness
-    const rs = calcReadiness(p, pc);
+    const rs = calcReadiness(p, pc, hasCertifications);
     setScore(rs);
 
     setStats([

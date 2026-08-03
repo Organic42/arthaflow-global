@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArthaFlow Global — Company Master Document</title>
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║  ArthaFlow Global — Company Master Document                       ║
+     ║  All-purpose reference: vision, product, tech, financials, team.  ║
+     ║  Single HTML file. Sticky nav. Mermaid flowcharts. CSS visuals.   ║
+     ║  Print-friendly for PDF export (Ctrl+P → Save as PDF).            ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<style>
+/* ════════════ BRAND TOKENS ════════════ */
+:root{
+  --navy:#0B1D3A; --navy-2:#0F2547; --royal:#163A6E; --blue:#2563EB;
+  --gold:#D4A843; --gold-dk:#9C6F1E; --teal:#2DD4BF; --teal-dk:#1FA89A;
+  --silver:#C7D0DC; --bg:#FAFBFC; --card:#FFFFFF; --border:#E3E8EF;
+  --subtle:#F1F4F8; --text:#1A2433; --text-2:#465268; --text-mute:#7B8599;
+  --success:#10B981; --warning:#F59E0B; --error:#EF4444; --purple:#8B5CF6;
+  --radius:14px; --shadow:0 1px 3px rgba(11,29,58,0.04), 0 4px 16px rgba(11,29,58,0.04);
+}
+
+/* ════════════ RESET ════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.6}
+
+/* ════════════ LAYOUT ════════════ */
+.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+aside.nav{
+  position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--navy);
+  color:#fff;padding:28px 22px;border-right:1px solid var(--border);
+}
+aside.nav::-webkit-scrollbar{width:4px}
+aside.nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:4px}
+.nav-brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.nav-brand .mark{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--gold),var(--gold-dk));display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--navy);font-size:18px}
+.nav-brand .name{font-size:15px;font-weight:800;letter-spacing:-0.3px}
+.nav-brand .name span{color:var(--gold)}
+.nav-meta{font-size:10.5px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;font-weight:700}
+.nav ul{list-style:none;margin-bottom:18px}
+.nav li{margin-bottom:2px}
+.nav a{display:block;font-size:13px;color:rgba(255,255,255,0.7);text-decoration:none;padding:6px 10px;border-radius:6px;transition:.15s}
+.nav a:hover{background:rgba(255,255,255,0.06);color:#fff}
+.nav a.section{font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:1.3px;padding:8px 10px 4px;cursor:default}
+
+main{padding:48px 64px;max-width:1100px}
+
+/* ════════════ TYPOGRAPHY ════════════ */
+h1{font-size:46px;font-weight:900;letter-spacing:-1.5px;line-height:1.05;color:var(--navy);margin-bottom:14px}
+h2{font-size:32px;font-weight:800;letter-spacing:-1px;color:var(--navy);margin:42px 0 14px;line-height:1.15}
+h2:first-child{margin-top:0}
+h3{font-size:22px;font-weight:700;color:var(--navy);margin:28px 0 10px}
+h4{font-size:16px;font-weight:700;color:var(--navy);margin:18px 0 8px;text-transform:uppercase;letter-spacing:.8px}
+p{margin-bottom:14px;color:var(--text-2);font-size:15px}
+strong,b{color:var(--text);font-weight:700}
+em{color:var(--text-2)}
+code{font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--subtle);padding:2px 6px;border-radius:4px;color:var(--navy)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.eyebrow::before{content:"";width:22px;height:2px;background:var(--gold)}
+.lead{font-size:18px;color:var(--text-2);font-weight:400;line-height:1.6;margin-bottom:20px;max-width:760px}
+
+/* ════════════ PART HEADERS ════════════ */
+.part{padding-top:30px;padding-bottom:60px;border-bottom:1px solid var(--border);scroll-margin-top:24px}
+.part:last-child{border-bottom:none}
+.part-num{display:inline-block;font-size:13px;font-weight:800;color:var(--gold);background:rgba(212,168,67,0.1);padding:5px 12px;border-radius:99px;margin-bottom:14px;letter-spacing:1px}
+
+/* ════════════ CARDS ════════════ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+.card.tinted{background:var(--subtle)}
+.card.gold{background:rgba(212,168,67,0.06);border-color:rgba(212,168,67,0.3)}
+.card.blue{background:rgba(37,99,235,0.04);border-color:rgba(37,99,235,0.2)}
+.card.teal{background:rgba(45,212,191,0.06);border-color:rgba(45,212,191,0.3)}
+.card.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+.card.navy h3,.card.navy h4,.card.navy strong{color:#fff}
+.card.navy p{color:rgba(255,255,255,0.75)}
+.grid{display:grid;gap:18px;margin:18px 0}
+.g-2{grid-template-columns:repeat(2,1fr)}
+.g-3{grid-template-columns:repeat(3,1fr)}
+.g-4{grid-template-columns:repeat(4,1fr)}
+.g-5{grid-template-columns:repeat(5,1fr)}
+
+/* ════════════ STAT BOXES ════════════ */
+.stat{text-align:center;padding:22px 16px}
+.stat .n{font-size:36px;font-weight:900;letter-spacing:-1.5px;color:var(--navy);line-height:1}
+.stat .n.gold{color:var(--gold)}
+.stat .n.teal{color:var(--teal-dk)}
+.stat .n.blue{color:var(--royal)}
+.stat .l{font-size:12.5px;color:var(--text-mute);margin-top:6px;font-weight:500}
+
+/* ════════════ TABLES ════════════ */
+table{width:100%;border-collapse:collapse;margin:14px 0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;font-size:14px}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:var(--subtle);font-weight:700;color:var(--navy);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+tr:last-child td{border-bottom:none}
+td.center,th.center{text-align:center}
+td.right,th.right{text-align:right}
+.yes{color:var(--teal-dk);font-weight:800}
+.no{color:var(--error);font-weight:700}
+.mid{color:var(--warning);font-weight:600}
+
+/* ════════════ INFOGRAPHIC ELEMENTS ════════════ */
+.callout{background:var(--subtle);border-left:4px solid var(--gold);padding:18px 22px;margin:18px 0;border-radius:0 var(--radius) var(--radius) 0}
+.callout.teal{border-color:var(--teal-dk)}
+.callout.blue{border-color:var(--royal)}
+.callout.error{border-color:var(--error);background:rgba(239,68,68,0.04)}
+.callout p:last-child{margin-bottom:0}
+.callout .lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);margin-bottom:6px}
+.callout.teal .lbl{color:var(--teal-dk)}
+.callout.blue .lbl{color:var(--royal)}
+.callout.error .lbl{color:var(--error)}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:99px;background:var(--subtle);color:var(--text-2);margin:3px}
+.pill.gold{background:rgba(212,168,67,0.12);color:var(--gold-dk)}
+.pill.teal{background:rgba(45,212,191,0.12);color:var(--teal-dk)}
+.pill.blue{background:rgba(37,99,235,0.1);color:var(--royal)}
+
+/* ════════════ TIMELINE ════════════ */
+.timeline{display:flex;align-items:stretch;margin:16px 0}
+.tl-node{flex:1;text-align:center;padding:12px 8px}
+.tl-node .v{font-size:28px;font-weight:900;letter-spacing:-1px;color:var(--text-mute)}
+.tl-node .v.curr{color:var(--royal)}
+.tl-node .v.targ{color:var(--gold)}
+.tl-node .y{font-size:12px;color:var(--text-mute);font-weight:600;margin-top:4px}
+.tl-arrow{display:flex;align-items:center;color:var(--text-mute);font-size:20px;padding:0 4px}
+
+/* ════════════ BARS ════════════ */
+.bars{display:flex;flex-direction:column;gap:12px;margin:12px 0}
+.bar-row .bar-top{display:flex;justify-content:space-between;font-size:13.5px;font-weight:600;margin-bottom:5px}
+.bar-track{height:9px;border-radius:99px;background:var(--subtle);overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--royal),var(--blue))}
+.bar-fill.gold{background:linear-gradient(90deg,var(--gold-dk),var(--gold))}
+.bar-fill.teal{background:linear-gradient(90deg,var(--teal-dk),var(--teal))}
+.bar-fill.muted{background:#CBD3DE}
+
+/* ════════════ FLOWCHART WRAP ════════════ */
+.flow{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;overflow-x:auto;margin:16px 0}
+.mermaid{display:flex;justify-content:center}
+
+/* ════════════ FLYWHEEL / CIRCULAR ════════════ */
+.flywheel{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+.fw-step{font-size:13.5px;color:var(--text-2);background:var(--subtle);border:1px solid var(--border);border-radius:9px;padding:9px 14px}
+.fw-step b{color:var(--navy)}
+.fw-arrow{text-align:center;color:var(--gold);font-size:14px;font-weight:800}
+.fw-deposit{border-color:var(--gold);background:rgba(212,168,67,0.08)}
+
+/* ════════════ MARKET CIRCLES ════════════ */
+.market-viz{position:relative;width:340px;height:340px;margin:18px auto}
+.mc{position:absolute;border-radius:50%;display:flex;flex-direction:column;align-items:flex-start;padding:18px 0 0 22px}
+.mc .v{font-size:22px;font-weight:900;line-height:1}
+.mc .l{font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--text-mute);margin-top:4px}
+.mc.tam{inset:0;background:rgba(37,99,235,0.08);border:2px solid rgba(37,99,235,0.4)}
+.mc.sam{top:80px;left:42px;width:256px;height:256px;background:rgba(45,212,191,0.1);border:2px solid var(--teal-dk)}
+.mc.som{top:172px;left:92px;width:156px;height:156px;background:rgba(212,168,67,0.18);border:2px solid var(--gold)}
+
+/* ════════════ FINANCIAL BAR CHART ════════════ */
+.fchart{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;height:230px;padding:0 4px;margin:12px 0}
+.fcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.fval{font-size:15px;font-weight:800;margin-bottom:8px;color:var(--navy)}
+.fbar{width:100%;max-width:70px;border-radius:9px 9px 0 0;background:linear-gradient(180deg,var(--gold),var(--gold-dk))}
+.flbl{font-size:12.5px;font-weight:700;color:var(--text-2);margin-top:10px}
+.feb{font-size:11px;font-weight:700;margin-top:3px}
+.feb.neg{color:var(--error)}
+.feb.bk{color:var(--gold-dk)}
+.feb.pos{color:var(--teal-dk)}
+
+/* ════════════ RISK MATRIX ════════════ */
+.risk{display:flex;align-items:flex-start;gap:14px;padding:14px;border-left:4px solid var(--border);background:var(--card);border-radius:0 var(--radius) var(--radius) 0;margin:8px 0}
+.risk.high{border-color:var(--error)}
+.risk.med{border-color:var(--warning)}
+.risk.low{border-color:var(--teal-dk)}
+.risk-tag{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap}
+.risk.high .risk-tag{background:rgba(239,68,68,0.12);color:var(--error)}
+.risk.med .risk-tag{background:rgba(245,158,11,0.12);color:var(--warning)}
+.risk.low .risk-tag{background:rgba(45,212,191,0.12);color:var(--teal-dk)}
+.risk-body{flex:1}
+.risk-body strong{display:block;margin-bottom:4px;color:var(--navy)}
+.risk-body p{font-size:13.5px;margin-bottom:4px}
+.risk-body .mit{font-size:12.5px;color:var(--teal-dk);font-weight:600}
+
+/* ════════════ AVATAR ════════════ */
+.member{display:flex;gap:18px;align-items:flex-start}
+.avatar{width:60px;height:60px;border-radius:14px;flex:0 0 60px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:var(--navy);background:linear-gradient(135deg,var(--teal),var(--teal-dk));color:#fff}
+.avatar.gold{background:linear-gradient(135deg,var(--gold),var(--gold-dk));color:var(--navy)}
+.member-role{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;margin:2px 0 8px}
+.member p{font-size:13.5px;margin-bottom:6px}
+
+/* ════════════ COVER ════════════ */
+.cover{padding:60px 0 40px;border-bottom:1px solid var(--border);margin-bottom:0}
+.cover h1{font-size:60px}
+.cover .doc-type{font-size:14px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:18px}
+.cover-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:36px;padding-top:24px;border-top:1px solid var(--border)}
+.cover-meta .m{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px}
+.cover-meta .v{font-size:14px;font-weight:600;color:var(--navy)}
+
+/* ════════════ ASCII PILLAR (for fallback flows) ════════════ */
+.pipeline-css{display:flex;align-items:stretch;gap:0;margin:14px 0;flex-wrap:nowrap}
+.ps{flex:1;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 10px;text-align:center;position:relative}
+.ps .n{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:22px;height:22px;background:var(--gold);color:var(--navy);border-radius:50%;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.ps .i{font-size:22px;margin-bottom:6px}
+.ps .t{font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:3px}
+.ps .d{font-size:10.5px;color:var(--text-mute);line-height:1.4}
+.pl{display:flex;align-items:center;justify-content:center;width:24px;flex:0 0 24px;color:var(--gold);font-size:16px;font-weight:900}
+
+/* ════════════ TOC GRID ════════════ */
+.toc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.toc-item{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:18px;text-decoration:none;color:var(--text);transition:.15s}
+.toc-item:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:var(--shadow)}
+.toc-item .toc-num{font-size:11px;font-weight:800;color:var(--gold);letter-spacing:1.5px}
+.toc-item .toc-title{font-size:15px;font-weight:700;color:var(--navy);margin:4px 0 6px}
+.toc-item .toc-desc{font-size:12px;color:var(--text-mute);line-height:1.5}
+
+/* ════════════ PRINT ════════════ */
+@page{size:A4;margin:18mm}
+@media print{
+  body{background:#fff}
+  .app{display:block}
+  aside.nav{display:none}
+  main{padding:0;max-width:none}
+  .part{page-break-before:always;break-before:page;padding-top:0}
+  .part:first-of-type{page-break-before:auto}
+  h1,h2,h3,h4{break-after:avoid;page-break-after:avoid}
+  .card,.callout,.flow,table{break-inside:avoid;page-break-inside:avoid}
+  .toc-item:hover{transform:none}
+}
+
+/* ════════════ RESPONSIVE ════════════ */
+@media(max-width:1024px){
+  .app{grid-template-columns:1fr}
+  aside.nav{position:relative;height:auto;width:100%}
+  main{padding:32px 24px}
+  .g-3,.g-4,.g-5{grid-template-columns:repeat(2,1fr)}
+  .g-2{grid-template-columns:1fr}
+  .cover-meta{grid-template-columns:repeat(2,1fr)}
+  .toc-grid{grid-template-columns:1fr}
+  .pipeline-css{flex-direction:column;gap:14px}
+  .pl{transform:rotate(90deg);flex:0;padding:0}
+  .market-viz{width:280px;height:280px}
+  .mc.sam{top:65px;left:35px;width:210px;height:210px}
+  .mc.som{top:142px;left:75px;width:130px;height:130px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- ════════════ SIDEBAR NAV ════════════ -->
+<aside class="nav">
+  <div class="nav-brand">
+    <div class="mark">A</div>
+    <div class="name">Artha<span>Flow</span> Global</div>
+  </div>
+  <div class="nav-meta">Master Document · v1.0</div>
+  <ul>
+    <li><a href="#cover" class="section">Overview</a></li>
+    <li><a href="#toc">Table of Contents</a></li>
+    <li><a href="#p1" class="section">Part 1 — Company</a></li>
+    <li><a href="#p1">Snapshot, mission, story</a></li>
+    <li><a href="#p2" class="section">Part 2 — Problem & Market</a></li>
+    <li><a href="#p2">Opportunity & sizing</a></li>
+    <li><a href="#p3" class="section">Part 3 — Solution</a></li>
+    <li><a href="#p3">Product pillars</a></li>
+    <li><a href="#p4" class="section">Part 4 — Technology</a></li>
+    <li><a href="#p4">Architecture & AI</a></li>
+    <li><a href="#p5" class="section">Part 5 — Business Model</a></li>
+    <li><a href="#p5">Revenue & pricing</a></li>
+    <li><a href="#p6" class="section">Part 6 — Traction</a></li>
+    <li><a href="#p6">Pilots & validation</a></li>
+    <li><a href="#p7" class="section">Part 7 — Moat</a></li>
+    <li><a href="#p7">Competition & defense</a></li>
+    <li><a href="#p8" class="section">Part 8 — Go-to-Market</a></li>
+    <li><a href="#p8">Sales & expansion</a></li>
+    <li><a href="#p9" class="section">Part 9 — Vision</a></li>
+    <li><a href="#p9">Roadmap & three acts</a></li>
+    <li><a href="#p10" class="section">Part 10 — Financials</a></li>
+    <li><a href="#p10">Projections & ask</a></li>
+    <li><a href="#p11" class="section">Part 11 — Team</a></li>
+    <li><a href="#p11">Founders & hiring</a></li>
+    <li><a href="#p12" class="section">Part 12 — Risks</a></li>
+    <li><a href="#p12">Register & mitigations</a></li>
+    <li><a href="#appx" class="section">Appendices</a></li>
+    <li><a href="#appx">Reference materials</a></li>
+  </ul>
+</aside>
+
+<main>
+
+<!-- ════════════ COVER ════════════ -->
+<section id="cover" class="cover">
+  <div class="doc-type">Company Master Document</div>
+  <h1>Artha<span style="color:var(--gold)">Flow</span> Global</h1>
+  <p class="lead" style="font-size:22px;color:var(--navy);font-weight:500;margin-top:18px">
+    The AI-powered export operating system for India's 57 million MSME manufacturers — from factory floor to global market.
+  </p>
+  <div class="cover-meta">
+    <div><div class="m">Founders</div><div class="v">Sarthak Wage · Sameer Morya</div></div>
+    <div><div class="m">Founded</div><div class="v">29 March 2026</div></div>
+    <div><div class="m">Headquarters</div><div class="v">Mumbai, Maharashtra · India</div></div>
+    <div><div class="m">Website</div><div class="v">arthaflowglobal.com</div></div>
+    <div><div class="m">Stage</div><div class="v">Pre-Seed · Live MVP</div></div>
+    <div><div class="m">Entity</div><div class="v">Partnership (Pvt Ltd in process)</div></div>
+    <div><div class="m">DPIIT</div><div class="v">Application submitted</div></div>
+    <div><div class="m">Contact</div><div class="v">info@arthaflowglobal.com</div></div>
+  </div>
+</section>
+
+<!-- ════════════ TABLE OF CONTENTS ════════════ -->
+<section id="toc" class="part">
+  <div class="eyebrow">Document Guide</div>
+  <h2>Table of Contents</h2>
+  <p class="lead">A complete reference for ArthaFlow Global — its vision, product, technology, market, business model, team, and roadmap. Each part stands alone and can be extracted for specific audiences.</p>
+  <div class="toc-grid">
+    <a href="#p1" class="toc-item"><div class="toc-num">PART 01</div><div class="toc-title">Company Overview</div><div class="toc-desc">Snapshot, mission, vision, values, founding story.</div></a>
+    <a href="#p2" class="toc-item"><div class="toc-num">PART 02</div><div class="toc-title">Problem & Market</div><div class="toc-desc">99.7% don't export. Why now. TAM/SAM/SOM.</div></a>
+    <a href="#p3" class="toc-item"><div class="toc-num">PART 03</div><div class="toc-title">The Solution</div><div class="toc-desc">Three pillars: Dashboard, AI, Partner Network.</div></a>
+    <a href="#p4" class="toc-item"><div class="toc-num">PART 04</div><div class="toc-title">Technology</div><div class="toc-desc">Architecture, AI stack, data flywheel, security.</div></a>
+    <a href="#p5" class="toc-item"><div class="toc-num">PART 05</div><div class="toc-title">Business Model</div><div class="toc-desc">SaaS + commission engine, pricing, unit economics.</div></a>
+    <a href="#p6" class="toc-item"><div class="toc-num">PART 06</div><div class="toc-title">Traction & Validation</div><div class="toc-desc">Pilots, interviews, partnerships, milestones.</div></a>
+    <a href="#p7" class="toc-item"><div class="toc-num">PART 07</div><div class="toc-title">Competition & Moat</div><div class="toc-desc">Landscape, data flywheel, three moat layers.</div></a>
+    <a href="#p8" class="toc-item"><div class="toc-num">PART 08</div><div class="toc-title">Go-to-Market</div><div class="toc-desc">Cluster-led sales, expansion, partnerships.</div></a>
+    <a href="#p9" class="toc-item"><div class="toc-num">PART 09</div><div class="toc-title">Vision & Roadmap</div><div class="toc-desc">Three Acts, FY-mapped phases, north stars.</div></a>
+    <a href="#p10" class="toc-item"><div class="toc-num">PART 10</div><div class="toc-title">Financial Model</div><div class="toc-desc">Projections, EBITDA path, geographic split, ask.</div></a>
+    <a href="#p11" class="toc-item"><div class="toc-num">PART 11</div><div class="toc-title">Team & Governance</div><div class="toc-desc">Founders, org chart, hiring plan, advisors.</div></a>
+    <a href="#p12" class="toc-item"><div class="toc-num">PART 12</div><div class="toc-title">Risks & Mitigations</div><div class="toc-desc">Risk register with mitigation strategies.</div></a>
+  </div>
+</section>
+
+<!-- ════════════ PART 1 — COMPANY OVERVIEW ════════════ -->
+<section id="p1" class="part">
+  <div class="part-num">PART 01</div>
+  <h2>Company Overview</h2>
+
+  <h3>Executive Summary</h3>
+  <p>ArthaFlow Global is an <strong>AI-powered export operating system</strong> built for India's 57 million MSME manufacturers — the 99.7% who don't currently export because the infrastructure doesn't exist for them. We combine an enterprise dashboard, two flagship AI products (an AI Document Generator and Export Saathi — an AI advisor in Hindi, Marathi & English), and a partner network for warehousing, freight, finance and insurance, in one platform priced for the MSME.</p>
+  <p>Founded in March 2026 by two student-engineers from KJ Somaiya College of Engineering, ArthaFlow is bootstrapped to a live MVP, 5 active pilot manufacturers across Mumbai and Pune, and 1 signed strategic partnership. We are raising <strong>₹50L–2 Cr</strong> in a pre-seed round to convert pilots to paying customers, acquire export licenses, and scale across Maharashtra before expanding to Gujarat and Tamil Nadu.</p>
+
+  <h3>Company Snapshot</h3>
+  <div class="grid g-4">
+    <div class="stat card"><div class="n">57M+</div><div class="l">Indian MSMEs (TAM)</div></div>
+    <div class="stat card"><div class="n gold">0.3%</div><div class="l">Currently export</div></div>
+    <div class="stat card"><div class="n teal">5</div><div class="l">Active pilots</div></div>
+    <div class="stat card"><div class="n blue">~50</div><div class="l">Manufacturer interviews</div></div>
+  </div>
+
+  <h3>Mission, Vision & Values</h3>
+  <div class="grid g-3">
+    <div class="card gold">
+      <h4 style="color:var(--gold-dk)">Mission</h4>
+      <p style="font-size:14px">Democratize global trade for every Indian manufacturer — turning the months-long, expert-led export process into a guided AI workflow accessible from a smartphone.</p>
+    </div>
+    <div class="card blue">
+      <h4 style="color:var(--royal)">Vision</h4>
+      <p style="font-size:14px">By 2030, become the operating system every Indian MSME runs their global trade on — empowering 1 million manufacturers and enabling $50B of facilitated export value.</p>
+    </div>
+    <div class="card teal">
+      <h4 style="color:var(--teal-dk)">Values</h4>
+      <p style="font-size:14px"><b>Truth in data</b> · Never hallucinate. <b>Manufacturer-first</b> · Their language, their pace. <b>Compounding moat</b> · Every transaction strengthens the next.</p>
+    </div>
+  </div>
+
+  <h3>Founding Story</h3>
+  <p>ArthaFlow began with a question: why does India produce world-class manufactured goods yet capture only 2% of global trade? After 50+ direct conversations with MSME factory owners across Maharashtra's industrial belts — Pune, Mumbai, Nashik, Aurangabad — the answer became clear. It wasn't quality. It wasn't ambition. It was <strong>infrastructure</strong>.</p>
+  <p>Every manufacturer who tried to export had the same story: weeks lost to documentation, ₹50,000+ spent on consultants for a single shipment, no way to find verified international buyers, and fragmented logistics where one missed step stalled cargo for weeks. Most gave up. Built by founders who lived in the same region as their target customer, ArthaFlow exists to make sure the next 56 million don't have to.</p>
+
+  <div class="callout teal">
+    <div class="lbl">Why we exist</div>
+    <p>Every product made in India deserves a global market. We're building the rails to get it there.</p>
+  </div>
+</section>
+
+<!-- ════════════ PART 2 — PROBLEM & MARKET ════════════ -->
+<section id="p2" class="part">
+  <div class="part-num">PART 02</div>
+  <h2>Problem & Market Opportunity</h2>
+
+  <h3>The Problem — 99.7% Don't Export</h3>
+  <p>India has 57 million MSME manufacturers producing export-quality goods. Yet 99.7% never export. The reason is infrastructure: the export process is gated by three compounding barriers that disproportionately punish small manufacturers.</p>
+
+  <div class="grid g-3">
+    <div class="card">
+      <h4 style="color:var(--royal)">📄 Documentation Nightmare</h4>
+      <p style="font-size:13.5px">40+ documents per shipment: IEC, HS codes, shipping bills, COO, proforma invoices. Manual, error-prone, requires ₹50K+ consultants. Most manufacturers give up here.</p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--gold-dk)">🔍 No Buyer Access</h4>
+      <p style="font-size:13.5px">Zero visibility into who's buying, where, or how to reach verified international buyers. Listing platforms generate leads but don't enable transactions.</p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--teal-dk)">🚢 Logistics Overwhelm</h4>
+      <p style="font-size:13.5px">Freight, customs, insurance, incoterms — 15+ decisions per shipment. One mistake stalls cargo for weeks and triggers demurrage fees.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="lbl">Manufacturer Voice, Pune</div>
+    <p style="font-style:italic">"I spent 2 years trying to figure out how to export. I gave up after the documentation."</p>
+  </div>
+
+  <h3>Why Now — Four Converging Tailwinds</h3>
+  <p>The export opportunity isn't new. The ability to capture it — at MSME scale, profitably — is. Four things became true in the last 24 months:</p>
+
+  <div class="grid g-2">
+    <div class="card">
+      <h4>🏛️ Policy Mandate</h4>
+      <p style="font-size:13.5px">Government targeting <b>$2T exports by 2030</b>. District Export Hubs, RoDTEP and PLI are funded national policy — pushing MSMEs outward.</p>
+    </div>
+    <div class="card">
+      <h4>🌐 China + 1 Shift</h4>
+      <p style="font-size:13.5px">Global buyers de-risking from China. India is the #1 alternative, but buyers can't find verified Indian suppliers. Demand searching for supply.</p>
+    </div>
+    <div class="card">
+      <h4>🤖 AI Inflection</h4>
+      <p style="font-size:13.5px">Documentation that needed a ₹50K consultant 24 months ago now costs near-zero via LLMs. Core friction became automatable for the first time.</p>
+    </div>
+    <div class="card">
+      <h4>📱 MSME Digitization</h4>
+      <p style="font-size:13.5px">Post-UPI, GST, ONDC, India's smallest manufacturers are digital-native. Nashik factory owners run businesses on smartphones.</p>
+    </div>
+  </div>
+
+  <h3>India's Export Trajectory</h3>
+  <div class="card">
+    <h4 style="text-align:center;margin-top:0;color:var(--text-mute)">📈 EXPORTS, USD</h4>
+    <div class="timeline">
+      <div class="tl-node"><div class="v">$318B</div><div class="y">2014</div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-node"><div class="v curr">$821B</div><div class="y">2024</div></div>
+      <div class="tl-arrow">→</div>
+      <div class="tl-node"><div class="v targ">$2T</div><div class="y">2030 TARGET</div></div>
+    </div>
+  </div>
+
+  <h3>Where India Stands Globally</h3>
+  <div class="card">
+    <div class="bars">
+      <div class="bar-row"><div class="bar-top"><span>China</span><span>$3.5T</span></div><div class="bar-track"><div class="bar-fill muted" style="width:100%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span style="color:var(--gold-dk)"><b>India</b></span><span style="color:var(--gold-dk)"><b>$821B</b></span></div><div class="bar-track"><div class="bar-fill gold" style="width:23%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Vietnam</span><span>$370B</span></div><div class="bar-track"><div class="bar-fill muted" style="width:11%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Bangladesh</span><span>$50B</span></div><div class="bar-track"><div class="bar-fill muted" style="width:3%"></div></div></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-mute);text-align:center;margin:8px 0 0;font-style:italic">5th largest exporter globally — the gap from leaders means runway, not ceiling.</p>
+  </div>
+
+  <h3>Market Sizing — TAM / SAM / SOM</h3>
+  <div class="grid g-2" style="align-items:center">
+    <div class="market-viz">
+      <div class="mc tam"><div class="v" style="color:var(--royal)">$12B</div><div class="l">TAM</div></div>
+      <div class="mc sam"><div class="v" style="color:var(--teal-dk)">$2.4B</div><div class="l">SAM</div></div>
+      <div class="mc som"><div class="v" style="color:var(--gold-dk)">$24M</div><div class="l">SOM · 3YR</div></div>
+    </div>
+    <div>
+      <div class="card blue" style="margin-bottom:10px"><h4 style="color:var(--royal);margin-top:0">TAM — $12B</h4><p style="font-size:13.5px;margin-bottom:0">Export services market for 57M Indian MSMEs.</p></div>
+      <div class="card teal" style="margin-bottom:10px"><h4 style="color:var(--teal-dk);margin-top:0">SAM — $2.4B</h4><p style="font-size:13.5px;margin-bottom:0">Tech-ready MSMEs in top 6 export sectors and manufacturing hubs.</p></div>
+      <div class="card gold"><h4 style="color:var(--gold-dk);margin-top:0">SOM — $24M (3-yr)</h4><p style="font-size:13.5px;margin-bottom:0">10,000 manufacturers in Maharashtra at ~$200/month average revenue.</p></div>
+    </div>
+  </div>
+
+  <h3>Customer Persona — The Buyer</h3>
+  <div class="card tinted">
+    <p style="margin-bottom:8px"><strong>Demographics:</strong> Factory owner or operations head, 35–55 years old, primarily Hindi/Marathi/Gujarati speaker. WhatsApp-native, smartphone-first. Has tried export once and given up — or never tried because the documentation maze felt insurmountable.</p>
+    <p style="margin-bottom:8px"><strong>Firmographics:</strong> 10–500 employees, ₹1–50 Cr annual turnover, established 5+ years, GST-registered, located in tier-2/3 manufacturing clusters (Pune, Mumbai, Nashik, Aurangabad, Surat, Coimbatore).</p>
+    <p style="margin-bottom:0"><strong>Trigger to buy:</strong> Sees a peer in their cluster successfully export through ArthaFlow → arrives via referral or the HS Code Finder tool → converts when they realize Saathi answers compliance questions in their language.</p>
+  </div>
+</section>
+
+<!-- ════════════ PART 3 — THE SOLUTION ════════════ -->
+<section id="p3" class="part">
+  <div class="part-num">PART 03</div>
+  <h2>The Solution</h2>
+  <p class="lead">A tech-first attack on India's export problem — one enterprise dashboard covering the entire export journey, with AI doing the work that consultants used to do, and a partner network handling the physical layers software can't touch.</p>
+
+  <h3>The Three Pillars</h3>
+  <div class="grid g-3">
+    <div class="card blue">
+      <h4 style="color:var(--royal);margin-top:0">🖥️ The Manufacturer Dashboard</h4>
+      <p style="font-size:14px;margin-bottom:6px"><em>One screen to run the entire export business.</em></p>
+      <p style="font-size:13.5px;margin-bottom:0">Catalogue, documents, buyers, shipments, readiness, financing — replacing the spreadsheets and WhatsApp chaos that fragment a manufacturer's day.</p>
+    </div>
+    <div class="card gold">
+      <h4 style="color:var(--gold-dk);margin-top:0">🤖 The AI Integration Layer</h4>
+      <p style="font-size:14px;margin-bottom:6px"><em>The export expert that never sleeps.</em></p>
+      <p style="font-size:13.5px;margin-bottom:0">AI Document Generator ships paperwork in 30 seconds. Saathi answers questions in Hindi, Marathi & English with real trade data. Together they cover the two skills manufacturers lack — documentation and market knowledge.</p>
+    </div>
+    <div class="card teal">
+      <h4 style="color:var(--teal-dk);margin-top:0">🤝 The Partner Network</h4>
+      <p style="font-size:14px;margin-bottom:6px"><em>Physical layers, partnered now — owned later.</em></p>
+      <p style="font-size:13.5px;margin-bottom:0">Warehousing, buyer databases, freight, customs, finance, insurance — coordinated through partners today, brought in-house via M&A from FY 2028-29.</p>
+    </div>
+  </div>
+
+  <h3>End-to-End Export Journey</h3>
+  <div class="flow">
+    <pre class="mermaid">
+flowchart LR
+  A([🏭 Manufacturer<br/>onboards]) --> B[📦 List<br/>products]
+  B --> C[⚡ AI generates<br/>documents]
+  C --> D[🛡️ Compliance<br/>verified]
+  D --> E{🤝 Buyer<br/>matched}
+  E --> F[🚚 Logistics<br/>orchestrated]
+  F --> G[🛳️ Customs<br/>cleared]
+  G --> H([💵 Paid in<br/>USD])
+
+  classDef start fill:#D4A843,stroke:#9C6F1E,color:#0B1D3A,font-weight:bold;
+  classDef proc fill:#163A6E,stroke:#2563EB,color:#fff;
+  classDef dec fill:#2DD4BF,stroke:#1FA89A,color:#0B1D3A,font-weight:bold;
+  classDef done fill:#2563EB,stroke:#6AA1FF,color:#fff,font-weight:bold;
+  class A start;
+  class B,C,D,F,G proc;
+  class E dec;
+  class H done;
+    </pre>
+  </div>
+
+  <h3>AI Document Generator — Deep Dive</h3>
+  <p><strong>What it does:</strong> Takes a manufacturer's product profile + company data and generates export-ready documents in 30 seconds, grounded in real data — never hallucinated.</p>
+  <table>
+    <tr><th>Document Type</th><th>Traditional</th><th>ArthaFlow</th></tr>
+    <tr><td><b>Product Export Sheet</b></td><td>1–2 days, consultant</td><td class="yes">30 seconds</td></tr>
+    <tr><td><b>HS Code Classification</b></td><td>Expert lookup, ₹5K+ fee</td><td class="yes">30 seconds</td></tr>
+    <tr><td><b>Proforma Invoice</b></td><td>Manual template entry</td><td class="yes">30 seconds, pre-filled</td></tr>
+    <tr><td><b>Cost per document</b></td><td>₹10K–50K</td><td class="yes">Included in subscription</td></tr>
+  </table>
+
+  <h3>Export Saathi — Deep Dive</h3>
+  <p><strong>What it does:</strong> An AI advisor inside the dashboard that answers compliance, HS-code, market, and pricing questions in Hindi, Marathi, or English. Every answer is retrieved from our trade intelligence pipeline — never guessed.</p>
+  <div class="grid g-3">
+    <div class="card">
+      <h4>🗣️ Multilingual</h4>
+      <p style="font-size:13px;margin-bottom:0">Hindi, Marathi, English. No competitor serves tier-2/3 manufacturers conversationally in their language.</p>
+    </div>
+    <div class="card">
+      <h4>📊 Grounded in real data</h4>
+      <p style="font-size:13px;margin-bottom:0">DGCIS, UN Comtrade, ITC Trade Map, our platform shipment data — Saathi retrieves, never hallucinates.</p>
+    </div>
+    <div class="card">
+      <h4>⚡ Answer → Action</h4>
+      <p style="font-size:13px;margin-bottom:0">Every reply ends in a next step — generate docs, find a buyer, check readiness. The front door to the platform.</p>
+    </div>
+  </div>
+
+  <h3>Partner Network Architecture</h3>
+  <p>Where software alone can't solve, we orchestrate through partnerships — starting with one signed partner (warehousing + verified buyer database) and expanding to a full fulfilment network by FY 2028-29.</p>
+  <div class="grid g-3">
+    <div class="card tinted"><h4>📦 Warehousing & Buyers</h4><p style="font-size:12.5px">✓ Signed (Q1 2026)</p></div>
+    <div class="card tinted"><h4>🚚 Freight & Logistics</h4><p style="font-size:12.5px">In pipeline · FY 26-27</p></div>
+    <div class="card tinted"><h4>🛡️ Insurance</h4><p style="font-size:12.5px">In discussion · FY 27-28</p></div>
+    <div class="card tinted"><h4>💰 Trade Finance</h4><p style="font-size:12.5px">Target partners: Drip Capital, SIDBI · FY 27-28</p></div>
+    <div class="card tinted"><h4>🔍 Quality Inspection</h4><p style="font-size:12.5px">Target: SGS, BV, Intertek · FY 28-29</p></div>
+    <div class="card tinted"><h4>📋 Customs (CHA)</h4><p style="font-size:12.5px">Acquisition target · FY 28-29</p></div>
+  </div>
+</section>
+
+<!-- ════════════ PART 4 — TECHNOLOGY ════════════ -->
+<section id="p4" class="part">
+  <div class="part-num">PART 04</div>
+  <h2>Technology Architecture</h2>
+  <p class="lead">Built mobile-first because Indian MSME owners run their business on smartphones. AI-grounded by design — every output retrieves from real data, never freely generates.</p>
+
+  <h3>System Architecture</h3>
+  <div class="flow">
+    <pre class="mermaid">
+flowchart TB
+  U([Manufacturer<br/>smartphone or laptop]) --> NX[Next.js 16 App<br/>Dashboard + Saathi UI]
+  NX --> API[API Layer<br/>Next.js Route Handlers]
+  API --> SB[(Supabase<br/>Postgres + Auth + RLS)]
+  API --> AI{AI Router}
+  AI --> GROQ[Groq LLM<br/>Llama 3.3 70B]
+  AI --> CLD[Anthropic Claude<br/>edge cases]
+  API --> TD[(Trade Intelligence<br/>Pipeline)]
+  TD --> DGCIS[DGCIS / DGFT]
+  TD --> UN[UN Comtrade]
+  TD --> ITC[ITC Trade Map]
+  TD --> SHIP[Platform shipments<br/>– proprietary data]
+
+  classDef ui fill:#163A6E,color:#fff,stroke:#2563EB;
+  classDef api fill:#D4A843,color:#0B1D3A,stroke:#9C6F1E,font-weight:bold;
+  classDef data fill:#2DD4BF,color:#0B1D3A,stroke:#1FA89A;
+  classDef src fill:#F1F4F8,color:#1A2433,stroke:#CBD3DE;
+  class U,NX ui;
+  class API,AI api;
+  class SB,TD data;
+  class GROQ,CLD,DGCIS,UN,ITC,SHIP src;
+    </pre>
+  </div>
+
+  <h3>Technology Stack</h3>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Why</th></tr>
+    <tr><td><b>Frontend</b></td><td>Next.js 16, React 19, Tailwind CSS 4, Motion</td><td>Mobile-first, fast, modern DX</td></tr>
+    <tr><td><b>Backend</b></td><td>Next.js Route Handlers, Supabase (Postgres + Auth + RLS)</td><td>Serverless, scalable, secure by default</td></tr>
+    <tr><td><b>AI / LLM</b></td><td>Groq (Llama 3.3 70B), Anthropic Claude API</td><td>Production speed (Groq), edge-case accuracy (Claude)</td></tr>
+    <tr><td><b>Pattern</b></td><td>Retrieval-Augmented Generation (RAG)</td><td>Every AI output is grounded in retrieved data</td></tr>
+    <tr><td><b>Output</b></td><td>Strict JSON schemas, runtime validation</td><td>Deterministic, parseable, never freeform</td></tr>
+    <tr><td><b>Hosting</b></td><td>Netlify (CDN + serverless)</td><td>Zero-ops production deployment</td></tr>
+    <tr><td><b>Source control</b></td><td>GitHub + CI/CD</td><td>Standard, transparent</td></tr>
+  </table>
+
+  <h3>The Data Flywheel</h3>
+  <div class="grid g-2" style="align-items:start">
+    <div class="card">
+      <h4 style="margin-top:0">How it compounds</h4>
+      <div class="flywheel">
+        <div class="fw-step"><b>More verified manufacturers</b></div>
+        <div class="fw-arrow">↓</div>
+        <div class="fw-step"><b>More buyers</b> attracted to unique supply</div>
+        <div class="fw-arrow">↓</div>
+        <div class="fw-step"><b>More shipments</b> transacted</div>
+        <div class="fw-arrow">↓</div>
+        <div class="fw-step fw-deposit">📥 <b>Proprietary data captured</b> — the deposit</div>
+        <div class="fw-arrow">↓</div>
+        <div class="fw-step">Better <b>intelligence, trust scores, underwriting</b></div>
+        <div class="fw-arrow">↓</div>
+        <div class="fw-step">Stickier for <b>both sides</b> → loop accelerates ↻</div>
+      </div>
+    </div>
+    <div>
+      <div class="callout teal" style="margin-top:0">
+        <div class="lbl">The strategic insight</div>
+        <p style="margin-bottom:0">Software is the hook. Data is the moat. Anyone can copy our UI in a quarter. No one can copy years of verified shipment, pricing, and payment data.</p>
+      </div>
+      <p style="font-size:14px;margin-top:14px">Every transaction on the platform deposits structured data: verified manufacturer profiles, realized prices by HS code by destination, payment behavior on buyers, certification trails. This dataset later powers credit underwriting (Act 3, Year 4+), market intelligence (sold to banks and NBFCs), and a data-driven trading entity.</p>
+    </div>
+  </div>
+
+  <h3>Security & Compliance Posture</h3>
+  <div class="grid g-3">
+    <div class="card"><h4>🔐 Access Control</h4><p style="font-size:13px;margin-bottom:0">Supabase Row-Level Security scopes every query to the user. Audit logs on every document generation and AI interaction.</p></div>
+    <div class="card"><h4>🇮🇳 Indian Compliance</h4><p style="font-size:13px;margin-bottom:0">DPDP Act 2023 aligned. FEMA-aware for cross-border. DGFT/Customs standards built into the schema.</p></div>
+    <div class="card"><h4>🇪🇺 EU Readiness</h4><p style="font-size:13px;margin-bottom:0">GDPR-ready architecture (EU region available on Supabase). EU AI Act risk classification: "limited risk."</p></div>
+  </div>
+
+  <h3>Tech Roadmap</h3>
+  <table>
+    <tr><th>Quarter</th><th>Shipping</th></tr>
+    <tr><td><b>Q2 2026</b></td><td>Saathi v2 — tool-calling, Marathi voice input, proactive alerts</td></tr>
+    <tr><td><b>Q3 2026</b></td><td>AI Doc Generator v2 — vision/OCR upload, document templates per sector</td></tr>
+    <tr><td><b>Q4 2026</b></td><td>Market Intelligence Dashboard — DGCIS + Comtrade visualisations</td></tr>
+    <tr><td><b>Q1 2027</b></td><td>Buyer Discovery Engine — verified-buyer match algorithm</td></tr>
+    <tr><td><b>Q2 2027</b></td><td>WhatsApp channel integration for Saathi</td></tr>
+    <tr><td><b>FY 27-28</b></td><td>Embedded trade finance + insurance APIs</td></tr>
+    <tr><td><b>FY 28-29</b></td><td>Trade Intelligence as data product (B2B API for banks)</td></tr>
+  </table>
+</section>
+
+<!-- ════════════ PART 5 — BUSINESS MODEL ════════════ -->
+<section id="p5" class="part">
+  <div class="part-num">PART 05</div>
+  <h2>Business Model</h2>
+  <p class="lead">SaaS subscription base for predictability, plus a commission engine that compounds revenue per customer as they scale their exports through the platform.</p>
+
+  <h3>Revenue Architecture</h3>
+  <div class="grid g-3">
+    <div class="card">
+      <div class="pill blue" style="margin-bottom:8px">SaaS</div>
+      <h4 style="margin-top:0">Starter</h4>
+      <p style="font-size:13px;margin-bottom:0">Free. Limited AI doc generations, 1 product, readiness score, HS Code Finder. Top-of-funnel.</p>
+    </div>
+    <div class="card gold">
+      <div class="pill gold" style="margin-bottom:8px">★ CORE</div>
+      <h4 style="margin-top:0;color:var(--gold-dk)">Growth</h4>
+      <p style="font-size:13px;margin-bottom:0">₹2,999/mo. Unlimited AI documents, full catalogue, buyer discovery, Saathi advisor, priority support.</p>
+    </div>
+    <div class="card">
+      <div class="pill blue" style="margin-bottom:8px">SaaS</div>
+      <h4 style="margin-top:0">Enterprise</h4>
+      <p style="font-size:13px;margin-bottom:0">₹9,999/mo. Dedicated export manager, API access, white-label export option.</p>
+    </div>
+  </div>
+
+  <h3>The Commission Engine</h3>
+  <p>Every shipment facilitated through ArthaFlow generates up to <b>four separate revenue events</b>:</p>
+  <table>
+    <tr><th>Channel</th><th>Rate</th><th>Applied To</th></tr>
+    <tr><td><b>Platform Transaction Fee</b></td><td class="center"><b style="color:var(--gold-dk)">1–2%</b></td><td>Shipment GMV</td></tr>
+    <tr><td><b>Freight Booking Commission</b></td><td class="center"><b style="color:var(--gold-dk)">3–8%</b></td><td>Freight charges</td></tr>
+    <tr><td><b>Marine Insurance Commission</b></td><td class="center"><b style="color:var(--gold-dk)">10–15%</b></td><td>Policy premium</td></tr>
+    <tr><td><b>Trade Finance Referral</b></td><td class="center"><b style="color:var(--gold-dk)">0.5–1%</b></td><td>Facility value</td></tr>
+  </table>
+
+  <h3>Revenue Mix at Scale (FY 28-29)</h3>
+  <div class="card">
+    <div class="bars">
+      <div class="bar-row"><div class="bar-top"><span>Transaction take-rate</span><span class="pill gold">35%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:35%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Subscription (recurring)</span><span class="pill blue">25%</span></div><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Logistics / freight</span><span class="pill teal">15%</span></div><div class="bar-track"><div class="bar-fill teal" style="width:15%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Trade finance referral</span><span class="pill">12%</span></div><div class="bar-track"><div class="bar-fill" style="width:12%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Insurance commission</span><span class="pill">8%</span></div><div class="bar-track"><div class="bar-fill" style="width:8%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Data / API + inspection</span><span class="pill">5%</span></div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--text-mute);margin:8px 0 0;font-style:italic">No channel above 35% — diversified, resilient, infrastructure-grade revenue.</p>
+  </div>
+
+  <h3>Customer Journey & Revenue Capture</h3>
+  <div class="flow">
+    <pre class="mermaid">
+flowchart LR
+  A[HS Code Finder<br/>– free tool] --> B[Free signup<br/>Starter tier]
+  B --> C[Onboard +<br/>generate first doc]
+  C --> D{Convert?}
+  D -->|Yes| E[Growth tier<br/>₹2,999/mo]
+  D -->|No| Z[Nurture<br/>via Saathi]
+  E --> F[First shipment<br/>facilitated]
+  F --> G[Transaction fee +<br/>freight + insurance<br/>+ finance commissions]
+  G --> H[Repeat shipments<br/>compounding ARPM]
+  H --> I[Enterprise tier<br/>or white-label]
+
+  classDef free fill:#F1F4F8,color:#1A2433,stroke:#CBD3DE;
+  classDef paid fill:#D4A843,color:#0B1D3A,stroke:#9C6F1E,font-weight:bold;
+  classDef rev fill:#2DD4BF,color:#0B1D3A,stroke:#1FA89A,font-weight:bold;
+  class A,B,C,Z free;
+  class E,I paid;
+  class F,G,H rev;
+    </pre>
+  </div>
+
+  <h3>Unit Economics Target</h3>
+  <div class="grid g-4">
+    <div class="stat card"><div class="n gold">5:1+</div><div class="l">LTV : CAC</div></div>
+    <div class="stat card"><div class="n teal">&lt; 6 mo</div><div class="l">Payback period</div></div>
+    <div class="stat card"><div class="n blue">~28%</div><div class="l">EBITDA margin at scale</div></div>
+    <div class="stat card"><div class="n">₹55K → ₹2.4L</div><div class="l">ARPM growth (Y1→Y4)</div></div>
+  </div>
+</section>
+
+<!-- ════════════ PART 6 — TRACTION ════════════ -->
+<section id="p6" class="part">
+  <div class="part-num">PART 06</div>
+  <h2>Traction & Validation</h2>
+  <p class="lead">Pre-revenue, but everything that matters at this stage is in place: working product, validated pain, real pilots, signed partnership, and a credible plan to convert.</p>
+
+  <h3>Current Metrics</h3>
+  <div class="grid g-4">
+    <div class="stat card"><div class="n gold">14</div><div class="l">Screens built & live</div></div>
+    <div class="stat card"><div class="n teal">5</div><div class="l">Pilot manufacturers</div></div>
+    <div class="stat card"><div class="n blue">~50</div><div class="l">Manufacturer interviews</div></div>
+    <div class="stat card"><div class="n">1</div><div class="l">Partnership signed</div></div>
+  </div>
+
+  <h3>What We've Validated — Interview Insights</h3>
+  <p>From ~50 manufacturer conversations across Mumbai, Pune, Nashik and Aurangabad, the barriers manufacturers cite — ranked by frequency:</p>
+  <div class="card">
+    <div class="bars">
+      <div class="bar-row"><div class="bar-top"><span><b>Documentation complexity</b></span><span style="color:var(--gold-dk);font-weight:800">#1 cited</span></div><div class="bar-track"><div class="bar-fill gold" style="width:92%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span><b>Finding verified buyers</b></span><span style="color:var(--gold-dk);font-weight:800">#2 cited</span></div><div class="bar-track"><div class="bar-fill gold" style="width:78%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Logistics & customs</span><span style="color:var(--text-mute);font-weight:600">#3 cited</span></div><div class="bar-track"><div class="bar-fill muted" style="width:48%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Trade finance access</span><span style="color:var(--text-mute);font-weight:600">#4 cited</span></div><div class="bar-track"><div class="bar-fill muted" style="width:34%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span>Language barriers</span><span style="color:var(--text-mute);font-weight:600">#5 cited</span></div><div class="bar-track"><div class="bar-fill muted" style="width:30%"></div></div></div>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--text-2);margin-top:14px">We built directly against the top two barriers: AI Document Generator solves #1, Buyer Discovery + Saathi solve #2.</p>
+
+  <h3>Pilot Manufacturer Map</h3>
+  <div class="grid g-2">
+    <div class="card">
+      <h4>📍 Mumbai (3 manufacturers)</h4>
+      <p style="font-size:13.5px;margin-bottom:0">Engineering goods (hydraulic cylinders, industrial valves), and CNC precision components. Active on the dashboard, using AI Doc Generator and Saathi.</p>
+    </div>
+    <div class="card">
+      <h4>📍 Pune (2 manufacturers)</h4>
+      <p style="font-size:13.5px;margin-bottom:0">Engineering goods. Sourced through industry contacts and direct outreach to MIDC industrial belt. First conversion-to-paid targeted Q3 2026.</p>
+    </div>
+  </div>
+
+  <h3>Signed Partnership</h3>
+  <div class="callout teal">
+    <div class="lbl">Q1 2026 · Strategic Partnership</div>
+    <p><b>Warehousing + verified international buyer database.</b> Covers the two hardest physical-layer problems (storage + access to international buyers) — letting us deliver end-to-end fulfilment from day one without building either from scratch.</p>
+  </div>
+
+  <h3>What's Next — 2026 Milestones</h3>
+  <div class="grid g-3">
+    <div class="card"><h4>Q2 2026</h4><p style="font-size:13px;margin-bottom:0">DPIIT recognition · Pvt Ltd conversion · 8 pilots</p></div>
+    <div class="card"><h4>Q3 2026</h4><p style="font-size:13px;margin-bottom:0">First 5 paying customers · Saathi v2 ship · Pre-seed close</p></div>
+    <div class="card"><h4>Q4 2026</h4><p style="font-size:13px;margin-bottom:0">20+ paying manufacturers · Market Intelligence dashboard ship · Freight partnership</p></div>
+  </div>
+</section>
+
+<!-- ════════════ PART 7 — COMPETITION & MOAT ════════════ -->
+<section id="p7" class="part">
+  <div class="part-num">PART 07</div>
+  <h2>Competition & Moat</h2>
+
+  <h3>Competitive Landscape</h3>
+  <p>The Indian export-services market is fragmented across three categories — none compete on AI or end-to-end coverage.</p>
+  <table>
+    <tr><th>Capability</th><th class="center" style="background:rgba(212,168,67,0.12)">ArthaFlow</th><th class="center">IndiaMART</th><th class="center">Freight Fwd.</th><th class="center">Consultants</th></tr>
+    <tr><td><b>AI Documentation</b></td><td class="center yes">✓</td><td class="center no">✕</td><td class="center no">✕</td><td class="center mid">manual</td></tr>
+    <tr><td><b>Buyer Matching</b></td><td class="center yes">✓</td><td class="center mid">listings</td><td class="center no">✕</td><td class="center no">✕</td></tr>
+    <tr><td><b>Logistics</b></td><td class="center yes">✓ partners</td><td class="center no">✕</td><td class="center yes">✓</td><td class="center no">✕</td></tr>
+    <tr><td><b>Compliance</b></td><td class="center yes">✓</td><td class="center no">✕</td><td class="center no">✕</td><td class="center mid">manual</td></tr>
+    <tr><td><b>MSME Pricing</b></td><td class="center yes">✓</td><td class="center yes">✓</td><td class="center no">enterprise</td><td class="center no">₹50K+/ship</td></tr>
+    <tr><td><b>AI-Powered</b></td><td class="center yes">✓</td><td class="center no">✕</td><td class="center no">✕</td><td class="center no">✕</td></tr>
+    <tr><td><b>Indian Languages</b></td><td class="center yes">✓ Hindi/Marathi</td><td class="center mid">multi-lang UI</td><td class="center no">English</td><td class="center mid">spoken</td></tr>
+  </table>
+
+  <h3>The Moat — Why We Can't Be Copied</h3>
+  <div class="grid g-3">
+    <div class="card">
+      <h4>📊 Data Asset</h4>
+      <p style="font-size:13.5px;margin-bottom:0"><em>Durable, compounding.</em> Verified manufacturer profiles + realized shipment history. Powers credit underwriting and data-driven trading later. Competitors rebuild from zero.</p>
+    </div>
+    <div class="card">
+      <h4>🔄 Two-Sided Network</h4>
+      <p style="font-size:13.5px;margin-bottom:0"><em>Self-reinforcing.</em> Each manufacturer makes the buyer side stronger; each buyer makes supply richer. Liquidity resists displacement at scale.</p>
+    </div>
+    <div class="card">
+      <h4>🧠 Feedback-Tuned AI</h4>
+      <p style="font-size:13.5px;margin-bottom:0"><em>Data is the moat, not the model.</em> Saathi and Doc Generator are correct-by-default because they retrieve structured data competitors can't access.</p>
+    </div>
+  </div>
+
+  <div class="callout teal">
+    <div class="lbl">The kill-shot</div>
+    <p>A competitor's clock to catch us doesn't even start until they get their first 100 manufacturers shipping. Ours started already — and compounds daily.</p>
+  </div>
+
+  <h3>Disintermediation Defense</h3>
+  <p>A classic risk for B2B marketplaces: once buyer and seller have each other's contact, they transact off-platform. Our defense:</p>
+  <div class="grid g-2">
+    <div class="card"><h4>🧾 Bundle settlement</h4><p style="font-size:13.5px">FIRC generation, forex settlement, trade-finance disbursement all happen through ArthaFlow — making the platform the easiest path, not the avoidable middleman.</p></div>
+    <div class="card"><h4>🛡️ Inspection + escrow</h4><p style="font-size:13.5px">Buyers prefer SGS-grade inspection + protected payment terms. Going off-platform removes both. Trust is the lock-in.</p></div>
+  </div>
+</section>
+
+<!-- ════════════ PART 8 — GO-TO-MARKET ════════════ -->
+<section id="p8" class="part">
+  <div class="part-num">PART 08</div>
+  <h2>Go-to-Market Strategy</h2>
+  <p class="lead">Tier-2/3 manufacturers don't respond to email or LinkedIn. They respond to in-person trust, WhatsApp, and peer referrals. Our entire GTM is built around that reality.</p>
+
+  <h3>Sales Motion</h3>
+  <div class="flow">
+    <pre class="mermaid">
+flowchart LR
+  A[HS Code Finder<br/>SEO traffic] --> M[Manufacturer<br/>arrives]
+  E[Cluster events<br/>FIEO / EEPC / MIDC] --> M
+  R[Peer referral<br/>WhatsApp] --> M
+  M --> O[Guided 4-step<br/>onboarding]
+  O --> S[Saathi engagement<br/>– first wow]
+  S --> P[60-day pilot<br/>milestone-bound]
+  P --> C{Converted?}
+  C -->|Yes| G[Growth tier<br/>+ commission revenue]
+  C -->|No| Z[Nurture w/ alerts]
+  G --> X[Referral loop:<br/>2–3 peer intros]
+  X --> M
+
+  classDef src fill:#163A6E,color:#fff;
+  classDef flow fill:#F1F4F8,color:#1A2433,stroke:#CBD3DE;
+  classDef win fill:#D4A843,color:#0B1D3A,font-weight:bold;
+  class A,E,R src;
+  class M,O,S,P,Z flow;
+  class G,X win;
+    </pre>
+  </div>
+
+  <h3>Five-Channel Strategy</h3>
+  <div class="grid g-2">
+    <div class="card"><h4>1. Cluster-led field sales</h4><p style="font-size:13.5px">Direct outreach in MIDC industrial zones (Pune, Nashik, Aurangabad). In-person demos in local language.</p></div>
+    <div class="card"><h4>2. Free tools for top-of-funnel</h4><p style="font-size:13.5px">HS Code Finder publicly accessible, drives SEO. Manufacturers find it, convert to dashboard.</p></div>
+    <div class="card"><h4>3. Peer referrals</h4><p style="font-size:13.5px">Tight-knit clusters mean every successful pilot becomes 2–3 warm intros. Built-in referral incentives.</p></div>
+    <div class="card"><h4>4. Content & education</h4><p style="font-size:13.5px">WhatsApp-distributed how-tos and market updates in Hindi/Marathi build trust over weeks.</p></div>
+    <div class="card"><h4>5. Strategic partnerships</h4><p style="font-size:13.5px">Co-marketing with freight forwarders, banks, FIEO/EEPC chapters to reach manufacturers through trusted channels.</p></div>
+    <div class="card teal"><h4 style="color:var(--teal-dk)">6. Government schemes</h4><p style="font-size:13.5px">Plug into DGFT / District Export Hub programs — official validation drives manufacturer trust.</p></div>
+  </div>
+
+  <h3>Geographic Expansion Plan</h3>
+  <table>
+    <tr><th>FY</th><th>Geographic focus</th><th>Manufacturer base</th></tr>
+    <tr><td><b>FY 26-27</b></td><td>Maharashtra only (Mumbai, Pune)</td><td>22</td></tr>
+    <tr><td><b>FY 27-28</b></td><td>+ Gujarat, Tamil Nadu</td><td>180</td></tr>
+    <tr><td><b>FY 28-29</b></td><td>+ Underserved small states</td><td>700</td></tr>
+    <tr><td><b>FY 29-30</b></td><td>Pan-India + Global South pilots</td><td>2,000</td></tr>
+  </table>
+</section>
+
+<!-- ════════════ PART 9 — VISION & ROADMAP ════════════ -->
+<section id="p9" class="part">
+  <div class="part-num">PART 09</div>
+  <h2>Vision & Roadmap</h2>
+  <p class="lead">From documentation tool to India's export operating system. We start by removing the #1 barrier — documentation. We end as the operating system every Indian MSME runs their global trade on.</p>
+
+  <h3>The Three Acts</h3>
+  <div class="grid g-3">
+    <div class="card">
+      <div class="pill teal">ACT 1 · FY 26-28</div>
+      <h4 style="margin-top:8px">🎯 The Matchmaker</h4>
+      <p style="font-size:13.5px;margin-bottom:0">Supply-side first. Onboard manufacturers, make them export-ready, connect them to first buyers. Build the proprietary manufacturer dataset that powers everything later.</p>
+    </div>
+    <div class="card">
+      <div class="pill blue">ACT 2 · FY 28-29</div>
+      <h4 style="margin-top:8px">🤝 The Aggregator</h4>
+      <p style="font-size:13.5px;margin-bottom:0">Two-sided marketplace. Verified buyers transact through ArthaFlow. Full-stack fulfilment via partners + first acquisitions (CHA, freight, trade data).</p>
+    </div>
+    <div class="card gold">
+      <div class="pill gold">ACT 3 · FY 29-30+</div>
+      <h4 style="margin-top:8px;color:var(--gold-dk)">🏗️ The Infrastructure</h4>
+      <p style="font-size:13.5px;margin-bottom:0">Data and APIs sold to banks for credit underwriting. Own export trading entity. The financial rails for MSME exports. The export OS for the Global South.</p>
+    </div>
+  </div>
+
+  <h3>FY-Mapped Phased Roadmap</h3>
+  <div class="grid g-4">
+    <div class="card teal">
+      <div class="pill teal">FY 26-27 · NOW</div>
+      <h4 style="margin-top:8px;color:var(--teal-dk)">⚡ Build & Prove</h4>
+      <p style="font-size:13px;margin-bottom:0">Ship full tech stack (AI Visualisation + Saathi + Doc Generator). Onboard 20+ paying manufacturers. Acquire export licenses + begin white-label exports.</p>
+    </div>
+    <div class="card">
+      <div class="pill">FY 27-28</div>
+      <h4 style="margin-top:8px">🗺️ Expand & Scale</h4>
+      <p style="font-size:13px;margin-bottom:0">Expand to Gujarat, Tamil Nadu, and underserved small states. Scale export operations and drive efficiency.</p>
+    </div>
+    <div class="card">
+      <div class="pill gold">FY 28-29</div>
+      <h4 style="margin-top:8px">🏗️ Full-Stack</h4>
+      <p style="font-size:13px;margin-bottom:0">Bring insurance, financing, logistics and CHA in-house via acquisitions & joint ventures. Own every layer of the export journey.</p>
+    </div>
+    <div class="card gold">
+      <div class="pill gold">FY 29-30+</div>
+      <h4 style="margin-top:8px;color:var(--gold-dk)">🌍 Go Global</h4>
+      <p style="font-size:13px;margin-bottom:0">With the full stack owned or partnered, expand into new international markets. The export OS for the Global South.</p>
+    </div>
+  </div>
+
+  <h3>North-Star Metrics (2030)</h3>
+  <div class="grid g-3">
+    <div class="stat card"><div class="n teal">1M</div><div class="l">Manufacturers empowered</div></div>
+    <div class="stat card"><div class="n gold">$50B</div><div class="l">Export value enabled</div></div>
+    <div class="stat card"><div class="n blue">#1</div><div class="l">Export platform in India</div></div>
+  </div>
+
+  <div class="callout">
+    <p style="font-style:italic;font-size:16px;margin:0">"Every product made in India deserves a global market. We're building the rails to get it there."</p>
+  </div>
+</section>
+
+<!-- ════════════ PART 10 — FINANCIAL MODEL ════════════ -->
+<section id="p10" class="part">
+  <div class="part-num">PART 10</div>
+  <h2>Financial Model</h2>
+  <p class="lead">Bottoms-up financial projection: from ₹12L in FY 26-27 to ₹48 Cr in FY 29-30. EBITDA-positive by FY 28-29 at ~20% margin, scaling to ~28%.</p>
+
+  <h3>Revenue Trajectory</h3>
+  <div class="card">
+    <h4 style="margin-top:0">Platform Net Revenue (₹ Cr)</h4>
+    <div class="fchart">
+      <div class="fcol"><div class="fval">₹12L</div><div class="fbar" style="height:10%"></div><div class="flbl">FY 26-27</div><div class="feb neg">EBITDA −₹90L</div></div>
+      <div class="fcol"><div class="fval">₹1.7Cr</div><div class="fbar" style="height:24%"></div><div class="flbl">FY 27-28</div><div class="feb bk">~breakeven</div></div>
+      <div class="fcol"><div class="fval">₹11.6Cr</div><div class="fbar" style="height:52%"></div><div class="flbl">FY 28-29</div><div class="feb pos">EBITDA +₹3.5Cr</div></div>
+      <div class="fcol"><div class="fval">₹48Cr</div><div class="fbar" style="height:100%"></div><div class="flbl">FY 29-30</div><div class="feb pos">EBITDA +₹19Cr</div></div>
+    </div>
+  </div>
+
+  <h3>Manufacturer Growth & State-Wise Split</h3>
+  <table>
+    <tr><th>State</th><th class="center">FY 26-27</th><th class="center">FY 27-28</th><th class="center">FY 28-29</th><th class="center">FY 29-30</th></tr>
+    <tr><td><b>Maharashtra</b></td><td class="center">22</td><td class="center">130</td><td class="center">350</td><td class="center">700</td></tr>
+    <tr><td><b>Gujarat</b></td><td class="center">—</td><td class="center">30</td><td class="center">140</td><td class="center">400</td></tr>
+    <tr><td><b>Tamil Nadu</b></td><td class="center">—</td><td class="center">20</td><td class="center">105</td><td class="center">360</td></tr>
+    <tr><td><b>Small / underserved states</b></td><td class="center">—</td><td class="center">—</td><td class="center">105</td><td class="center">540</td></tr>
+    <tr style="background:rgba(212,168,67,0.06)"><td><b>TOTAL</b></td><td class="center"><b>22</b></td><td class="center"><b>180</b></td><td class="center"><b>700</b></td><td class="center"><b>2,000</b></td></tr>
+  </table>
+
+  <h3>Full P&L Summary</h3>
+  <table>
+    <tr><th>₹ Cr</th><th class="center">FY 26-27</th><th class="center">FY 27-28</th><th class="center">FY 28-29</th><th class="center">FY 29-30</th></tr>
+    <tr><td><b>Platform Net Revenue</b></td><td class="center">0.12</td><td class="center">1.70</td><td class="center">11.60</td><td class="center">48.00</td></tr>
+    <tr><td>Trading gross profit (~10% of GMV)</td><td class="center">0.20</td><td class="center">1.50</td><td class="center">6.00</td><td class="center">20.00</td></tr>
+    <tr style="background:var(--subtle)"><td><b>Total Gross Revenue</b></td><td class="center"><b>0.32</b></td><td class="center"><b>3.20</b></td><td class="center"><b>17.60</b></td><td class="center"><b>68.00</b></td></tr>
+    <tr><td>Operating Costs</td><td class="center">1.20</td><td class="center">3.50</td><td class="center">9.00</td><td class="center">25.00</td></tr>
+    <tr style="background:rgba(212,168,67,0.06)"><td><b>EBITDA</b></td><td class="center" style="color:var(--error)"><b>−0.90</b></td><td class="center" style="color:var(--gold-dk)"><b>−0.30</b></td><td class="center" style="color:var(--teal-dk)"><b>+3.50</b></td><td class="center" style="color:var(--teal-dk)"><b>+19.00</b></td></tr>
+    <tr><td>EBITDA margin</td><td class="center">—</td><td class="center">~breakeven</td><td class="center" style="color:var(--teal-dk)"><b>20%</b></td><td class="center" style="color:var(--teal-dk)"><b>28%</b></td></tr>
+  </table>
+
+  <h3>Team Growth</h3>
+  <table>
+    <tr><th>Function</th><th class="center">FY 26-27</th><th class="center">FY 27-28</th><th class="center">FY 28-29</th><th class="center">FY 29-30</th></tr>
+    <tr><td>Engineering</td><td class="center">2</td><td class="center">5</td><td class="center">14</td><td class="center">28</td></tr>
+    <tr><td>Sales & GTM</td><td class="center">1</td><td class="center">4</td><td class="center">10</td><td class="center">22</td></tr>
+    <tr><td>Operations & compliance</td><td class="center">1</td><td class="center">3</td><td class="center">6</td><td class="center">12</td></tr>
+    <tr><td>Founders / leadership</td><td class="center">2</td><td class="center">3</td><td class="center">5</td><td class="center">8</td></tr>
+    <tr style="background:var(--subtle)"><td><b>TOTAL HEADCOUNT</b></td><td class="center"><b>6</b></td><td class="center"><b>15</b></td><td class="center"><b>35</b></td><td class="center"><b>70</b></td></tr>
+  </table>
+
+  <h3>Funding History & Current Ask</h3>
+  <div class="grid g-2">
+    <div class="card tinted">
+      <h4 style="margin-top:0">Funding History</h4>
+      <p style="font-size:14px;margin-bottom:6px"><b>Pre-incorporation (2025):</b> Bootstrapped — founder time + savings only.</p>
+      <p style="font-size:14px;margin-bottom:0"><b>To date:</b> ₹0 external capital. ~₹15K/month infrastructure burn.</p>
+    </div>
+    <div class="card gold">
+      <h4 style="margin-top:0;color:var(--gold-dk)">Current Ask · Pre-Seed</h4>
+      <p style="font-size:14px;margin-bottom:6px"><b>Raising:</b> ₹50L – ₹2 Cr</p>
+      <p style="font-size:14px;margin-bottom:0"><b>Mix:</b> Equity pre-seed + non-dilutive grants (DPIIT, state schemes, AI competitions)</p>
+    </div>
+  </div>
+
+  <h3>Use of Funds</h3>
+  <div class="card">
+    <div class="bars">
+      <div class="bar-row"><div class="bar-top"><span><b>40% — Product & AI</b> (Claude, Groq, doc gen v2, Saathi v2)</span><span style="color:var(--gold-dk);font-weight:800">40%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:40%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span><b>25% — Go-to-market</b> (field sales, cluster activation, events)</span><span style="color:var(--gold-dk);font-weight:800">25%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:25%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span><b>20% — Team</b> (2 engineers, 1 export expert, 1 CS lead)</span><span style="color:var(--gold-dk);font-weight:800">20%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:20%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span><b>10% — Operations & compliance</b> (Pvt Ltd, licenses, legal)</span><span style="color:var(--gold-dk);font-weight:800">10%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:10%"></div></div></div>
+      <div class="bar-row"><div class="bar-top"><span><b>5% — Working capital & contingency</b></span><span style="color:var(--gold-dk);font-weight:800">5%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:5%"></div></div></div>
+    </div>
+  </div>
+
+  <h3>Milestones This Round Unlocks</h3>
+  <div class="grid g-2">
+    <div class="card"><h4>By end of FY 26-27</h4><p style="font-size:13.5px;margin-bottom:0">• 20+ paying manufacturers<br>• Full tech stack live<br>• Export licenses acquired<br>• DPIIT + Pvt Ltd complete</p></div>
+    <div class="card"><h4>By end of FY 27-28</h4><p style="font-size:13.5px;margin-bottom:0">• 180 paying manufacturers<br>• Gujarat + TN launch<br>• 3+ partnerships (freight, finance, buyer)<br>• Path to EBITDA-positive validated</p></div>
+  </div>
+</section>
+
+<!-- ════════════ PART 11 — TEAM ════════════ -->
+<section id="p11" class="part">
+  <div class="part-num">PART 11</div>
+  <h2>Team & Governance</h2>
+
+  <h3>Founders</h3>
+  <div class="grid g-2">
+    <div class="card member">
+      <div class="avatar gold">SW</div>
+      <div>
+        <h4 style="margin:0">Sarthak Wage</h4>
+        <div class="member-role">Founder & CEO</div>
+        <p>Creative technologist building ArthaFlow's product, AI architecture, and design system. Previously CTO at a 3D game-dev startup that scaled to 6-figure USD revenue and raised multiple rounds — proven ability to take products from blank page to production at venture scale.</p>
+        <p style="font-size:12px;color:var(--text-mute);margin-bottom:0">Pursuing CS at KJ Somaiya College of Engineering, Mumbai.</p>
+      </div>
+    </div>
+    <div class="card member">
+      <div class="avatar">SM</div>
+      <div>
+        <h4 style="margin:0">Sameer Morya</h4>
+        <div class="member-role">Co-Founder & CTO</div>
+        <p>Strategy-to-tech operator building ArthaFlow's end-to-end AI architecture and technical pipelines. Previously Strategy & Operations Associate at SeekMyCOURSE, working directly with the founder on scaling, investor materials, and cross-functional initiatives.</p>
+        <p style="font-size:12px;color:var(--text-mute);margin-bottom:0">Pursuing Robotics & AI at KJ Somaiya College of Engineering, Mumbai.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Why This Team Wins</h3>
+  <div class="grid g-3">
+    <div class="card blue"><h4 style="color:var(--royal);margin-top:0">🛠️ Technical depth</h4><p style="font-size:13.5px;margin-bottom:0">Both founders ship code. Full-stack engineering, applied AI, and AI pipeline architecture in-house.</p></div>
+    <div class="card teal"><h4 style="color:var(--teal-dk);margin-top:0">🧭 Operational discipline</h4><p style="font-size:13.5px;margin-bottom:0">Sameer's strategy/ops background turns product into go-to-market into revenue.</p></div>
+    <div class="card gold"><h4 style="color:var(--gold-dk);margin-top:0">🇮🇳 Ecosystem proximity</h4><p style="font-size:13.5px;margin-bottom:0">Embedded in Maharashtra's MSME belt. 50+ direct manufacturer conversations behind every product decision.</p></div>
+  </div>
+
+  <h3>Current Org Chart (Year 1)</h3>
+  <div class="flow">
+    <pre class="mermaid">
+flowchart TB
+  CEO([Sarthak Wage<br/>Founder & CEO])
+  CTO([Sameer Morya<br/>Co-Founder & CTO])
+  CEO --- CTO
+  CEO --> SALES[Field Sales<br/>+1 hire FY26-27]
+  CEO --> OPS[Operations<br/>+1 hire FY26-27]
+  CTO --> ENG[Engineering<br/>+1 hire FY26-27]
+  CTO --> AI[AI / Data<br/>+1 hire FY27]
+
+  classDef f fill:#D4A843,color:#0B1D3A,font-weight:bold,stroke:#9C6F1E;
+  classDef h fill:#F1F4F8,color:#1A2433,stroke:#CBD3DE;
+  class CEO,CTO f;
+  class SALES,OPS,ENG,AI h;
+    </pre>
+  </div>
+
+  <h3>Hiring Plan</h3>
+  <table>
+    <tr><th>Role</th><th class="center">FY 26-27</th><th class="center">FY 27-28</th><th class="center">FY 28-29</th></tr>
+    <tr><td>Full-stack engineer</td><td class="center">+1</td><td class="center">+2</td><td class="center">+4</td></tr>
+    <tr><td>AI / data engineer</td><td class="center">—</td><td class="center">+1</td><td class="center">+3</td></tr>
+    <tr><td>Field sales (Maharashtra → Gujarat → TN)</td><td class="center">+1</td><td class="center">+3</td><td class="center">+5</td></tr>
+    <tr><td>Customer success</td><td class="center">+1</td><td class="center">+2</td><td class="center">+3</td></tr>
+    <tr><td>Export domain expert</td><td class="center">—</td><td class="center">+1</td><td class="center">+1</td></tr>
+    <tr><td>Operations / compliance</td><td class="center">—</td><td class="center">+1</td><td class="center">+2</td></tr>
+  </table>
+
+  <h3>Governance & Equity</h3>
+  <div class="grid g-2">
+    <div class="card tinted">
+      <h4 style="margin-top:0">Current Structure</h4>
+      <p style="font-size:14px;margin-bottom:6px"><b>Entity:</b> Partnership firm (incorporated 29 March 2026)</p>
+      <p style="font-size:14px;margin-bottom:6px"><b>Conversion:</b> Pvt Ltd application in process (target Q2 2026)</p>
+      <p style="font-size:14px;margin-bottom:0"><b>DPIIT:</b> Application submitted, recognition pending</p>
+    </div>
+    <div class="card tinted">
+      <h4 style="margin-top:0">Founder Equity</h4>
+      <p style="font-size:14px;margin-bottom:6px"><b>Co-founder split:</b> Equal (to be formalized at Pvt Ltd conversion)</p>
+      <p style="font-size:14px;margin-bottom:6px"><b>ESOP pool:</b> 10% reserved at first institutional round</p>
+      <p style="font-size:14px;margin-bottom:0"><b>Cap table:</b> Clean — no external capital to date</p>
+    </div>
+  </div>
+
+  <h3>Advisors (In Cultivation)</h3>
+  <p style="font-size:14px;color:var(--text-2)">Active outreach to: senior operators in B2B SaaS scaled across India, export-trade domain experts (former FIEO/EEPC), and applied-AI advisors. KJ Somaiya RIIDL incubator endorsement in progress — unlocks formal advisor network.</p>
+</section>
+
+<!-- ════════════ PART 12 — RISKS ════════════ -->
+<section id="p12" class="part">
+  <div class="part-num">PART 12</div>
+  <h2>Risks & Mitigations</h2>
+  <p class="lead">Honest assessment of what could go wrong — and the specific mitigations in place or planned.</p>
+
+  <h3>Risk Register</h3>
+
+  <div class="risk high">
+    <div class="risk-tag">HIGH</div>
+    <div class="risk-body">
+      <strong>Premature breadth — building Act 2 features during Act 1</strong>
+      <p>The temptation to build the buyer marketplace, full fulfilment stack, and trading desk in parallel — diluting focus before the core manufacturer dataset accretes.</p>
+      <div class="mit">✓ Mitigation: Hard gate. No buyer-side product until ~100 verified manufacturers with ≥1 documented shipment each. Discipline tracked monthly.</div>
+    </div>
+  </div>
+
+  <div class="risk high">
+    <div class="risk-tag">HIGH</div>
+    <div class="risk-body">
+      <strong>Disintermediation — buyers and sellers transacting off-platform</strong>
+      <p>Classic B2B marketplace risk. Once parties have each other's contact, they may transact off-platform to avoid the take-rate.</p>
+      <div class="mit">✓ Mitigation: Bundle settlement (FIRC, forex, trade finance) into ArthaFlow so off-platform transactions lose key services. Trust via inspection + escrow.</div>
+    </div>
+  </div>
+
+  <div class="risk med">
+    <div class="risk-tag">MEDIUM</div>
+    <div class="risk-body">
+      <strong>Pilot-to-paid conversion at scale unproven</strong>
+      <p>5 active pilots is a small sample. Conversion rate from free pilot to paid Growth tier is the make-or-break Year 1 metric.</p>
+      <div class="mit">✓ Mitigation: 60-day pilots with structured milestones, weekly check-ins, validated pricing from interviews. Track conversion weekly; iterate playbook.</div>
+    </div>
+  </div>
+
+  <div class="risk med">
+    <div class="risk-tag">MEDIUM</div>
+    <div class="risk-body">
+      <strong>Regulatory complexity — FEMA, DGFT, customs</strong>
+      <p>Cross-border B2B operations span multiple regulators. Mistakes are expensive and reputationally damaging.</p>
+      <div class="mit">✓ Mitigation: Partner-first for licensed activities (CHA, forex). Bring in-house only when volume + capital justify. Legal advisor on retainer at Pvt Ltd.</div>
+    </div>
+  </div>
+
+  <div class="risk med">
+    <div class="risk-tag">MEDIUM</div>
+    <div class="risk-body">
+      <strong>AI commoditization — frontier LLMs erode the document-generation moat</strong>
+      <p>Raw AI document generation will be table-stakes within 18 months. Our differentiation must come from elsewhere.</p>
+      <div class="mit">✓ Mitigation: Moat is the proprietary data feeding the model, not the model itself. Race to build the dataset before AI becomes generic. RAG-first architecture.</div>
+    </div>
+  </div>
+
+  <div class="risk med">
+    <div class="risk-tag">MEDIUM</div>
+    <div class="risk-body">
+      <strong>Manufacturer digital adoption resistance</strong>
+      <p>Tier-2/3 manufacturers may resist new tools, especially in English-only formats.</p>
+      <div class="mit">✓ Mitigation: Saathi in Hindi/Marathi removes language barrier. Mobile-first matches existing behavior. In-person onboarding for first 100 customers.</div>
+    </div>
+  </div>
+
+  <div class="risk low">
+    <div class="risk-tag">LOW-MED</div>
+    <div class="risk-body">
+      <strong>Vertical heterogeneity — different sectors have wildly different needs</strong>
+      <p>Engineering, pharma, textiles, and agri have different compliance, certifications, and buyer dynamics.</p>
+      <div class="mit">✓ Mitigation: Wedge with ONE vertical (engineering goods) for Year 1. Templatize, then expand. Depth before breadth.</div>
+    </div>
+  </div>
+
+  <div class="risk low">
+    <div class="risk-tag">LOW-MED</div>
+    <div class="risk-body">
+      <strong>Capital runway / fundraise timing</strong>
+      <p>Bootstrapped operation has limited runway. Failure to close pre-seed by Q3 2026 forces difficult trade-offs.</p>
+      <div class="mit">✓ Mitigation: Multiple parallel paths (grants, angels, accelerators, equity). Zero-burn ops by default. Revenue from first paid pilots Q3 2026.</div>
+    </div>
+  </div>
+
+  <div class="risk low">
+    <div class="risk-tag">LOW</div>
+    <div class="risk-body">
+      <strong>Buyer-side trust & dispute resolution</strong>
+      <p>Once we sit in the middle of cross-border transactions, we own disputes — payment defaults, quality claims, returns.</p>
+      <div class="mit">✓ Mitigation: Inspection partner (SGS/BV) + escrow-style settlement must precede shipment volume. Don't intermediate transactions we can't adjudicate.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════ APPENDICES ════════════ -->
+<section id="appx" class="part">
+  <div class="part-num">APPENDICES</div>
+  <h2>Reference Materials</h2>
+
+  <h3>A. Glossary</h3>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><code>ARPM</code></td><td>Annual Revenue Per Manufacturer</td></tr>
+    <tr><td><code>CHA</code></td><td>Customs House Agent (licensed customs broker)</td></tr>
+    <tr><td><code>DGCIS</code></td><td>Directorate General of Commercial Intelligence and Statistics</td></tr>
+    <tr><td><code>DGFT</code></td><td>Directorate General of Foreign Trade</td></tr>
+    <tr><td><code>DPDP</code></td><td>Digital Personal Data Protection Act 2023 (India)</td></tr>
+    <tr><td><code>DPIIT</code></td><td>Department for Promotion of Industry and Internal Trade</td></tr>
+    <tr><td><code>EEPC</code></td><td>Engineering Export Promotion Council of India</td></tr>
+    <tr><td><code>FEMA</code></td><td>Foreign Exchange Management Act</td></tr>
+    <tr><td><code>FIEO</code></td><td>Federation of Indian Export Organisations</td></tr>
+    <tr><td><code>FIRC</code></td><td>Foreign Inward Remittance Certificate</td></tr>
+    <tr><td><code>GMV</code></td><td>Gross Merchandise Value (total transaction value)</td></tr>
+    <tr><td><code>HS Code</code></td><td>Harmonized System code for product classification</td></tr>
+    <tr><td><code>IEC</code></td><td>Importer Exporter Code</td></tr>
+    <tr><td><code>ITC-HS</code></td><td>Indian Trade Classification (Harmonised System) — 8-digit India-specific HS</td></tr>
+    <tr><td><code>LTV : CAC</code></td><td>Lifetime Value to Customer Acquisition Cost ratio</td></tr>
+    <tr><td><code>MSME</code></td><td>Micro, Small & Medium Enterprises</td></tr>
+    <tr><td><code>RAG</code></td><td>Retrieval-Augmented Generation (AI pattern)</td></tr>
+    <tr><td><code>RIIDL</code></td><td>Research, Innovation, Incubation and Design Lab (KJ Somaiya)</td></tr>
+    <tr><td><code>RoDTEP</code></td><td>Remission of Duties and Taxes on Exported Products</td></tr>
+    <tr><td><code>SaaS</code></td><td>Software as a Service</td></tr>
+    <tr><td><code>TAM/SAM/SOM</code></td><td>Total / Serviceable / Obtainable Addressable Market</td></tr>
+    <tr><td><code>TRL</code></td><td>Technology Readiness Level (we are TRL 7)</td></tr>
+  </table>
+
+  <h3>B. Key Documents Available on Request</h3>
+  <ul style="font-size:14px;color:var(--text-2);padding-left:24px">
+    <li>Detailed financial model (Excel/Google Sheets)</li>
+    <li>Pitch deck (15 slides, PDF + HTML)</li>
+    <li>Technical architecture diagrams</li>
+    <li>Partnership agreement summaries</li>
+    <li>Manufacturer interview synthesis</li>
+    <li>Product demo recording (Loom, on request)</li>
+  </ul>
+
+  <h3>C. Contact</h3>
+  <div class="grid g-2">
+    <div class="card">
+      <h4 style="margin-top:0">General Enquiries</h4>
+      <p style="font-size:14px;margin-bottom:0">info@arthaflowglobal.com<br>arthaflowglobal.com</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Founder Direct</h4>
+      <p style="font-size:14px;margin-bottom:0"><b>Sarthak Wage</b> — sarthak@arthaflowglobal.com<br><b>Sameer Morya</b> — sameer@arthaflowglobal.com</p>
+    </div>
+  </div>
+
+  <h3>D. Document Metadata</h3>
+  <table>
+    <tr><td><b>Document version</b></td><td>1.0</td></tr>
+    <tr><td><b>Date issued</b></td><td>June 2026</td></tr>
+    <tr><td><b>Author</b></td><td>Sarthak Wage, Sameer Morya</td></tr>
+    <tr><td><b>Confidentiality</b></td><td>Confidential. Shared on a need-to-know basis with prospective investors, advisors, and partners.</td></tr>
+    <tr><td><b>Next update</b></td><td>Quarterly (Q3 2026)</td></tr>
+  </table>
+
+  <div class="callout teal" style="margin-top:30px">
+    <div class="lbl">Closing Note</div>
+    <p>Every product made in India deserves a global market. This document is our blueprint to make that possible — by building the AI-powered rails that the next million Indian MSME manufacturers will use to reach the world.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    fontFamily: 'Inter, sans-serif',
+    fontSize: '14px',
+    lineColor: '#7B8599',
+    primaryColor: '#163A6E',
+    primaryTextColor: '#1A2433',
+    primaryBorderColor: '#2563EB'
+  },
+  flowchart: { curve: 'basis', padding: 14, htmlLabels: true }
+});
+</script>
+</body>
+</html>

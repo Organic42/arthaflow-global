@@ -28,6 +28,8 @@ import {
   Leaf,
   Gem,
   ArrowRight,
+  Clock,
+  Mountain,
 } from "lucide-react";
 
 // ── Opportunity section data ──────────────────────────────────────────────────
@@ -52,6 +54,13 @@ const growingSectors = [
   { name: "Textiles",     growth: "+9%",  icon: <Shirt size={16} />,        bg: "bg-gold-bg",   color: "text-[#92710A]" },
   { name: "Agri Products",growth: "+12%", icon: <Leaf size={16} />,         bg: "bg-green-bg",  color: "text-success" },
   { name: "Gems & Jewelry",growth: "+7%", icon: <Gem size={16} />,          bg: "bg-blue-bg",   color: "text-action-blue" },
+];
+
+const trustBadges = [
+  { icon: <Shield size={18} />, title: "Bank Grade Security", desc: "Your data is encrypted and secure", bg: "bg-green-bg", color: "text-success" },
+  { icon: <Clock size={18} />, title: "24/7 Expert Support", desc: "We're here whenever you need us", bg: "bg-gold-bg", color: "text-[#92710A]" },
+  { icon: <Zap size={18} />, title: "Save Time & Money", desc: "Automate. Simplify. Scale.", bg: "bg-blue-bg", color: "text-action-blue" },
+  { icon: <Mountain size={18} />, title: "Grow Globally", desc: "We take you beyond boundaries", bg: "bg-red-bg", color: "text-error" },
 ];
 
 const problems = [
@@ -160,6 +169,28 @@ export default function HomePage() {
           <div className="relative mx-auto -mt-6 max-w-[720px]" style={{ marginBottom: "-42%" }}>
             <Globe />
           </div>
+        </div>
+      </section>
+
+      {/* TRUST BAR — reassurance strip right under the fold, before the ask */}
+      <section className="border-t border-white/10 bg-navy px-6 py-6 sm:px-8">
+        <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 divide-y divide-white/10 sm:grid-cols-2 sm:gap-0 sm:divide-y-0 lg:grid-cols-4">
+          {trustBadges.map((b, i) => (
+            <div
+              key={b.title}
+              className={`flex items-center gap-3 pt-6 first:pt-0 sm:pt-0 lg:px-6 lg:first:pl-0 ${
+                i > 0 ? "lg:border-l lg:border-white/10" : ""
+              }`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${b.bg} ${b.color}`}>
+                {b.icon}
+              </div>
+              <div>
+                <div className="text-[13px] font-bold text-white">{b.title}</div>
+                <div className="text-[12px] text-white/60">{b.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

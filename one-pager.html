@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArthaFlow Global — One-Pager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+/* ══════════════ BRAND ══════════════ */
+:root{
+  --navy:#0B1D3A; --navy-2:#0F2547; --royal:#163A6E; --blue:#2563EB;
+  --gold:#D4A843; --gold-dk:#9C6F1E; --teal:#2DD4BF; --teal-dk:#1FA89A;
+  --bg:#FAFBFC; --card:#FFFFFF; --border:#E3E8EF; --subtle:#F1F4F8;
+  --text:#1A2433; --text-2:#465268; --text-mute:#7B8599;
+  --success:#10B981; --error:#EF4444;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#E5E9EF;color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.35;padding:24px}
+
+/* ══════════════ PAGE — exactly one A4 ══════════════ */
+.page{
+  width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:11mm 12mm;
+  box-shadow:0 8px 40px rgba(11,29,58,0.14);
+  display:flex;flex-direction:column;gap:8px;
+}
+
+/* ══════════════ HEADER ══════════════ */
+.head{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--royal) 60%,var(--blue) 100%);
+  color:#fff;border-radius:12px;padding:16px 20px;position:relative;overflow:hidden;
+}
+.head::after{content:"";position:absolute;top:-40%;right:-8%;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,67,0.22),transparent 70%);pointer-events:none}
+.head-row{display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:6px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold-dk));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;color:var(--navy)}
+.b-name{font-size:16px;font-weight:900;letter-spacing:-0.3px;line-height:1}
+.b-name span{color:var(--gold)}
+.tag-strip{font-size:9.5px;color:rgba(255,255,255,0.55);letter-spacing:1.3px;text-transform:uppercase;font-weight:700;margin-top:2px}
+.label{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);padding:4px 9px;background:rgba(212,168,67,0.12);border-radius:99px;border:1px solid rgba(212,168,67,0.35)}
+.head-line{position:relative;font-size:19px;font-weight:800;line-height:1.15;letter-spacing:-0.4px;max-width:99%}
+.head-line .g{color:var(--gold)}
+.head-sub{position:relative;font-size:11px;color:rgba(255,255,255,0.78);margin-top:5px;line-height:1.42;max-width:98%}
+
+/* ══════════════ METRIC STRIP ══════════════ */
+.metric-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.m-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center}
+.m-card .v{font-size:16px;font-weight:900;letter-spacing:-0.6px;line-height:1;color:var(--navy)}
+.m-card .v.g{color:var(--gold-dk)} .m-card .v.t{color:var(--teal-dk)} .m-card .v.b{color:var(--royal)}
+.m-card .l{font-size:8px;color:var(--text-mute);margin-top:3px;font-weight:600;line-height:1.15;text-transform:uppercase;letter-spacing:.4px}
+
+/* ══════════════ SECTIONS ══════════════ */
+.section{display:grid;gap:7px}
+.g-2{grid-template-columns:1fr 1fr}
+.g-23{grid-template-columns:2fr 3fr}
+.g-32{grid-template-columns:3fr 2fr}
+.g-3{grid-template-columns:1fr 1fr 1fr}
+
+.block{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 12px}
+.block.tint{background:var(--subtle)}
+.block.gold{background:linear-gradient(135deg,rgba(212,168,67,0.07),rgba(212,168,67,0.02));border-color:rgba(212,168,67,0.35)}
+.block.teal{background:rgba(45,212,191,0.05);border-color:rgba(45,212,191,0.28)}
+.block.blue{background:rgba(37,99,235,0.04);border-color:rgba(37,99,235,0.22)}
+.block.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+.block.navy h3,.block.navy strong{color:#fff}
+.block.navy p, .block.navy li{color:rgba(255,255,255,0.78)}
+
+.bt{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:var(--gold-dk);margin-bottom:4px}
+.block.teal .bt{color:var(--teal-dk)}
+.block.blue .bt{color:var(--royal)}
+.block.navy .bt{color:var(--gold)}
+h3{font-size:12px;font-weight:800;color:var(--navy);letter-spacing:-0.25px;line-height:1.2;margin-bottom:3px}
+.block.navy h3{color:#fff}
+p{font-size:10px;color:var(--text-2);line-height:1.4}
+strong,b{color:var(--text);font-weight:700}
+.block.navy strong{color:#fff}
+
+/* ══════════════ LISTS ══════════════ */
+.lst{list-style:none;padding:0;margin-top:3px}
+.lst li{font-size:9.5px;color:var(--text-2);line-height:1.38;padding-left:11px;position:relative;margin-bottom:2px}
+.lst li::before{content:"▸";position:absolute;left:0;color:var(--gold);font-weight:900;font-size:9px;top:0}
+.lst.teal li::before{color:var(--teal-dk)}
+.lst.blue li::before{color:var(--royal)}
+.lst.gold li::before{color:var(--gold)}
+.lst li b{color:var(--text);font-weight:700}
+.block.navy .lst li{color:rgba(255,255,255,0.85)}
+.block.navy .lst li b{color:#fff}
+.block.navy .lst li::before{color:var(--gold)}
+
+/* ══════════════ INFOGRAPHIC: PRODUCT PIPELINE ══════════════ */
+.pipeline{display:flex;align-items:stretch;gap:0;margin-top:5px}
+.ps{flex:1;background:var(--subtle);border:1px solid var(--border);border-radius:7px;padding:6px 5px;text-align:center;position:relative}
+.ps .n{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:15px;height:15px;background:var(--gold);color:var(--navy);border-radius:50%;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.ps .ico{font-size:14px;margin:3px 0 2px}
+.ps .t{font-size:8.5px;font-weight:800;color:var(--navy);margin-bottom:1px;line-height:1.1}
+.ps .d{font-size:7.5px;color:var(--text-mute);line-height:1.2}
+.pl{display:flex;align-items:center;justify-content:center;width:14px;flex:0 0 14px;color:var(--gold);font-size:12px;font-weight:900}
+
+/* ══════════════ INFOGRAPHIC: TAM/SAM/SOM ══════════════ */
+.mkt-viz{position:relative;width:130px;height:130px;margin:2px auto 0}
+.mc{position:absolute;border-radius:50%;display:flex;flex-direction:column;align-items:flex-start;padding:6px 0 0 9px}
+.mc .v{font-size:11px;font-weight:900;line-height:1}
+.mc .l{font-size:6.5px;font-weight:800;letter-spacing:1px;color:var(--text-mute);margin-top:1px}
+.mc.tam{inset:0;background:rgba(37,99,235,0.08);border:1.5px solid rgba(37,99,235,0.4)}
+.mc.sam{top:32px;left:16px;width:98px;height:98px;background:rgba(45,212,191,0.1);border:1.5px solid var(--teal-dk)}
+.mc.som{top:65px;left:35px;width:60px;height:60px;background:rgba(212,168,67,0.18);border:1.5px solid var(--gold)}
+
+/* ══════════════ INFOGRAPHIC: REVENUE BARS ══════════════ */
+.rev-bars{display:flex;flex-direction:column;gap:3px;margin-top:3px}
+.rev-row .rt{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;margin-bottom:1px}
+.rev-track{height:4px;border-radius:99px;background:var(--subtle);overflow:hidden}
+.rev-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold-dk),var(--gold))}
+.rev-fill.b{background:linear-gradient(90deg,var(--royal),var(--blue))}
+.rev-fill.t{background:linear-gradient(90deg,var(--teal-dk),var(--teal))}
+
+/* ══════════════ FLOWCHART: FLYWHEEL ══════════════ */
+.fw{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:4px;margin-top:4px}
+.fw-node{background:var(--subtle);border:1px solid var(--border);border-radius:6px;padding:5px 6px;text-align:center;font-size:8px;font-weight:700;color:var(--navy);line-height:1.2}
+.fw-node.g{background:rgba(212,168,67,0.14);border-color:var(--gold);color:var(--gold-dk)}
+.fw-arr{color:var(--gold);font-size:11px;font-weight:900;text-align:center}
+
+/* ══════════════ VISION BLOCK ══════════════ */
+.vision{background:linear-gradient(135deg,var(--gold-dk) 0%,var(--gold) 100%);color:var(--navy);border-radius:9px;padding:9px 14px}
+.vision .bt{color:var(--navy);opacity:0.75}
+.vision p{color:var(--navy);font-size:10.5px;line-height:1.4;font-weight:500}
+.vision p b{color:var(--navy);font-weight:800}
+
+/* ══════════════ FOOTER ══════════════ */
+.foot{margin-top:auto;padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:8.5px;color:var(--text-mute);font-weight:600;letter-spacing:.2px}
+.foot .fw-b{color:var(--navy);font-weight:800}
+.confidential{padding:2px 8px;background:rgba(239,68,68,0.06);color:#DC2626;border-radius:99px;font-weight:800;letter-spacing:.8px;font-size:7.5px}
+
+/* ══════════════ PILL ══════════════ */
+.pill{display:inline-block;font-size:8.5px;font-weight:800;padding:2px 7px;border-radius:99px;letter-spacing:.4px}
+.pill.gold{background:rgba(212,168,67,0.15);color:var(--gold-dk)}
+.pill.teal{background:rgba(45,212,191,0.14);color:var(--teal-dk)}
+.pill.blue{background:rgba(37,99,235,0.1);color:var(--royal)}
+
+/* ══════════════ CHIPS ══════════════ */
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.chip{font-size:8px;font-weight:600;padding:2px 6px;border-radius:99px;background:var(--subtle);color:var(--text-2);border:1px solid var(--border)}
+
+/* ══════════════ PRINT ══════════════ */
+@page{size:A4;margin:0}
+@media print{
+  body{background:#fff;padding:0}
+  .page{box-shadow:none;width:210mm;min-height:297mm;page-break-after:always}
+}
+
+/* ══════════════ RESPONSIVE ══════════════ */
+@media(max-width:820px){
+  body{padding:12px}
+  .page{width:100%;min-height:auto;padding:16px}
+  .metric-strip{grid-template-columns:repeat(2,1fr)}
+  .g-2,.g-23,.g-32,.g-3{grid-template-columns:1fr}
+  .pipeline{flex-direction:column;gap:8px}
+  .pl{transform:rotate(90deg);width:auto;flex:0 0 auto;padding:0}
+  .fw{grid-template-columns:1fr}
+  .fw-arr{transform:rotate(90deg)}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ════════════ HEADER ════════════ -->
+  <div class="head">
+    <div class="head-row">
+      <div class="brand">
+        <div class="mark">A</div>
+        <div>
+          <div class="b-name">Artha<span>Flow</span> Global</div>
+          <div class="tag-strip">Mumbai · arthaflowglobal.com · Pre-Seed</div>
+        </div>
+      </div>
+      <div class="label">★ Investor One-Pager</div>
+    </div>
+    <div class="head-line">The <span class="g">AI-powered export operating system</span> for India's 57 million MSME manufacturers.</div>
+    <div class="head-sub"><b style="color:#fff">What we do:</b> ArthaFlow gives Indian manufacturers one dashboard to run their entire export business — documentation, compliance, buyer discovery, shipments, and financing. Work that once required consultants at ₹50,000 per shipment now happens in 30 seconds, in the manufacturer's own language. We are building the rails India's $2 trillion export ambition will run on.</div>
+  </div>
+
+  <!-- ════════════ METRIC STRIP ════════════ -->
+  <div class="metric-strip">
+    <div class="m-card"><div class="v">57M</div><div class="l">Indian MSMEs (TAM)</div></div>
+    <div class="m-card"><div class="v g">99.7%</div><div class="l">Do not export today</div></div>
+    <div class="m-card"><div class="v b">$12B</div><div class="l">Total addressable market</div></div>
+    <div class="m-card"><div class="v t">$2T</div><div class="l">India 2030 export target</div></div>
+    <div class="m-card"><div class="v g">28%</div><div class="l">Target EBITDA (Y4)</div></div>
+  </div>
+
+  <!-- ════════════ PROBLEM + SOLUTION (with pipeline) ════════════ -->
+  <div class="section g-2">
+    <div class="block">
+      <div class="bt">The Problem</div>
+      <h3>India's MSMEs cannot access global trade.</h3>
+      <ul class="lst">
+        <li><b>99.7% of 57M</b> Indian MSMEs never export — not for quality but for infrastructure.</li>
+        <li>Exporting demands <b>40+ documents</b>, verified buyers, and coordinated logistics.</li>
+        <li>Result: <b>$800B+ in unrealized export potential</b> locked inside Indian factories.</li>
+      </ul>
+    </div>
+    <div class="block gold">
+      <div class="bt">The Solution</div>
+      <h3>One AI-powered platform. Every export task. Any Indian language.</h3>
+      <ul class="lst gold">
+        <li><b>AI Document Generator</b> — export docs in 30 sec, grounded in real data.</li>
+        <li><b>Export Saathi</b> — AI advisor in Hindi, Marathi, English (first of its kind).</li>
+        <li><b>Buyer Discovery</b> — verified international importers matched by capability.</li>
+        <li><b>Ops Dashboard</b> — compliance, shipments, financing, tracking in one place.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════ PRODUCT PIPELINE (flowchart) ════════════ -->
+  <div class="block tint">
+    <div class="bt">How the product works</div>
+    <div class="pipeline">
+      <div class="ps"><div class="n">1</div><div class="ico">📝</div><div class="t">Onboard</div><div class="d">GST · IEC · Products</div></div>
+      <div class="pl">→</div>
+      <div class="ps"><div class="n">2</div><div class="ico">⚡</div><div class="t">AI Docs</div><div class="d">30 sec generation</div></div>
+      <div class="pl">→</div>
+      <div class="ps"><div class="n">3</div><div class="ico">🧭</div><div class="t">Saathi</div><div class="d">Advises in Hindi</div></div>
+      <div class="pl">→</div>
+      <div class="ps"><div class="n">4</div><div class="ico">🤝</div><div class="t">Match Buyer</div><div class="d">Verified importers</div></div>
+      <div class="pl">→</div>
+      <div class="ps"><div class="n">5</div><div class="ico">🚚</div><div class="t">Ship</div><div class="d">Partner logistics</div></div>
+      <div class="pl">→</div>
+      <div class="ps"><div class="n">6</div><div class="ico">💵</div><div class="t">Paid USD</div><div class="d">FIRC auto-issued</div></div>
+    </div>
+  </div>
+
+  <!-- ════════════ MARKET + TRACTION ════════════ -->
+  <div class="section g-23">
+    <div class="block blue">
+      <div class="bt">Market Opportunity</div>
+      <div class="mkt-viz">
+        <div class="mc tam"><div class="v" style="color:var(--royal)">$12B</div><div class="l">TAM</div></div>
+        <div class="mc sam"><div class="v" style="color:var(--teal-dk)">$2.4B</div><div class="l">SAM</div></div>
+        <div class="mc som"><div class="v" style="color:var(--gold-dk)">$24M</div><div class="l">SOM</div></div>
+      </div>
+      <p style="margin-top:5px;font-size:9px"><b>TAM ₹1L Cr</b> — 57M MSMEs × ~₹17K/yr. <b>SAM ₹20K Cr</b> — top-6 sectors. <b>SOM ₹200 Cr</b> — 10K Maharashtra manufacturers in 3 years.</p>
+    </div>
+    <div class="block">
+      <div class="bt">Traction</div>
+      <ul class="lst">
+        <li><b>Live working MVP</b> at arthaflowglobal.com — not a prototype.</li>
+        <li><b>5 pilot manufacturers</b> onboarded across Mumbai &amp; Pune.</li>
+        <li><b>50+ interviews</b> — 90% cite docs &amp; buyer access as top barriers.</li>
+        <li><b>Strategic partnership signed</b> — warehousing + verified buyer database.</li>
+        <li><b>AI doc generation operational</b> end-to-end today.</li>
+        <li><b>Bootstrapped</b> to this point — ₹0 external capital.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════ BUSINESS MODEL ════════════ -->
+  <div class="block">
+    <div class="bt">Business Model — Six diversified revenue streams</div>
+    <div class="section g-2" style="gap:12px;margin-top:2px">
+      <div>
+        <ul class="lst">
+          <li><b>SaaS subscription</b> — ₹2,999–9,999/mo per manufacturer</li>
+          <li><b>Transaction commission</b> — 1–2% of shipment value</li>
+          <li><b>Logistics commission</b> — 3–8% of freight charges</li>
+          <li><b>Trade finance</b> — 0.5–1% of facility · <b>Insurance</b> — 10–15% of premium</li>
+          <li><b>Data / API</b> — banks &amp; NBFCs at scale · <b>Target LTV:CAC &gt; 5:1</b>, payback &lt; 6 mo</li>
+        </ul>
+      </div>
+      <div>
+        <div class="rev-bars">
+          <div class="rev-row"><div class="rt"><span>Transaction take-rate</span><span class="pill gold">35%</span></div><div class="rev-track"><div class="rev-fill" style="width:35%"></div></div></div>
+          <div class="rev-row"><div class="rt"><span>Subscription</span><span class="pill blue">25%</span></div><div class="rev-track"><div class="rev-fill b" style="width:25%"></div></div></div>
+          <div class="rev-row"><div class="rt"><span>Logistics</span><span class="pill teal">15%</span></div><div class="rev-track"><div class="rev-fill t" style="width:15%"></div></div></div>
+          <div class="rev-row"><div class="rt"><span>Trade finance</span><span class="pill">12%</span></div><div class="rev-track"><div class="rev-fill" style="width:12%;background:var(--text-mute)"></div></div></div>
+          <div class="rev-row"><div class="rt"><span>Insurance</span><span class="pill">8%</span></div><div class="rev-track"><div class="rev-fill" style="width:8%;background:var(--text-mute)"></div></div></div>
+          <div class="rev-row"><div class="rt"><span>Data / API</span><span class="pill">5%</span></div><div class="rev-track"><div class="rev-fill" style="width:5%;background:var(--text-mute)"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ COMPETITIVE ADVANTAGE (flywheel) ════════════ -->
+  <div class="block navy">
+    <div class="bt">Competitive Advantage — the moat compounds daily</div>
+    <div class="section g-32" style="gap:12px;margin-top:2px">
+      <div>
+        <ul class="lst">
+          <li><b>Only end-to-end platform</b> — competitors solve one slice; we own the workflow.</li>
+          <li><b>Multilingual AI</b> serving manufacturers no English-first product can reach.</li>
+          <li><b>MSME-first pricing</b> — 1/100th the cost of consultants.</li>
+          <li><b>Proprietary export-intelligence dataset</b> compounds with every shipment — copyable UI, uncopyable data.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="fw">
+          <div class="fw-node">More manufacturers</div>
+          <div class="fw-arr">→</div>
+          <div class="fw-node">More buyers</div>
+          <div class="fw-arr">→</div>
+          <div class="fw-node g">More data deposit</div>
+        </div>
+        <div class="fw" style="margin-top:3px">
+          <div class="fw-node g">Better intelligence</div>
+          <div class="fw-arr">←</div>
+          <div class="fw-node">Stickier for both sides</div>
+          <div class="fw-arr">←</div>
+          <div class="fw-node">Loop accelerates ↻</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ VISION ════════════ -->
+  <div class="vision">
+    <div class="bt">Vision</div>
+    <p>Become the <b>default export operating system for Indian manufacturers</b> — the infrastructure layer through which India's MSMEs reach global markets — then carry the same playbook to the <b>Global South</b>. Every product made in India deserves a global market. <b>We are building the way to get it there.</b></p>
+  </div>
+
+  <!-- ════════════ FOOTER / CONTACT ════════════ -->
+  <div class="foot">
+    <div>
+      <span class="fw-b">Founders:</span> Sarthak Wage (CEO) · Sameer Morya (CTO)  &nbsp;·&nbsp;
+      <span class="fw-b">Web:</span> arthaflowglobal.com  &nbsp;·&nbsp;
+      <span class="fw-b">Email:</span> info@arthaflowglobal.com  &nbsp;·&nbsp; Mumbai, India
+    </div>
+    <div class="confidential">CONFIDENTIAL</div>
+  </div>
+
+</div>
+
+</body>
+</html>

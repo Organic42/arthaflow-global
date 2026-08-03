@@ -51,6 +51,10 @@ next-env.d.ts
 .rodtep-cache/
 itchs-schedule2.pdf
 
+# Manually-exported CSVs for scripts/build-dgcis.py. Raw government exports
+# aren't committed, only the parsed src/lib/hs/dgcis.json output.
+.dgcis-source/
+
 # Agent skills installed via `npx skills add`. Vendored tooling, not project
 # source: ~8MB of CSV rule data and scripts, re-installable from skills-lock.json.
 .claude/skills/

@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogOut, HelpCircle, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function UserMenu() {
   const supabase = createClient();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

@@ -2,7 +2,6 @@
 
 import { HoverCard } from "@/components/arthaflow/hover-card";
 import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { FileText, Clock, Search } from "lucide-react";
 

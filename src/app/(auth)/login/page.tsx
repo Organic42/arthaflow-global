@@ -163,7 +163,7 @@ function LoginContent() {
             ))}
           </div>
           <p className="text-[13px] text-white/40">
-            Live with 5 pilot manufacturers in Pune
+            Live with 20 pilot manufacturers in Mumbai and Pune
           </p>
         </div>
       </div>

@@ -78,9 +78,12 @@ export default function ShipmentTrackerPage() {
     if (err) { setError(err.message); setLoading(false); return; }
     const rows = (data || []) as Shipment[];
     setShipments(rows);
-    if (rows.length > 0 && !selId) setSelId(rows[0].id);
+    // Functional form so this doesn't close over `selId`. Reading it directly
+    // would force `selId` into the dep array, which would rebuild `load` — and
+    // therefore refetch the whole list — every time the user clicks a row.
+    if (rows.length > 0) setSelId((cur) => cur ?? rows[0].id);
     setLoading(false);
-  }, []);
+  }, [supabase]);
 
   // The loader is async and every setState in it runs after an await, so no
   // state is set during the effect's synchronous phase. The rule flags the

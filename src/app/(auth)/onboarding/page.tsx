@@ -217,7 +217,7 @@ export default function OnboardingPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [supabase, router]);
 
   /* ─── Validation ─── */
   function validateStep1(): boolean {

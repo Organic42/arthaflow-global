@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,7 +109,7 @@ export default function ProductCataloguePage() {
   // Form state, shared by add and edit
   const [form, setForm] = useState(emptyForm);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoadError(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -125,14 +125,14 @@ export default function ProductCataloguePage() {
     }
     setProducts(data || []);
     setLoading(false);
-  };
+  }, [supabase]);
 
   // The loader is async and every setState in it runs after an await, so no
   // state is set during the effect's synchronous phase. The rule flags the
   // call because it cannot see across the await boundary; satisfying it
   // properly means a data library or Server Components, not a change here.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadProducts(); }, []);
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
   function openAddDialog() {
     setEditingProduct(null);

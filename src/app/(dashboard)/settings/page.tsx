@@ -123,7 +123,7 @@ export default function SettingsPage() {
     if (!user) return;
     setEmail(user.email || "");
 
-    const { data: p, error: err } = await supabase
+    const { data, error: err } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
@@ -134,6 +134,8 @@ export default function SettingsPage() {
       setLoading(false);
       return;
     }
+
+    const p = data as Profile | null;
 
     if (p) {
       setFullName(p.full_name || "");
@@ -162,7 +164,7 @@ export default function SettingsPage() {
       });
     }
     setLoading(false);
-  }, []);
+  }, [supabase]);
 
   // The loader is async and every setState in it runs after an await, so no
   // state is set during the effect's synchronous phase. The rule flags the

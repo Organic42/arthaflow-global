@@ -16,7 +16,6 @@ import {
   Settings,
   Zap,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
 
 // ── FAQ Data ─────────────────────────────────────────────────────────────────

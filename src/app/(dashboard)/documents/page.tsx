@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ export default function DocumentVaultPage() {
   const [error, setError] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -69,10 +69,10 @@ export default function DocumentVaultPage() {
     }
     setDocs(data || []);
     setLoading(false);
-  }
+  }, [supabase]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const filtered = docs.filter((d) => {
     const matchesSearch = d.name.toLowerCase().includes(query.toLowerCase());

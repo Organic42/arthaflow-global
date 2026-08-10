@@ -26,7 +26,7 @@ export function UserMenu() {
       setName(p?.full_name || user.user_metadata?.full_name || "Account");
     }
     load();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {

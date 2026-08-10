@@ -193,7 +193,7 @@ export default function MobileDashboardPage() {
     );
 
     setLoading(false);
-  }, []);
+  }, [supabase]);
 
   // The loader is async and every setState in it runs after an await, so no
   // state is set during the effect's synchronous phase. The rule flags the

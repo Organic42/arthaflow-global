@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/arthaflow/stat-card";
@@ -95,7 +95,7 @@ export default function DashboardPage() {
   const [readiness, setReadiness] = useState<{ label: string; pct: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -170,10 +170,10 @@ export default function DashboardPage() {
     }
 
     setLoading(false);
-  }
+  }, [supabase]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const readinessScore = readiness.length
     ? Math.round(readiness.reduce((sum, r) => sum + r.pct, 0) / readiness.length)

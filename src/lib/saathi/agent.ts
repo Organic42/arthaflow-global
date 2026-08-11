@@ -423,6 +423,24 @@ export async function runSaathi(
             toolContent +=
               "\n\nMANDATORY DISCLOSURE: these figures are mirror statistics — what importing " +
               "countries reported buying from India. Say so in your answer.";
+          } else if (src === "dgcis") {
+            // DGCIS is our strongest source, so the risk here is the opposite
+            // of the others: not that the number is too coarse, but that its
+            // authority invites treating it as current. It is a periodic
+            // snapshot of one financial year.
+            const d = result.data as {
+              financialYear?: string;
+              linesAggregated?: number;
+            };
+            toolContent +=
+              `\n\nMANDATORY DISCLOSURE: these are DGCIS figures (India's own customs data) for ` +
+              `financial year ${d.financialYear ?? "the latest snapshot"}. State the financial year ` +
+              "in your answer and do NOT describe them as current or live.";
+            if ((d.linesAggregated ?? 1) > 1) {
+              toolContent +=
+                ` The total spans all ${d.linesAggregated} Indian tariff lines under this HS code, ` +
+                "not one specific line. Say so.";
+            }
           }
         } else {
           toolContent =

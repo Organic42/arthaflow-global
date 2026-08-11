@@ -64,50 +64,85 @@ export interface DgcisDestination {
 }
 
 export interface DgcisExportsData {
+  /** The prefix that was queried, as supplied by the caller. */
   hsCode: string;
   description: string;
   financialYear: string;
   totalUsd: number;
   totalUsdM: number;
   destinations: DgcisDestination[];
+  /**
+   * How many 8-digit tariff lines were summed to produce these figures.
+   * 1 means the answer is a single line; more means it is an aggregate across
+   * every Indian tariff line under the requested prefix. The narrative must
+   * disclose this — "HS 420221" covers several distinct tariff items and a
+   * manufacturer should know the number spans all of them.
+   */
+  linesAggregated: number;
 }
 
 /**
- * India's exports of an 8-digit HS code, by destination, from vendored DGCIS
- * data. Returns null when the code isn't in the current export (a real gap —
- * either genuinely untraded or just not in the last manual refresh — not
- * something to guess around).
+ * India's exports under an HS prefix, by destination, from vendored DGCIS data.
+ *
+ * WHY THIS AGGREGATES RATHER THAN LOOKING UP ONE CODE: DGCIS publishes at
+ * India's 8-digit tariff line, but classification deliberately resolves to 6
+ * digits (see classify.ts — an 8-digit code reaching a Comtrade query returns
+ * TOTAL trade rather than an error, so the codebase never lets one through).
+ * Callers therefore arrive holding 6 digits. We sum every 8-digit line sharing
+ * that prefix, per destination, and report how many lines went into the total
+ * so the caller can say so.
+ *
+ * Accepts a 2, 4, 6 or 8 digit prefix. Returns null when nothing matches — a
+ * real gap, either genuinely untraded or absent from the last manual refresh,
+ * and not something to paper over.
  */
 export function dgcisIndiaExports(
   hsCode: string,
   limit = 5
 ): DgcisExportsData | null {
-  const hs8 = hsCode.replace(/\D/g, "");
-  if (hs8.length !== 8) return null;
+  const prefix = hsCode.replace(/\D/g, "");
+  if (![2, 4, 6, 8].includes(prefix.length)) return null;
 
-  const entry = FILE.entries[hs8];
-  if (!entry || entry.destinations.length === 0) return null;
+  const matches = Object.entries(FILE.entries).filter(([code]) =>
+    code.startsWith(prefix)
+  );
+  if (matches.length === 0) return null;
 
-  const destinations: DgcisDestination[] = entry.destinations
+  // Sum each destination across every matching tariff line.
+  const byDestination = new Map<string, number>();
+  let totalUsd = 0;
+  for (const [, entry] of matches) {
+    totalUsd += entry.totalUsd;
+    for (const d of entry.destinations) {
+      byDestination.set(d.iso3, (byDestination.get(d.iso3) ?? 0) + d.valueUsd);
+    }
+  }
+  if (totalUsd <= 0) return null;
+
+  const destinations: DgcisDestination[] = [...byDestination.entries()]
+    .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
-    .map((d, i) => ({
-      iso3: d.iso3,
-      valueUsd: d.valueUsd,
-      valueUsdM: Math.round((d.valueUsd / 1_000_000) * 10) / 10,
-      sharePct:
-        entry.totalUsd > 0
-          ? Math.round((d.valueUsd / entry.totalUsd) * 1000) / 10
-          : 0,
+    .map(([iso3, valueUsd], i) => ({
+      iso3,
+      valueUsd,
+      valueUsdM: Math.round((valueUsd / 1_000_000) * 10) / 10,
+      sharePct: Math.round((valueUsd / totalUsd) * 1000) / 10,
       rank: i + 1,
     }));
 
+  // With one line the published description is exact. Across several it would
+  // be misleading to present any single line's wording as the whole, so leave
+  // it to the caller to describe the prefix.
+  const description = matches.length === 1 ? matches[0][1].description : "";
+
   return {
-    hsCode: hs8,
-    description: entry.description,
+    hsCode: prefix,
+    description,
     financialYear: FILE.financialYear,
-    totalUsd: entry.totalUsd,
-    totalUsdM: Math.round((entry.totalUsd / 1_000_000) * 10) / 10,
+    totalUsd,
+    totalUsdM: Math.round((totalUsd / 1_000_000) * 10) / 10,
     destinations,
+    linesAggregated: matches.length,
   };
 }
 

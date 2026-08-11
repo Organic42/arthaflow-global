@@ -13,6 +13,7 @@ import { comtradeQuery, type ComtradeResult, type ComtradeRecord } from "./clien
 import { findByM49, COUNTRIES } from "./countries";
 import { witsIndiaExports } from "@/lib/wits/client";
 import { isValidHsCode } from "@/lib/hs/classify";
+import { dgcisIndiaExports, dgcisHasData } from "@/lib/hs/dgcis";
 
 // ── Common shapes ────────────────────────────────────────────────────────────
 
@@ -224,11 +225,19 @@ export interface IndiaExportsData {
    *  - "wits": neither was available in Comtrade (its usual state for India),
    *    so figures come from the World Bank's WITS database at HS-chapter-group
    *    granularity — coarser than the requested HS code.
+   *  - "dgcis": India's own customs statistics, vendored from the Department
+   *    of Commerce TIA portal. Most authoritative and finest-grained source we
+   *    have for India's exports, but a periodic manual snapshot rather than a
+   *    live query — so it carries a financial year, not a calendar year.
    */
-  source: "direct" | "mirror" | "wits";
+  source: "direct" | "mirror" | "wits" | "dgcis";
   /** Only set when source === "wits": the chapter group actually measured. */
   group?: string;
   groupLabel?: string;
+  /** Only set when source === "dgcis": the financial year of the snapshot. */
+  financialYear?: string;
+  /** Only set when source === "dgcis": how many 8-digit lines were summed. */
+  linesAggregated?: number;
 }
 
 const INDIA_M49 = 356;
@@ -242,6 +251,76 @@ const INDIA_M49 = 356;
  * Note the flow inversion: a country's IMPORT from India is an India EXPORT,
  * so the reporter of each row is the destination market.
  */
+/**
+ * India's own customs statistics (DGCIS), vendored from the Department of
+ * Commerce TIA portal. Tried FIRST because it beats every other source we have
+ * on this question: real Indian tariff lines rather than WITS chapter groups,
+ * India's own filings rather than partner-reported mirror data, and a more
+ * recent period than either.
+ *
+ * Returns null rather than a failed ToolResult so the caller simply falls
+ * through to the live chain — an HS code missing from the snapshot is not an
+ * error, it just means we have to ask Comtrade instead.
+ */
+function indiaExportsViaDgcis(
+  hsCode: string,
+  limit: number
+): ToolResult<IndiaExportsData> | null {
+  if (!dgcisHasData()) return null;
+
+  const d = dgcisIndiaExports(hsCode, limit);
+  if (!d) return null;
+
+  const topDestinations: CountryValue[] = d.destinations.map((dest) => {
+    const country = COUNTRIES.find((c) => c.iso3 === dest.iso3);
+    return {
+      iso3: dest.iso3,
+      name: country?.name ?? dest.iso3,
+      valueUsd: dest.valueUsd,
+      valueUsdM: dest.valueUsdM,
+      sharePct: dest.sharePct,
+      rank: dest.rank,
+    };
+  });
+
+  // Both caveats travel WITH the number rather than being left implicit: the
+  // figure is a financial-year snapshot (not live), and where several tariff
+  // lines sit under the requested prefix it spans all of them.
+  const spread =
+    d.linesAggregated > 1
+      ? ` This covers all ${d.linesAggregated} Indian tariff lines under HS ${d.hsCode}.`
+      : "";
+
+  const narrative =
+    `In FY ${d.financialYear}, India exported about $${d.totalUsdM}M of HS ${d.hsCode} ` +
+    `(DGCIS, India's own customs data).${spread}` +
+    (topDestinations.length
+      ? ` Top destinations: ` +
+        topDestinations
+          .map((c) => `${c.name} ($${c.valueUsdM}M, ${c.sharePct}%)`)
+          .join(", ") +
+        "."
+      : "");
+
+  return {
+    ok: true,
+    cached: true, // vendored file, not a network call
+    narrative,
+    data: {
+      hsCode: d.hsCode,
+      // Financial years don't map onto a calendar year; carry the FY string in
+      // its own field and take the opening year so `year` stays a number.
+      year: Number(d.financialYear.slice(0, 4)) || new Date().getUTCFullYear(),
+      totalIndiaExportsUsd: d.totalUsd,
+      totalIndiaExportsUsdM: d.totalUsdM,
+      topDestinations,
+      source: "dgcis",
+      financialYear: d.financialYear,
+      linesAggregated: d.linesAggregated,
+    },
+  };
+}
+
 /**
  * Last resort: the World Bank's WITS database, which (unlike Comtrade) does
  * carry India. Coarser products — HS chapter groups rather than the exact
@@ -369,6 +448,15 @@ export async function getIndiaExports(
 
   const year = args.year ?? currentDataYear();
   const limit = args.limit ?? 5;
+
+  // India's own customs data first — see indiaExportsViaDgcis. Skipped when the
+  // caller pinned a specific year, since the snapshot only holds one financial
+  // year and silently answering about a different period would be worse than
+  // falling through to a source that can honour the request.
+  if (!args.year) {
+    const dgcis = indiaExportsViaDgcis(args.hsCode, limit);
+    if (dgcis) return dgcis;
+  }
 
   // NOTE: partnerCode 0 is Comtrade's "World" aggregate, so this establishes
   // whether India reported at all. It cannot yield a per-destination

@@ -161,7 +161,7 @@ export default function HomePage() {
               </MagneticButton>
             </div>
             <p className="mt-5 text-[13px] text-white/55">
-              Live with 20 pilot manufacturers in Mumbai and Pune
+              Live with 10 pilot manufacturers in Mumbai and Pune
             </p>
           </div>
 

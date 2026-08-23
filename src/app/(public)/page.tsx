@@ -28,8 +28,6 @@ import {
   Leaf,
   Gem,
   ArrowRight,
-  Clock,
-  Mountain,
 } from "lucide-react";
 
 // ── Opportunity section data ──────────────────────────────────────────────────
@@ -56,11 +54,12 @@ const growingSectors = [
   { name: "Gems & Jewelry",growth: "+7%", icon: <Gem size={16} />,          bg: "bg-blue-bg",   color: "text-action-blue" },
 ];
 
-const trustBadges = [
-  { icon: <Shield size={18} />, title: "Bank Grade Security", desc: "Your data is encrypted and secure", bg: "bg-green-bg", color: "text-success" },
-  { icon: <Clock size={18} />, title: "24/7 Expert Support", desc: "We're here whenever you need us", bg: "bg-gold-bg", color: "text-[#92710A]" },
-  { icon: <Zap size={18} />, title: "Save Time & Money", desc: "Automate. Simplify. Scale.", bg: "bg-blue-bg", color: "text-action-blue" },
-  { icon: <Mountain size={18} />, title: "Grow Globally", desc: "We take you beyond boundaries", bg: "bg-red-bg", color: "text-error" },
+// Both source files are transparent PNGs on dark ink (black/maroon), so they
+// render inside a white pill rather than directly on the navy hero — on navy
+// the RIIDL wordmark in particular would be nearly unreadable.
+const supportedBy = [
+  { name: "RIIDL", logo: "/riidl-logo.png", width: 96, height: 46 },
+  { name: "Somaiya Vidyavihar University", logo: "/svu-logo.png", width: 46, height: 48 },
 ];
 
 const problems = [
@@ -125,15 +124,10 @@ export default function HomePage() {
             <div className="mb-4 text-xs font-bold uppercase tracking-[2px] text-artha-gold">
               Tech-Enabled Export Infrastructure
             </div>
-            <h1 className="mb-4 max-w-[720px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:text-6xl">
+            <h1 className="mb-7 max-w-[720px] text-4xl font-extrabold leading-[1.08] tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.5)] sm:text-6xl">
               Your Export Department —{" "}
               <span className="text-artha-gold">Without The Overhead</span>
             </h1>
-            <p className="mb-7 max-w-[540px] text-base leading-relaxed text-white/70 sm:text-lg">
-              India has 57M+ MSMEs and fewer than 0.3% export. We classify your
-              HS code, generate every export document, and show you which
-              markets actually want your product.
-            </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <MagneticButton>
                 <Link href="/login">
@@ -172,25 +166,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TRUST BAR — reassurance strip right under the fold, before the ask */}
-      <section className="border-t border-white/10 bg-navy px-6 py-6 sm:px-8">
-        <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 divide-y divide-white/10 sm:grid-cols-2 sm:gap-0 sm:divide-y-0 lg:grid-cols-4">
-          {trustBadges.map((b, i) => (
-            <div
-              key={b.title}
-              className={`flex items-center gap-3 pt-6 first:pt-0 sm:pt-0 lg:px-6 lg:first:pl-0 ${
-                i > 0 ? "lg:border-l lg:border-white/10" : ""
-              }`}
-            >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${b.bg} ${b.color}`}>
-                {b.icon}
+      {/* SUPPORTED BY — institutional backing strip right under the fold. */}
+      <section className="border-t border-white/10 bg-navy px-6 py-8 sm:px-8">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-center gap-5">
+          <span className="font-heading text-[2rem] font-extrabold leading-[1.08] tracking-tight text-artha-gold sm:text-[2.5rem]">
+            Supported by
+          </span>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {supportedBy.map((s) => (
+              <div
+                key={s.name}
+                className="flex h-11 items-center rounded-md bg-white px-4 shadow-sm transition hover:shadow-md"
+              >
+                <Image
+                  src={s.logo}
+                  alt={s.name}
+                  width={s.width}
+                  height={s.height}
+                  className="w-auto object-contain"
+                  style={{ height: s.height }}
+                />
               </div>
-              <div>
-                <div className="text-[13px] font-bold text-white">{b.title}</div>
-                <div className="text-[12px] text-white/60">{b.desc}</div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 

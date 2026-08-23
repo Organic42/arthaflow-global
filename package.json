@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
-    "test:hs": "tsx scripts/check-hs-search.mjs"
+    "test:hs": "tsx scripts/check-hs-search.mjs",
+    "test:dgcis": "tsx scripts/check-dgcis.mjs"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.39",

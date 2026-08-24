@@ -57,7 +57,6 @@ export const COUNTRIES: Country[] = [
   { m49: 372, iso3: "IRL", name: "Ireland" },
   { m49: 208, iso3: "DNK", name: "Denmark" },
   { m49: 752, iso3: "SWE", name: "Sweden" },
-  { m49: 616, iso3: "POL", name: "Poland" },
   { m49: 604, iso3: "PER", name: "Peru" },
   { m49: 152, iso3: "CHL", name: "Chile" },
   { m49: 32,  iso3: "ARG", name: "Argentina" },
@@ -67,6 +66,60 @@ export const COUNTRIES: Country[] = [
   { m49: 404, iso3: "KEN", name: "Kenya" },
   { m49: 231, iso3: "ETH", name: "Ethiopia" },
   { m49: 818, iso3: "EGY", name: "Egypt" },
+  // ── DGCIS destinations ────────────────────────────────────────────────────
+  // Added for India's own export statistics, which report ~184 destinations.
+  // Against the curated list above, 138 of them had nowhere to land and a
+  // third of India's export value by destination was being dropped on the
+  // floor. These are the ones carrying real volume.
+  //
+  // CAVEAT, AND IT MATTERS: presence here means we can attribute TRADE DATA to
+  // the destination. It does NOT mean the landed-cost stack covers it — duty
+  // comes from WITS_REPORTERS in tariff/destination.ts, which is a separate
+  // and smaller list. A country here but not there will show what India ships
+  // it and nothing about what a buyer pays to land it.
+  { m49: 368, iso3: "IRQ", name: "Iraq" },
+  { m49: 64,  iso3: "BTN", name: "Bhutan" },
+  { m49: 800, iso3: "UGA", name: "Uganda" },
+  { m49: 834, iso3: "TZA", name: "Tanzania" },
+  { m49: 524, iso3: "NPL", name: "Nepal" },
+  { m49: 12,  iso3: "DZA", name: "Algeria" },
+  { m49: 462, iso3: "MDV", name: "Maldives" },
+  { m49: 434, iso3: "LBY", name: "Libya" },
+  { m49: 887, iso3: "YEM", name: "Yemen" },
+  { m49: 144, iso3: "LKA", name: "Sri Lanka" },
+  { m49: 686, iso3: "SEN", name: "Senegal" },
+  { m49: 180, iso3: "COD", name: "DR Congo" },
+  { m49: 504, iso3: "MAR", name: "Morocco" },
+  { m49: 608, iso3: "PHL", name: "Philippines" },
+  { m49: 643, iso3: "RUS", name: "Russia" },
+  { m49: 376, iso3: "ISR", name: "Israel" },
+  { m49: 466, iso3: "MLI", name: "Mali" },
+  { m49: 729, iso3: "SDN", name: "Sudan" },
+  { m49: 894, iso3: "ZMB", name: "Zambia" },
+  { m49: 300, iso3: "GRC", name: "Greece" },
+  { m49: 430, iso3: "LBR", name: "Liberia" },
+  { m49: 204, iso3: "BEN", name: "Benin" },
+  { m49: 694, iso3: "SLE", name: "Sierra Leone" },
+  { m49: 554, iso3: "NZL", name: "New Zealand" },
+  { m49: 706, iso3: "SOM", name: "Somalia" },
+  { m49: 270, iso3: "GMB", name: "Gambia" },
+  { m49: 48,  iso3: "BHR", name: "Bahrain" },
+  { m49: 288, iso3: "GHA", name: "Ghana" },
+  { m49: 499, iso3: "MNE", name: "Montenegro" },
+  { m49: 120, iso3: "CMR", name: "Cameroon" },
+  { m49: 690, iso3: "SYC", name: "Seychelles" },
+  { m49: 508, iso3: "MOZ", name: "Mozambique" },
+  { m49: 642, iso3: "ROU", name: "Romania" },
+  { m49: 324, iso3: "GIN", name: "Guinea" },
+  { m49: 862, iso3: "VEN", name: "Venezuela" },
+  { m49: 384, iso3: "CIV", name: "Cote d'Ivoire" },
+  { m49: 328, iso3: "GUY", name: "Guyana" },
+  { m49: 262, iso3: "DJI", name: "Djibouti" },
+  { m49: 212, iso3: "DMA", name: "Dominica" },
+  { m49: 348, iso3: "HUN", name: "Hungary" },
+  { m49: 450, iso3: "MDG", name: "Madagascar" },
+  { m49: 768, iso3: "TGO", name: "Togo" },
+  { m49: 578, iso3: "NOR", name: "Norway" },
 ];
 
 // Fast lookup by ISO3 or M49

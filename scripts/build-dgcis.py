@@ -80,6 +80,15 @@ NAME_ALIASES = {
     "BANGLADESH PR": "BANGLADESH",
     "MYANMAR": "MYANMAR",
     "U K": "UNITED KINGDOM",
+    # Seen in the EIDB "commodity-wise, all countries" export.
+    "TANZANIA REP": "TANZANIA",
+    "EGYPT A RP": "EGYPT",
+    "YEMEN REPUBLC": "YEMEN",
+    "SRI LANKA DSR": "SRI LANKA",
+    "CONGO D. REP.": "DR CONGO",
+    "CZECH REPUBLIC": "CZECHIA",
+    "COTE D' IVOIRE": "COTE D'IVOIRE",
+    "RUSSIA": "RUSSIA",
 }
 
 

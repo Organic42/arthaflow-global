@@ -31,7 +31,9 @@
 /** When this table was last checked against the source. */
 export const VAT_TABLE_AS_OF = "2026-01";
 export const VAT_SOURCE =
-  "VATupdate global VAT/GST rate table (Jan 2026 revision), standard rates";
+  "VATupdate global VAT/GST rate table (Jan 2026 revision), standard rates; " +
+  "Greece, Hungary and Romania cross-checked against the Tax Foundation EU table " +
+  "and euvat.dev, both citing the European Commission";
 
 export interface VatRate {
   /** Standard rate as a percentage, or null where the country levies none. */
@@ -70,10 +72,25 @@ export const VAT_RATES: Record<string, VatRate> = {
   ETH: { standardRatePct: 15, label: "VAT" },
   FRA: { standardRatePct: 20, label: "TVA" },
   GBR: { standardRatePct: 20, label: "VAT" },
+  GRC: {
+    standardRatePct: 24,
+    label: "ΦΠΑ",
+    note:
+      "Greece applies a reduced set of rates on several Aegean islands, so a consignment " +
+      "landing there can face less than 24%. Rate confirmed January 2026 against the Tax " +
+      "Foundation EU table and euvat.dev, both citing the European Commission.",
+  },
   HKG: {
     standardRatePct: null,
     label: "none",
     note: "Hong Kong levies no VAT, GST or sales tax on imports.",
+  },
+  HUN: {
+    standardRatePct: 27,
+    label: "ÁFA",
+    note:
+      "The highest standard VAT rate in the EU. Rate confirmed January 2026 against the " +
+      "Tax Foundation EU table and euvat.dev, both citing the European Commission.",
   },
   IDN: { standardRatePct: 11, label: "PPN" },
   IND: { standardRatePct: 18, label: "IGST" },
@@ -104,6 +121,14 @@ export const VAT_RATES: Record<string, VatRate> = {
     standardRatePct: null,
     label: "none",
     note: "Qatar has not implemented VAT despite the GCC framework agreement.",
+  },
+  ROU: {
+    standardRatePct: 21,
+    label: "TVA",
+    note:
+      "Raised from 19% to 21% on 1 August 2025, so quotes prepared before that date " +
+      "understate it. Rate confirmed January 2026 against the Tax Foundation EU table and " +
+      "euvat.dev, both citing the European Commission.",
   },
   SAU: { standardRatePct: 15, label: "VAT" },
   SGP: { standardRatePct: 9, label: "GST" },

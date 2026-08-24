@@ -135,6 +135,14 @@ interface LandedResult {
   };
   destination: { country: string; year: number };
   fta: Fta | null;
+  surcharge: {
+    name: string;
+    kind: "additional-tariff" | "carbon-levy";
+    headlineRatePct: number | null;
+    since: string;
+    coversProduct: boolean;
+    source: string;
+  } | null;
   caveats: string[];
 }
 
@@ -150,6 +158,9 @@ interface MarketRow {
   vatLabel: string | null;
   vatRecoverable: boolean;
   vatKnown: boolean;
+  surchargeName: string | null;
+  surchargeRatePct: number | null;
+  surchargeCovers: boolean;
   unavailable: string | null;
 }
 interface MarketRank {
@@ -158,6 +169,7 @@ interface MarketRank {
   totalCount: number;
   ftaCount: number;
   dutyFreeCount: number;
+  surchargedCount: number;
 }
 
 const EXAMPLES = ["leather handbags", "basmati rice", "brass door handles", "61091000"];
@@ -694,6 +706,21 @@ export default function ExportToolkitPage() {
                     Pick one to run the full landed cost below.
                   </p>
 
+                  {ranking.surchargedCount > 0 && (
+                    <p className="mb-6 max-w-[640px] border-l-2 border-error py-1 pl-4 text-[13.5px] leading-relaxed text-text-body">
+                      <span className="font-semibold text-text-heading">
+                        {ranking.surchargedCount} of these markets charge more than the rate
+                        shown.
+                      </span>{" "}
+                      They apply a measure on top of the MFN tariff — a reciprocal duty or a
+                      carbon levy — that we cannot resolve to your specific line. They are
+                      marked{" "}
+                      <span className="font-mono font-bold text-error">+</span> and are ranked
+                      on MFN like everything else, so treat their position as optimistic. Pick
+                      one to see what applies.
+                    </p>
+                  )}
+
                   <div className="border-t border-text-muted/25">
                     {(showAllMarkets ? ranking.rows : ranking.rows.slice(0, 10)).map((m, i) => (
                       <MarketRowLine
@@ -816,6 +843,26 @@ export default function ExportToolkitPage() {
                       <p className="mt-2.5 font-mono text-[11px] tracking-wide text-white/40">
                         {result.buyer.upliftPct}% over your invoice
                       </p>
+                      {result.surcharge?.coversProduct && (
+                        <div className="mt-5 border-l-2 border-[#FCA5A5] py-1 pl-4">
+                          <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#FCA5A5]">
+                            This total is too low
+                          </div>
+                          <p className="mt-1.5 max-w-[420px] text-[12.5px] leading-relaxed text-white/65">
+                            {result.surcharge.name} applies on top of the duty above
+                            {result.surcharge.headlineRatePct !== null && (
+                              <>
+                                , with a headline rate of{" "}
+                                <span className="font-mono font-semibold text-white">
+                                  {result.surcharge.headlineRatePct}%
+                                </span>
+                              </>
+                            )}
+                            . We hold no per-line rate for it and will not estimate one — the
+                            note below says what to confirm.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1066,6 +1113,7 @@ function MarketRowLine({
   onPick: () => void;
 }) {
   const priced = m.dutyRatePct !== null;
+  const surcharged = Boolean(m.surchargeName && m.surchargeCovers);
   return (
     <button
       onClick={onPick}
@@ -1098,12 +1146,28 @@ function MarketRowLine({
 
       <span className="w-24 shrink-0 text-right">
         {priced ? (
-          <span
-            className={`font-mono text-[17px] font-bold tabular-nums ${
-              m.dutyRatePct === 0 ? "text-[#0E7A5F] dark:text-[#34D399]" : "text-text-heading"
-            }`}
-          >
-            {m.dutyRatePct}%
+          <span className="inline-flex items-baseline gap-1.5">
+            <span
+              className={`font-mono text-[17px] font-bold tabular-nums ${
+                surcharged
+                  ? "text-error"
+                  : m.dutyRatePct === 0
+                    ? "text-[#0E7A5F] dark:text-[#34D399]"
+                    : "text-text-heading"
+              }`}
+            >
+              {m.dutyRatePct}%
+            </span>
+            {/* This rank is built on MFN, and MFN is not the whole story here.
+                Saying so on the row is the only way the number is honest. */}
+            {surcharged && (
+              <span
+                title={`${m.surchargeName} applies on top of this rate`}
+                className="font-mono text-[13px] font-bold text-error"
+              >
+                +
+              </span>
+            )}
           </span>
         ) : (
           <span className="font-mono text-[11px] text-text-muted">no data</span>

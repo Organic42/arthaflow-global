@@ -23,6 +23,7 @@
 import { destinationDuty, type DestinationDuty } from "./destination";
 import { assessVat, vatAbsenceReason, VAT_SOURCE, type VatAssessment } from "./vat";
 import { agreementFor, type FtaStatus } from "./fta";
+import { surchargeFor, describeSurcharge, type SurchargeKind } from "./surcharge";
 import { lookupRodtep } from "@/lib/hs/rodtep";
 import { drawbackForHsCode } from "@/lib/hs/drawback";
 
@@ -118,6 +119,20 @@ export interface LandedCostBreakdown {
     claimable: boolean;
     inForceSince?: string;
     note?: string;
+  } | null;
+  /**
+   * A measure pushing the buyer's cost ABOVE the MFN rate — see surcharge.ts.
+   * The mirror of `fta`: that field warns the duty may be too high, this one
+   * warns it is too low. Like `fta` it carries no per-line rate, because scope
+   * is defined below the granularity we can verify.
+   */
+  surcharge: {
+    name: string;
+    kind: SurchargeKind;
+    headlineRatePct: number | null;
+    since: string;
+    coversProduct: boolean;
+    source: string;
   } | null;
   /** Every caveat that materially moves these numbers. */
   caveats: string[];
@@ -223,6 +238,27 @@ export async function landedCost(
         "most likely what applies."
     );
   }
+  // The other direction. An MFN rate is only the whole story where nothing
+  // sits on top of it, and since 2025 that is no longer true of the largest
+  // destination for Indian goods.
+  const surchargeLookup = surchargeFor(iso, args.hsCode);
+  const surcharge: LandedCostBreakdown["surcharge"] = surchargeLookup
+    ? {
+        name: surchargeLookup.measure.name,
+        kind: surchargeLookup.measure.kind,
+        headlineRatePct: surchargeLookup.measure.headlineRatePct,
+        since: surchargeLookup.measure.since,
+        coversProduct: surchargeLookup.coversProduct,
+        source: surchargeLookup.measure.source,
+      }
+    : null;
+
+  if (surchargeLookup) {
+    // Unshifted, not pushed: a measure that makes the headline number wrong
+    // has to be read before the caveats about freight and rounding.
+    caveats.unshift(describeSurcharge(surchargeLookup));
+  }
+
   // VAT is charged on CIF plus duty — it compounds on the duty rather than
   // sitting beside it.
   const vat = assessVat(iso, landed);
@@ -340,6 +376,7 @@ export async function landedCost(
     },
     destination: duty.data,
     fta,
+    surcharge,
     caveats,
   };
 

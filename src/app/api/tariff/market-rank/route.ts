@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { destinationDuty, supportedDestinations, WITS_REPORTERS } from "@/lib/tariff/destination";
 import { agreementFor } from "@/lib/tariff/fta";
+import { surchargeFor } from "@/lib/tariff/surcharge";
 import { VAT_RATES, VAT_SOURCE, VAT_TABLE_AS_OF } from "@/lib/tariff/vat";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -58,6 +59,14 @@ interface Row {
   vatLabel: string | null;
   vatRecoverable: boolean;
   vatKnown: boolean;
+  /**
+   * A measure on top of MFN — see surcharge.ts. Ranking on MFN alone would put
+   * the United States 20 places higher than it belongs, so this has to travel
+   * with the row even though it cannot reorder it.
+   */
+  surchargeName: string | null;
+  surchargeRatePct: number | null;
+  surchargeCovers: boolean;
   /** Set when we could not price this market, with the reason. */
   unavailable: string | null;
 }
@@ -65,6 +74,7 @@ interface Row {
 async function priceOne(iso3: string, hsCode: string): Promise<Row> {
   const fta = agreementFor(iso3);
   const vat = VAT_RATES[iso3] ?? null;
+  const sur = surchargeFor(iso3, hsCode);
   const base: Row = {
     iso3,
     country: WITS_REPORTERS[iso3]?.name ?? iso3,
@@ -79,6 +89,9 @@ async function priceOne(iso3: string, hsCode: string): Promise<Row> {
     // buyer. Same rule assessVat() applies — kept identical on purpose.
     vatRecoverable: vat ? vat.label !== "SST" : false,
     vatKnown: vat !== null,
+    surchargeName: sur?.measure.name ?? null,
+    surchargeRatePct: sur?.measure.headlineRatePct ?? null,
+    surchargeCovers: sur?.coversProduct ?? false,
     unavailable: null,
   };
 
@@ -155,6 +168,10 @@ export async function POST(request: Request) {
     });
 
     const priced = rows.filter((r) => r.dutyRatePct !== null);
+    // Counted, not reordered. The MFN rate is the number we can verify, and a
+    // measure whose per-line scope we cannot resolve must not silently move a
+    // market up or down a list a manufacturer is about to act on.
+    const surchargedCount = priced.filter((r) => r.surchargeName && r.surchargeCovers).length;
     return NextResponse.json({
       data: {
         hsCode,
@@ -162,6 +179,7 @@ export async function POST(request: Request) {
         pricedCount: priced.length,
         totalCount: rows.length,
         ftaCount: priced.filter((r) => r.ftaClaimable).length,
+        surchargedCount,
         dutyFreeCount: priced.filter((r) => r.dutyRatePct === 0).length,
         vatAsOf: VAT_TABLE_AS_OF,
         vatSource: VAT_SOURCE,

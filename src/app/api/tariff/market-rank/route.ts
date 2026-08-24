@@ -39,8 +39,18 @@ export const maxDuration = 60;
 // upstream lookups, so it gets its own, much tighter budget.
 const LIMIT = { scope: "market-rank", limit: 4, windowMs: 60_000 };
 
-/** Concurrency cap. High enough to finish inside maxDuration, low enough not
- *  to arrive at TRAINS as a burst of 44 simultaneous requests. */
+/**
+ * Concurrency cap. High enough to finish inside maxDuration, low enough not to
+ * arrive at TRAINS as a burst of 80 simultaneous requests.
+ *
+ * Measured after the reporter list grew to 80: a cold product takes ~24s at 10
+ * and prices 79 of them. Raising to 16 saved 5s, but coverage on the sample run
+ * came back one market lower — and because two different HS codes have
+ * genuinely different TRAINS coverage, that was not a controlled comparison and
+ * could not be attributed to throttling either way. Kept at the proven value:
+ * a cold run happens once per product and is cached after, so five seconds is
+ * not worth an unverified risk to how many markets we can actually price.
+ */
 const POOL = 10;
 
 /** A single slow destination must not sink the whole ranking. */

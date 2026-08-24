@@ -89,8 +89,11 @@ export const MEASURES: Record<string, SurchargeMeasure> = {
  * same measure rather than eleven near-identical entries in MEASURES.
  */
 const EU_MEMBERS = [
-  "BGR", "CZE", "DEU", "DNK", "ESP", "FRA", "IRL", "ITA", "NLD", "POL", "PRT", "SWE",
+  "BGR", "CZE", "DEU", "DNK", "ESP", "FRA", "GRC", "HUN", "IRL", "ITA", "NLD",
+  "POL", "PRT", "ROU", "SWE",
 ];
+// Montenegro is a candidate, not a member, so it is deliberately absent —
+// CBAM does not apply to imports into it.
 
 /**
  * Chapters holding CBAM Annex I goods: cement (25), electricity (27), hydrogen

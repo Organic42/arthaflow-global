@@ -31,9 +31,10 @@
 /** When this table was last checked against the source. */
 export const VAT_TABLE_AS_OF = "2026-01";
 export const VAT_SOURCE =
-  "VATupdate global VAT/GST rate table (Jan 2026 revision), standard rates; " +
-  "Greece, Hungary and Romania cross-checked against the Tax Foundation EU table " +
-  "and euvat.dev, both citing the European Commission";
+  "VATupdate global VAT/GST rate table (Jan 2026 revision) and PwC Worldwide Tax " +
+  "Summaries, cross-checked against each other where both cover a territory; EU rates " +
+  "additionally checked against the Tax Foundation EU table and euvat.dev. Entries " +
+  "resting on a single source say so in their own note";
 
 export interface VatRate {
   /** Standard rate as a percentage, or null where the country levies none. */
@@ -54,6 +55,12 @@ export interface VatRate {
 export const VAT_RATES: Record<string, VatRate> = {
   ARE: { standardRatePct: 5, label: "VAT" },
   ARG: { standardRatePct: 21, label: "IVA" },
+  BEN: {
+    standardRatePct: 18,
+    label: "TVA",
+    note:
+      "WAEMU harmonised band (15-20%). Rate per the US Department of Commerce import guide.",
+  },
   BGR: { standardRatePct: 20, label: "VAT" },
   CAN: {
     standardRatePct: 5,
@@ -62,6 +69,20 @@ export const VAT_RATES: Record<string, VatRate> = {
   },
   CHL: { standardRatePct: 19, label: "IVA" },
   CHN: { standardRatePct: 13, label: "VAT" },
+  CIV: { standardRatePct: 18, label: "TVA" },
+  CMR: {
+    standardRatePct: 19.25,
+    label: "TVA",
+    note:
+      "Includes the additional council tax that applies on top of the 17.5% base rate.",
+  },
+  COD: {
+    standardRatePct: 16,
+    label: "TVA",
+    note:
+      "Rate from PwC Worldwide Tax Summaries; not in the VATupdate table, so " +
+      "single-sourced.",
+  },
   COL: { standardRatePct: 19, label: "IVA" },
   CZE: { standardRatePct: 21, label: "VAT" },
   DEU: { standardRatePct: 19, label: "VAT" },
@@ -72,6 +93,21 @@ export const VAT_RATES: Record<string, VatRate> = {
   ETH: { standardRatePct: 15, label: "VAT" },
   FRA: { standardRatePct: 20, label: "TVA" },
   GBR: { standardRatePct: 20, label: "VAT" },
+  GHA: {
+    standardRatePct: 20,
+    label: "VAT",
+    note:
+      "Effective rate from 1 January 2026 under the VAT Act 2025 (Act 1151): a 15% base " +
+      "plus NHIL and GETFund at 2.5% each, now recoupled with VAT so a registered buyer can " +
+      "claim them as input tax. Down from roughly 21.9%, because the COVID-19 levy was " +
+      "abolished.",
+  },
+  GIN: {
+    standardRatePct: 18,
+    label: "TVA",
+    note:
+      "Single-sourced; confirm before relying on it for a large consignment.",
+  },
   GRC: {
     standardRatePct: 24,
     label: "ΦΠΑ",
@@ -79,6 +115,13 @@ export const VAT_RATES: Record<string, VatRate> = {
       "Greece applies a reduced set of rates on several Aegean islands, so a consignment " +
       "landing there can face less than 24%. Rate confirmed January 2026 against the Tax " +
       "Foundation EU table and euvat.dev, both citing the European Commission.",
+  },
+  GUY: {
+    standardRatePct: 14,
+    label: "VAT",
+    note:
+      "Rate from PwC Worldwide Tax Summaries; not in the VATupdate table, so " +
+      "single-sourced.",
   },
   HKG: {
     standardRatePct: null,
@@ -95,6 +138,7 @@ export const VAT_RATES: Record<string, VatRate> = {
   IDN: { standardRatePct: 11, label: "PPN" },
   IND: { standardRatePct: 18, label: "IGST" },
   IRL: { standardRatePct: 23, label: "VAT" },
+  ISR: { standardRatePct: 18, label: "VAT" },
   ITA: { standardRatePct: 22, label: "IVA" },
   JOR: { standardRatePct: 16, label: "GST" },
   JPN: { standardRatePct: 10, label: "Consumption Tax" },
@@ -105,7 +149,29 @@ export const VAT_RATES: Record<string, VatRate> = {
     label: "none",
     note: "Kuwait has not implemented VAT despite the GCC framework agreement.",
   },
+  LKA: {
+    standardRatePct: 18,
+    label: "VAT",
+    note:
+      "Rate from the VATupdate 2026 table; not covered by the PwC chart, so single-sourced.",
+  },
+  MAR: { standardRatePct: 20, label: "TVA" },
+  MDG: {
+    standardRatePct: 20,
+    label: "TVA",
+    note:
+      "Rate from PwC Worldwide Tax Summaries; not in the VATupdate table, so " +
+      "single-sourced.",
+  },
   MEX: { standardRatePct: 16, label: "IVA" },
+  MNE: { standardRatePct: 21, label: "PDV" },
+  MOZ: {
+    standardRatePct: 16,
+    label: "IVA",
+    note:
+      "Rate from PwC Worldwide Tax Summaries; not in the VATupdate table, so " +
+      "single-sourced.",
+  },
   MYS: {
     standardRatePct: 10,
     label: "SST",
@@ -113,8 +179,17 @@ export const VAT_RATES: Record<string, VatRate> = {
   },
   NGA: { standardRatePct: 7.5, label: "VAT" },
   NLD: { standardRatePct: 21, label: "BTW" },
+  NOR: { standardRatePct: 25, label: "MVA" },
+  NPL: {
+    standardRatePct: 13,
+    label: "VAT",
+    note:
+      "Rate from the VATupdate 2026 table; not covered by the PwC chart, so single-sourced.",
+  },
+  NZL: { standardRatePct: 15, label: "GST" },
   OMN: { standardRatePct: 5, label: "VAT" },
   PER: { standardRatePct: 18, label: "IGV" },
+  PHL: { standardRatePct: 12, label: "VAT" },
   POL: { standardRatePct: 23, label: "VAT" },
   PRT: { standardRatePct: 23, label: "IVA" },
   QAT: {
@@ -130,7 +205,14 @@ export const VAT_RATES: Record<string, VatRate> = {
       "understate it. Rate confirmed January 2026 against the Tax Foundation EU table and " +
       "euvat.dev, both citing the European Commission.",
   },
+  RUS: {
+    standardRatePct: 20,
+    label: "VAT",
+    note:
+      "Rate from the VATupdate 2026 table; not covered by the PwC chart, so single-sourced.",
+  },
   SAU: { standardRatePct: 15, label: "VAT" },
+  SEN: { standardRatePct: 18, label: "TVA" },
   SGP: { standardRatePct: 9, label: "GST" },
   SWE: { standardRatePct: 25, label: "VAT" },
   THA: {
@@ -140,13 +222,23 @@ export const VAT_RATES: Record<string, VatRate> = {
   },
   TUR: { standardRatePct: 20, label: "KDV" },
   TWN: { standardRatePct: 5, label: "VAT" },
+  TZA: { standardRatePct: 18, label: "VAT" },
+  UGA: { standardRatePct: 18, label: "VAT" },
   USA: {
     standardRatePct: null,
     label: "none",
     note: "The United States levies no VAT on imports. State sales tax applies at retail, not at the border.",
   },
+  VEN: {
+    standardRatePct: 16,
+    label: "IVA",
+    note:
+      "Rate from PwC Worldwide Tax Summaries; not in the VATupdate table, so " +
+      "single-sourced.",
+  },
   VNM: { standardRatePct: 10, label: "VAT" },
   ZAF: { standardRatePct: 15, label: "VAT" },
+  ZMB: { standardRatePct: 16, label: "VAT" },
 };
 
 export interface VatAssessment {

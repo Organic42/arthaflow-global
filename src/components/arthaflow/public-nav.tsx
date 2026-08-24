@@ -11,8 +11,12 @@ const links = [
   { href: "/#how-it-works", label: "How It Works" },
   // Placed before Pricing on purpose: it is free, needs no sign-up, and is the
   // fastest way for a manufacturer to see whether we are useful to them.
-  { href: "/calculator", label: "Calculator" },
-  { href: "/hsn-search", label: "HSN Search" },
+  // /tools is the one entry point: it resolves the tariff line and then folds
+  // in policy, GST, RoDTEP, Drawback, duty, VAT, FTA and landed cost without a
+  // second search. /calculator and /hsn-search stay live for anyone who wants
+  // just one half — the footer still links them — but three nav items for what
+  // is now a single flow is the clutter this page was built to remove.
+  { href: "/tools", label: "Export Toolkit" },
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
 ];

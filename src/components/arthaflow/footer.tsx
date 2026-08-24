@@ -18,6 +18,7 @@ const productLinks = [
   { label: "Logistics", href: "/shipments" },
 ];
 const resourceLinks = [
+  { label: "Export Toolkit", href: "/tools" },
   { label: "Landed Cost Calculator", href: "/calculator" },
   { label: "HSN Code Search", href: "/hsn-search" },
   { label: "Blog", href: "/blog" },

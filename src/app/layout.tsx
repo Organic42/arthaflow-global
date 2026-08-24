@@ -22,7 +22,9 @@ const dmSans = DM_Sans({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  // 700 is here for the tariff code on /tools, which is set large enough that
+  // 500 reads thin. Additive — nothing else changes weight by gaining one.
+  weight: ["400", "500", "700"],
 });
 
 const SITE_DESCRIPTION =

@@ -9,6 +9,7 @@ const publicRoutes = [
   "/privacy",
   "/terms",
   // Free tools, deliberately usable before sign-up.
+  "/tools",
   "/calculator",
   "/hsn-search",
 ];

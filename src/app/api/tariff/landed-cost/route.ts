@@ -44,7 +44,9 @@ export async function GET(request: Request) {
   // the same source of truth the calculation uses.
   if (!q) {
     return NextResponse.json({
-      destinations: supportedDestinations().map((iso) => ({
+      // IND is a WITS reporter like any other, but it is nonsense as an export
+      // destination for an Indian exporter — it was showing up in the picker.
+      destinations: supportedDestinations().filter((iso) => iso !== "IND").map((iso) => ({
         iso3: iso,
         name: WITS_REPORTERS[iso].name,
         // Lets the destination picker flag FTA-covered markets before a

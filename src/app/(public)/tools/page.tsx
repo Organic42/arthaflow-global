@@ -138,6 +138,28 @@ interface LandedResult {
   caveats: string[];
 }
 
+interface MarketRow {
+  iso3: string;
+  country: string;
+  dutyRatePct: number | null;
+  year: number | null;
+  hasFta: boolean;
+  ftaName: string | null;
+  ftaClaimable: boolean;
+  vatRatePct: number | null;
+  vatLabel: string | null;
+  vatRecoverable: boolean;
+  vatKnown: boolean;
+  unavailable: string | null;
+}
+interface MarketRank {
+  rows: MarketRow[];
+  pricedCount: number;
+  totalCount: number;
+  ftaCount: number;
+  dutyFreeCount: number;
+}
+
 const EXAMPLES = ["leather handbags", "basmati rice", "brass door handles", "61091000"];
 
 /**
@@ -201,6 +223,11 @@ export default function ExportToolkitPage() {
   const [calcError, setCalcError] = useState<string | null>(null);
   const [calculating, setCalculating] = useState(false);
 
+  const [ranking, setRanking] = useState<MarketRank | null>(null);
+  const [rankingBusy, setRankingBusy] = useState(false);
+  const [rankError, setRankError] = useState<string | null>(null);
+  const [showAllMarkets, setShowAllMarkets] = useState(false);
+
   const searchAbort = useRef<AbortController | null>(null);
   const detailAbort = useRef<AbortController | null>(null);
   const calcAbort = useRef<AbortController | null>(null);
@@ -208,6 +235,11 @@ export default function ExportToolkitPage() {
   // ── Resolve one tariff line ────────────────────────────────────────────────
   const load = useCallback(async (code: string) => {
     setSelected(code);
+    // The ranking is per-product; carrying it across a new search would show
+    // one product's markets under another's code.
+    setRanking(null);
+    setRankError(null);
+    setShowAllMarkets(false);
     setLoadingDetail(true);
     setError(null);
     detailAbort.current?.abort();
@@ -340,6 +372,33 @@ export default function ExportToolkitPage() {
     setDetail(null);
     setResult(null);
     setCalcError(null);
+    setRanking(null);
+    setRankError(null);
+    setShowAllMarkets(false);
+  }
+
+  /**
+   * Explicit, never automatic. One press can mean 43 upstream tariff lookups,
+   * so it waits to be asked rather than firing on every resolved product.
+   */
+  async function runRanking() {
+    if (!selected) return;
+    setRankingBusy(true);
+    setRankError(null);
+    try {
+      const r = await fetch("/api/tariff/market-rank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hsCode: selected.slice(0, 6) }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Could not rank markets.");
+      setRanking(d.data);
+    } catch (e) {
+      setRankError(e instanceof Error ? e.message : "Could not rank markets.");
+    } finally {
+      setRankingBusy(false);
+    }
   }
 
   const dest = destinations.find((d) => d.iso3 === destIso);
@@ -583,6 +642,91 @@ export default function ExportToolkitPage() {
                     <DrawbackItems d={detail.drawback} />
                   ))}
               </div>
+            </Section>
+
+            {/* ══ MARKET RANKING ═════════════════════════════════════════════
+                The question that comes before "where are you selling" is
+                "where should I sell". Picking a row answers the next section
+                for you, so the two read as one decision. */}
+            <Section eyebrow="Where should you sell it?" optional>
+              {!ranking && (
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+                  <p className="max-w-[520px] text-[14px] leading-relaxed text-text-body">
+                    Price this product against every market we cover, ranked by the duty
+                    your buyer pays. Trade agreements are flagged — several of them take
+                    the duty to nothing.
+                  </p>
+                  <button
+                    onClick={runRanking}
+                    disabled={rankingBusy}
+                    className="inline-flex items-center gap-2 border border-text-muted/30 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-text-heading transition-colors hover:border-artha-gold hover:text-[#8A6310] disabled:opacity-50 dark:hover:text-artha-gold"
+                  >
+                    {rankingBusy ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" /> Pricing every market
+                      </>
+                    ) : (
+                      <>Rank the markets</>
+                    )}
+                  </button>
+                </div>
+              )}
+              {rankError && <p className="mt-4 font-mono text-[13px] text-error">{rankError}</p>}
+
+              {ranking && (
+                <>
+                  <p className="mb-6 max-w-[640px] text-[13.5px] leading-relaxed text-text-body">
+                    <span className="font-semibold text-text-heading">
+                      {ranking.pricedCount} markets priced.
+                    </span>{" "}
+                    {ranking.dutyFreeCount > 0 && (
+                      <>
+                        {ranking.dutyFreeCount} charge no duty at all
+                        {ranking.ftaCount > 0 ? ", and " : ". "}
+                      </>
+                    )}
+                    {ranking.ftaCount > 0 && (
+                      <>
+                        {ranking.ftaCount} are covered by a trade agreement you can claim
+                        against a Certificate of Origin.{" "}
+                      </>
+                    )}
+                    Pick one to run the full landed cost below.
+                  </p>
+
+                  <div className="border-t border-text-muted/25">
+                    {(showAllMarkets ? ranking.rows : ranking.rows.slice(0, 10)).map((m, i) => (
+                      <MarketRowLine
+                        key={m.iso3}
+                        rank={i + 1}
+                        m={m}
+                        selected={destIso === m.iso3}
+                        onPick={() => setDestIso(m.iso3)}
+                      />
+                    ))}
+                  </div>
+
+                  {ranking.rows.length > 10 && (
+                    <button
+                      onClick={() => setShowAllMarkets((v) => !v)}
+                      className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.16em] text-text-muted underline-offset-4 transition-colors hover:text-text-heading hover:underline"
+                    >
+                      {showAllMarkets
+                        ? "Show only the top 10"
+                        : `Show the other ${ranking.rows.length - 10} markets`}
+                    </button>
+                  )}
+
+                  <p className="mt-6 max-w-[640px] text-[12px] leading-relaxed text-text-muted">
+                    Ranked on the MFN duty rate, which is what differs between markets —
+                    freight and insurance are the same wherever you ship, so they cannot
+                    change this order. VAT is shown but deliberately does not affect the
+                    ranking: a VAT-registered buyer reclaims it, so letting it reorder
+                    markets would steer you away from good ones over a cost your buyer
+                    never bears.
+                  </p>
+                </>
+              )}
             </Section>
 
             {/* ══ DESTINATION ════════════════════════════════════════════════ */}
@@ -906,6 +1050,66 @@ function DrawbackItems({ d }: { d: DrawbackDetail }) {
         </p>
       </details>
     </div>
+  );
+}
+
+/** One market in the ranking. Picking it fills the destination step below. */
+function MarketRowLine({
+  rank,
+  m,
+  selected,
+  onPick,
+}: {
+  rank: number;
+  m: MarketRow;
+  selected: boolean;
+  onPick: () => void;
+}) {
+  const priced = m.dutyRatePct !== null;
+  return (
+    <button
+      onClick={onPick}
+      disabled={!priced}
+      className={`flex w-full items-baseline gap-4 border-b border-text-muted/25 px-2 py-3 text-left transition-colors focus-visible:outline-none ${
+        selected ? "bg-gold-bg" : priced ? "hover:bg-subtle" : "cursor-default opacity-55"
+      }`}
+    >
+      <span className="w-6 shrink-0 font-mono text-[11px] tabular-nums text-text-muted">
+        {priced ? rank : "—"}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[14px] text-text-heading">{m.country}</span>
+
+      {m.ftaClaimable && m.ftaName && (
+        <span
+          title={m.ftaName}
+          className="hidden max-w-[190px] shrink-0 truncate font-mono text-[10px] uppercase tracking-[0.12em] text-[#8A6310] dark:text-artha-gold sm:inline"
+        >
+          {m.ftaName}
+        </span>
+      )}
+
+      <span className="hidden w-28 shrink-0 text-right font-mono text-[11px] text-text-muted sm:inline">
+        {m.vatRatePct !== null
+          ? `${m.vatLabel} ${m.vatRatePct}%`
+          : m.vatKnown
+            ? "no VAT"
+            : "VAT unknown"}
+      </span>
+
+      <span className="w-24 shrink-0 text-right">
+        {priced ? (
+          <span
+            className={`font-mono text-[17px] font-bold tabular-nums ${
+              m.dutyRatePct === 0 ? "text-[#0E7A5F] dark:text-[#34D399]" : "text-text-heading"
+            }`}
+          >
+            {m.dutyRatePct}%
+          </span>
+        ) : (
+          <span className="font-mono text-[11px] text-text-muted">no data</span>
+        )}
+      </span>
+    </button>
   );
 }
 

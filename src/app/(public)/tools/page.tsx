@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Loader2, ArrowRight, Check, AlertTriangle, Ban, ChevronDown } from "lucide-react";
+import {
+  Loader2, ArrowRight, Check, AlertTriangle, Ban, ChevronDown, Link2,
+} from "lucide-react";
 
 /**
  * The export toolkit — every Tier-1 lookup in one flow.
@@ -240,7 +242,12 @@ export default function ExportToolkitPage() {
   const [rankError, setRankError] = useState<string | null>(null);
   const [showAllMarkets, setShowAllMarkets] = useState(false);
 
+  const [copied, setCopied] = useState(false);
+
   const searchAbort = useRef<AbortController | null>(null);
+  /** Guards the URL sync so it cannot fire before the URL has been read. */
+  const restored = useRef(false);
+  const syncSkippedFirst = useRef(false);
   const detailAbort = useRef<AbortController | null>(null);
   const calcAbort = useRef<AbortController | null>(null);
 
@@ -308,6 +315,59 @@ export default function ExportToolkitPage() {
     }, 250);
     return () => clearTimeout(t);
   }, [query, load]);
+
+  // ── Shareable URLs ─────────────────────────────────────────────────────────
+  // A landed cost a manufacturer cannot send to their buyer, their CA or their
+  // freight forwarder is a dead end, and those are exactly the people who would
+  // pass it on. State lives in the query string so every result has an address.
+  //
+  // Uses the History API rather than useSearchParams + router.replace on
+  // purpose: useSearchParams forces a Suspense boundary on this page, and
+  // router.replace would push a re-render through the tree on every keystroke
+  // in the invoice field. replaceState changes the address bar and nothing
+  // else, which is all this needs.
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    // Every state write sits inside the timeout, the same rule the search and
+    // landed-cost effects follow — a setState in an effect body cascades
+    // renders. It also guarantees this lands after the sync effect below has
+    // taken its skipped first pass.
+    const t = setTimeout(() => {
+      const p = new URLSearchParams(window.location.search);
+      const hs = (p.get("hs") ?? "").replace(/\D/g, "");
+      // Deliberately not setting `query` too: that would re-run the search for
+      // a line we are about to load directly, and fetch the same thing twice.
+      if (hs.length === 8) load(hs);
+      const to = p.get("to");
+      if (to) setDestIso(to.toUpperCase().slice(0, 3));
+      const num = (k: string) => {
+        const v = (p.get(k) ?? "").replace(/[^\d.]/g, "");
+        return v && Number(v) > 0 ? v : "";
+      };
+      const f = num("fob"); if (f) setFob(f);
+      const fr = num("freight"); if (fr) setFreight(fr);
+      const ins = num("insurance"); if (ins) setInsurance(ins);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  // Write state back. The first run is skipped so the restore above is not
+  // overwritten by the empty state it started from.
+  useEffect(() => {
+    if (!syncSkippedFirst.current) {
+      syncSkippedFirst.current = true;
+      return;
+    }
+    const p = new URLSearchParams();
+    if (selected) p.set("hs", selected);
+    if (destIso) p.set("to", destIso);
+    if (fob) p.set("fob", fob);
+    if (freight) p.set("freight", freight);
+    if (insurance) p.set("insurance", insurance);
+    const qs = p.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [selected, destIso, fob, freight, insurance]);
 
   // ── Destination list (populates the picker) ────────────────────────────────
   useEffect(() => {
@@ -380,6 +440,7 @@ export default function ExportToolkitPage() {
   }
 
   function reset() {
+    setCopied(false);
     setSelected(null);
     setDetail(null);
     setResult(null);
@@ -410,6 +471,20 @@ export default function ExportToolkitPage() {
       setRankError(e instanceof Error ? e.message : "Could not rank markets.");
     } finally {
       setRankingBusy(false);
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard is permission-gated and blocked outright in some in-app
+      // browsers. The address bar already carries the state, so say that
+      // rather than failing silently.
+      setCopied(false);
+      window.prompt("Copy this link:", window.location.href);
     }
   }
 
@@ -571,6 +646,14 @@ export default function ExportToolkitPage() {
                   {policy.label}
                 </span>
               )}
+              <button
+                onClick={copyLink}
+                title="Copy a link to this result"
+                className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-white/40 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:text-white focus-visible:underline focus-visible:outline-none"
+              >
+                {copied ? <Check size={12} strokeWidth={3} /> : <Link2 size={12} />}
+                {copied ? "Copied" : "Copy link"}
+              </button>
               <button
                 onClick={reset}
                 className="shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-white/40 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:text-white focus-visible:underline focus-visible:outline-none"

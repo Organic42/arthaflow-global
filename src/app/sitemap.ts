@@ -16,6 +16,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    // The unified toolkit. Highest priority of the free tools: it is the one
+    // that answers a manufacturer's whole question, and /calculator and
+    // /hsn-search are each half of it.
+    {
+      url: `${BASE}/tools`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
     {
       url: `${BASE}/calculator`,
       lastModified: new Date(),

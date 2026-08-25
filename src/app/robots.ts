@@ -20,6 +20,12 @@ export default function robots(): MetadataRoute.Robots {
         "/api/",
       ],
     },
-    sitemap: "https://arthaflowglobal.com/sitemap.xml",
+    // Two sitemaps: the hand-maintained marketing pages, and the generated
+    // per-tariff-line pages under /export. A crawler that only reads the
+    // first would never discover the ten thousand pages that carry the data.
+    sitemap: [
+      "https://arthaflowglobal.com/sitemap.xml",
+      "https://arthaflowglobal.com/export/sitemap.xml",
+    ],
   };
 }

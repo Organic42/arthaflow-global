@@ -13,6 +13,13 @@ const publicRoutes = [
   "/calculator",
   "/hsn-search",
 ];
+
+// Public routes above are matched exactly. These are matched by prefix,
+// because they are dynamic: /export/[slug] is one page per tariff line and
+// cannot be enumerated here. It also covers /export/sitemap.xml, which is
+// useless to a crawler if it answers with a redirect to the login page.
+const publicPrefixes = ["/export/"];
+
 const onboardingRoute = "/onboarding";
 
 // Routes that require onboarding to be complete
@@ -64,7 +71,11 @@ export async function proxy(request: NextRequest) {
   // ── Unauthenticated ─────────────────────────────────────────────────
   if (!user) {
     // Public routes are fine
-    if (publicRoutes.includes(pathname) || pathname === onboardingRoute) {
+    if (
+      publicRoutes.includes(pathname) ||
+      publicPrefixes.some((r) => pathname.startsWith(r)) ||
+      pathname === onboardingRoute
+    ) {
       return supabaseResponse;
     }
     // Everything else → login with redirect

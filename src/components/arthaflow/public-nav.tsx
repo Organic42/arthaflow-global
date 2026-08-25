@@ -17,6 +17,11 @@ const links = [
   // just one half — the footer still links them — but three nav items for what
   // is now a single flow is the clutter this page was built to remove.
   { href: "/tools", label: "Export Toolkit" },
+  // Earns a nav slot of its own rather than living under the toolkit: the
+  // toolkit answers a question about a product you already have in mind, this
+  // one tells you which product to have in mind. Different question, and the
+  // most linkable page on the site.
+  { href: "/export/growing", label: "What's Growing" },
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
 ];

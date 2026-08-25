@@ -68,14 +68,29 @@ check(
 );
 
 // ── Scale ───────────────────────────────────────────────────────────────────
-// India's merchandise exports run a little under $450bn. A total far outside
-// that band means the ingestion double-counted a dimension (summing states AND
-// destinations) or dropped one, which is the failure mode that looks fine.
+// India's merchandise exports have run $420-460bn every year since FY2021-22,
+// so the latest complete year has to land in that neighbourhood.
+//
+// THIS BAND USED TO BE $250bn-$600bn AND WAS USELESS. The first build of this
+// dataset parsed "2,949.732" by calling float() directly inside a bare
+// "except ValueError: pass", silently zeroing every comma-formatted figure. It
+// produced $385bn — 13% light, entirely plausible-looking, and comfortably
+// inside the old band. A tolerance wide enough to admit a wrong answer is not
+// a check.
 const total = codes.reduce((sum, c) => sum + entries[c][latest], 0);
 check(
-  "the latest year totals a plausible national figure ($250bn-$600bn)",
-  total > 250_000 && total < 600_000,
+  "the latest year totals a plausible national figure ($400bn-$500bn)",
+  total > 400_000 && total < 500_000,
   `$${Math.round(total).toLocaleString()} mn`
+);
+
+// The parser bug showed up as a deficit concentrated in the biggest lines, so
+// pin one directly: pharmaceuticals nes is India's largest single tariff line.
+const PHARMA = "30049099";
+check(
+  "the largest single line parses its comma-formatted value",
+  entries[PHARMA] && entries[PHARMA][latest] > 10_000,
+  entries[PHARMA] ? `$${entries[PHARMA][latest]} mn` : "missing"
 );
 
 // ── Aggregation, recomputed independently of the loader ─────────────────────
@@ -168,7 +183,13 @@ check("sub-million renders as k", formatUsdMn(0.25) === "$250k", formatUsdMn(0.2
 // ── Rejections ──────────────────────────────────────────────────────────────
 check("an odd-length prefix is rejected", indiaExportsFor("123") === null);
 check("an empty query is rejected", indiaExportsFor("") === null);
-check("a code with no data returns null", indiaExportsFor("99999999") === null);
+// Not 99999999: that is a real DGCIS "unspecified" line with real values, and
+// using it as an absent-code sentinel only passed by luck on a smaller build.
+check(
+  "a code with no data returns null",
+  indiaExportsFor("00000000") === null,
+  JSON.stringify(indiaExportsFor("00000000"))
+);
 
 console.log(
   `\n${failed === 0 ? "all India export checks passed" : `${failed} check(s) FAILED`}` +

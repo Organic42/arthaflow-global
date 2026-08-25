@@ -29,10 +29,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // substantiate is the kind of thing that gets a sitemap ignored.
   const lastModified = new Date();
 
-  return indexableLines().map((line) => ({
+  return [
+    // The growth ranking. Hand-listed because it is one page, not a generated
+    // set, and it is the strongest single page in this section.
+    {
+      url: `${BASE}/export/growing`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    ...indexableLines().map((line) => ({
     url: `${BASE}${pathForLine(line)}`,
     lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.5,
-  }));
+    })),
+  ];
 }

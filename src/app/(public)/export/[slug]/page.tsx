@@ -6,6 +6,7 @@ import { describeGst } from "@/lib/hs/gst";
 import { describeRodtep } from "@/lib/hs/rodtep";
 import { describeDrawback } from "@/lib/hs/drawback";
 import { lookupHsCode } from "@/lib/hs/classify";
+import { describeIndiaExports, formatUsdMn, INDIA_EXPORTS_SOURCE } from "@/lib/hs/india-exports";
 import { JsonLdScript } from "@/components/arthaflow/json-ld";
 import {
   codeFromSlug,
@@ -52,7 +53,11 @@ export async function generateMetadata({
 
   const rate = f.rodtep ? `RoDTEP ${f.rodtep.notifiedRatePct}%` : null;
   const gst = f.gst.unambiguous ? `GST ${f.gst.candidates[0]?.rate}%` : null;
-  const bits = [gst, rate].filter(Boolean).join(", ");
+  const vol =
+    f.trade && f.trade.latestUsdMn > 0
+      ? `India exported ${formatUsdMn(f.trade.latestUsdMn)} in FY ${f.trade.latestYear}`
+      : null;
+  const bits = [vol, gst, rate].filter(Boolean).join(". ");
 
   return {
     title: `Export ${f.line.description} from India — HS ${f.line.code}`,
@@ -183,6 +188,57 @@ export default async function ExportLinePage({
           )}
         </section>
 
+        {/* ── Is anyone actually shipping this ───────────────────────────── */}
+        {f.trade && f.trade.latestUsdMn > 0 && (
+          <section className="border-b border-text-muted/25 py-10">
+            <h2 className="mb-6 font-mono text-[11px] uppercase tracking-[0.22em] text-text-heading">
+              What India ships
+            </h2>
+            <div className="flex flex-wrap items-end gap-x-10 gap-y-6">
+              <div>
+                <div className="font-mono text-[2.4rem] font-bold leading-none tracking-tight text-text-heading">
+                  {formatUsdMn(f.trade.latestUsdMn)}
+                </div>
+                <div className="mt-2 text-[13px] text-text-secondary">
+                  exported in FY {f.trade.latestYear}
+                </div>
+              </div>
+              {f.trade.growthPct !== null && (
+                <div>
+                  <div
+                    className={`font-mono text-[1.6rem] font-bold leading-none ${
+                      f.trade.growthPct >= 0
+                        ? "text-[#0E7A5F] dark:text-[#34D399]"
+                        : "text-error"
+                    }`}
+                  >
+                    {f.trade.growthPct >= 0 ? "+" : ""}
+                    {f.trade.growthPct}%
+                  </div>
+                  <div className="mt-2 text-[13px] text-text-secondary">
+                    year on year
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-6">
+                {f.trade.financialYears.map((y, i) => (
+                  <div key={y}>
+                    <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-text-muted">
+                      FY {y}
+                    </div>
+                    <div className="mt-1 font-mono text-[14px] font-semibold text-text-body">
+                      {formatUsdMn(f.trade!.valuesUsdMn[i])}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="mt-6 max-w-[700px] text-[13px] leading-relaxed text-text-secondary">
+              {describeIndiaExports(f.trade)}
+            </p>
+          </section>
+        )}
+
         {/* ── What India pays back ───────────────────────────────────────── */}
         <section className="border-b border-text-muted/25 py-10">
           <h2 className="mb-6 font-mono text-[11px] uppercase tracking-[0.22em] text-text-heading">
@@ -306,6 +362,7 @@ export default async function ExportLinePage({
         )}
 
         <p className="py-8 text-[12px] leading-relaxed text-text-muted">
+          Export values from {INDIA_EXPORTS_SOURCE.name}, {INDIA_EXPORTS_SOURCE.unit}.
           Tariff line and export policy from DGFT ITC(HS) 2022. GST from Notification
           9/2025-Integrated Tax (Rate). RoDTEP from DGFT Appendix 4R. Duty Drawback from CBIC
           77/2023-Cus (N.T.). Bundled and updated periodically, never fetched live — rates

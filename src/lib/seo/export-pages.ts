@@ -2,6 +2,7 @@ import { lookupTariffLine, tariffLinesFor, type TariffLine } from "@/lib/hs/itch
 import { lookupGst } from "@/lib/hs/gst";
 import { lookupRodtep } from "@/lib/hs/rodtep";
 import { drawbackForHsCode } from "@/lib/hs/drawback";
+import { indiaExportsFor, type IndiaExportSeries } from "@/lib/hs/india-exports";
 import itchs from "@/lib/hs/itchs-export.json";
 
 /**
@@ -77,6 +78,12 @@ export interface LineFacts {
   drawback: ReturnType<typeof drawbackForHsCode>;
   /** Other lines under the same 6-digit heading, for internal linking. */
   siblings: TariffLine[];
+  /**
+   * What India actually exported under this line. Null where DGCIS reports
+   * nothing for it — which is itself information, and the page says so rather
+   * than printing a zero that looks like a measurement.
+   */
+  trade: IndiaExportSeries | null;
 }
 
 export function factsFor(code: string): LineFacts | null {
@@ -88,6 +95,7 @@ export function factsFor(code: string): LineFacts | null {
     rodtep: lookupRodtep(line.code),
     drawback: drawbackForHsCode(line.code),
     siblings: tariffLinesFor(line.hsParent).filter((l) => l.code !== line.code),
+    trade: indiaExportsFor(line.code),
   };
 }
 
@@ -101,6 +109,7 @@ export function factsFor(code: string): LineFacts | null {
 export function isIndexable(f: LineFacts): boolean {
   if (f.line.policy !== "Free") return true;
   if (f.line.condition.trim().length > 0) return true;
+  if (f.trade !== null && f.trade.latestUsdMn > 0) return true;
   if (f.rodtep !== null) return true;
   if (f.drawback !== null) return true;
   if (!f.gst.isCatchAll) return true;
@@ -121,6 +130,11 @@ export function seedLines(limit = 750): TariffLine[] {
     const f = factsFor(raw.c);
     if (!f || !isIndexable(f)) continue;
     let score = 0;
+    // Lines India genuinely ships are the ones worth having pre-rendered
+    // before a crawler shows up, so trade volume outweighs everything else.
+    if (f.trade && f.trade.latestUsdMn >= 100) score += 6;
+    else if (f.trade && f.trade.latestUsdMn >= 10) score += 4;
+    else if (f.trade && f.trade.latestUsdMn > 0) score += 2;
     if (f.rodtep) score += 3;
     if (f.drawback) score += 2;
     if (!f.gst.isCatchAll) score += 2;

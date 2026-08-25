@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "test:hs": "tsx scripts/check-hs-search.mjs",
-    "test:dgcis": "tsx scripts/check-dgcis.mjs"
+    "test:dgcis": "tsx scripts/check-dgcis.mjs",
+    "test:india-exports": "tsx scripts/check-india-exports.mjs",
+    "build:india-exports": "python scripts/build-india-exports.py"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.39",

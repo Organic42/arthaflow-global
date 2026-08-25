@@ -42,6 +42,7 @@ import {
   lookupHs,
   getIndianTariffLines,
 } from "@/lib/hs/tool";
+import { getIndiaExportVolume, INDIA_EXPORT_TOOLS } from "@/lib/hs/india-exports-tool";
 import {
   TARIFF_TOOLS,
   getImportDuty,
@@ -78,11 +79,18 @@ const TOOL_FNS: Record<string, AnyToolFn> = {
   classifyProduct: async (a) => classifyProduct(a),
   lookupHs: async (a) => lookupHs(a),
   getIndianTariffLines: async (a) => getIndianTariffLines(a),
+  // Vendored and synchronous, like the HS lookups above.
+  getIndiaExportVolume: async (a) => getIndiaExportVolume(a),
   getImportDuty,
   calculateLandedCost,
 };
 
-const ALL_TOOLS = [...HS_TOOLS, ...TRADE_TOOLS, ...TARIFF_TOOLS];
+const ALL_TOOLS = [
+  ...HS_TOOLS,
+  ...INDIA_EXPORT_TOOLS,
+  ...TRADE_TOOLS,
+  ...TARIFF_TOOLS,
+];
 
 // Adapt our plain schemas to Chat Completions' { type:"function", function:{...} } shape.
 const CHAT_TOOLS: ChatCompletionTool[] = ALL_TOOLS.map((t) => ({

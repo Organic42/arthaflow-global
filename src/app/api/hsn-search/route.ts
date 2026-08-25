@@ -9,6 +9,11 @@ import {
 import { lookupRodtep, describeRodtep, RODTEP_SOURCE } from "@/lib/hs/rodtep";
 import { drawbackForHsCode, describeDrawback, DRAWBACK_SOURCE } from "@/lib/hs/drawback";
 import { lookupGst, describeGst, GST_SOURCE } from "@/lib/hs/gst";
+import {
+  indiaExportsFor,
+  describeIndiaExports,
+  INDIA_EXPORTS_SOURCE,
+} from "@/lib/hs/india-exports";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +86,9 @@ function lineDetail(code: string) {
   const gst = lookupGst(line.code);
   const rodtep = lookupRodtep(line.code);
   const drawback = drawbackForHsCode(line.code);
+  // What India actually ships of this line. Every other field here is a
+  // rule; this is the only one that says whether the trade exists.
+  const trade = indiaExportsFor(line.code);
 
   return {
     code: line.code,
@@ -93,11 +101,13 @@ function lineDetail(code: string) {
     gst: { ...gst, description: describeGst(gst) },
     rodtep: rodtep && { ...rodtep, description: describeRodtep(rodtep) },
     drawback: drawback && { ...drawback, description: describeDrawback(drawback) },
+    trade: trade && { ...trade, description: describeIndiaExports(trade) },
     sources: {
       itchs: ITCHS_SOURCE.note,
       gst: GST_SOURCE.notification,
       rodtep: RODTEP_SOURCE.note,
       drawback: DRAWBACK_SOURCE.note,
+      trade: INDIA_EXPORTS_SOURCE.note,
     },
   };
 }

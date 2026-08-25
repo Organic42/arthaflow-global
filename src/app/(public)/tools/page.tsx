@@ -87,6 +87,16 @@ interface DrawbackDetail {
   unambiguous: boolean;
   description: string;
 }
+interface TradeSeries {
+  prefix: string;
+  financialYears: string[];
+  valuesUsdMn: number[];
+  latestUsdMn: number;
+  latestYear: string;
+  growthPct: number | null;
+  linesAggregated: number;
+  description: string;
+}
 interface LineDetail {
   code: string;
   description: string;
@@ -96,6 +106,8 @@ interface LineDetail {
   gst: GstDetail;
   rodtep: RodtepDetail | null;
   drawback: DrawbackDetail | null;
+  /** What India actually ships of this line. Null where DGCIS records none. */
+  trade: TradeSeries | null;
 }
 
 interface Destination { iso3: string; name: string; hasFta: boolean }
@@ -190,6 +202,15 @@ const DEMO_LADDER = [
   { lit: 6, level: "subheading", title: "Handbags, outer surface of leather" },
   { lit: 8, level: "tariff line", title: "Hand-bags for ladies" },
 ];
+
+/** Same rendering as lib/hs/india-exports.ts, so a figure reads identically
+ *  whether a manufacturer meets it here or on a tariff-line page. */
+const usdMn = (v: number) => {
+  if (v >= 1000) return `$${(v / 1000).toFixed(2)} bn`;
+  if (v >= 1) return `$${v.toFixed(1)} mn`;
+  if (v > 0) return `$${(v * 1000).toFixed(0)}k`;
+  return "$0";
+};
 
 const inr = (n: number) =>
   "₹" + Math.round(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -700,6 +721,46 @@ export default function ExportToolkitPage() {
               </p>
             </Section>
 
+            {/* ══ IS ANYONE SHIPPING THIS ════════════════════════════════════
+                Every other figure on this page is a rule. This is the only one
+                that says whether the trade exists at all, so it comes before
+                what you can claim on it — the same order /export/[slug] uses. */}
+            {detail.trade && detail.trade.latestUsdMn > 0 && (
+              <Section eyebrow="What India ships">
+                <div className="flex flex-wrap items-end gap-x-12 gap-y-6">
+                  <div>
+                    <div className="font-mono text-[2.4rem] font-bold leading-none tracking-tight text-text-heading">
+                      {usdMn(detail.trade.latestUsdMn)}
+                    </div>
+                    <div className="mt-2 text-[13px] text-text-secondary">
+                      exported in FY {detail.trade.latestYear}
+                    </div>
+                  </div>
+                  {detail.trade.growthPct !== null && (
+                    <div>
+                      <div
+                        className={`font-mono text-[1.6rem] font-bold leading-none ${
+                          detail.trade.growthPct >= 0
+                            ? "text-[#0E7A5F] dark:text-[#34D399]"
+                            : "text-error"
+                        }`}
+                      >
+                        {detail.trade.growthPct >= 0 ? "+" : ""}
+                        {detail.trade.growthPct}%
+                      </div>
+                      <div className="mt-2 text-[13px] text-text-secondary">year on year</div>
+                    </div>
+                  )}
+                  {/* A bar per year: seven numbers in a row is a table nobody
+                      reads, but the shape of the series is the whole point. */}
+                  <Sparkline series={detail.trade} />
+                </div>
+                <p className="mt-6 max-w-[700px] text-[13px] leading-relaxed text-text-secondary">
+                  {detail.trade.description}
+                </p>
+              </Section>
+            )}
+
             {/* ══ INDIA SIDE ═════════════════════════════════════════════════ */}
             <Section eyebrow="What India pays back">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1038,7 +1099,9 @@ export default function ExportToolkitPage() {
             </div>
 
             <p className="border-t border-text-muted/25 py-8 text-[12px] leading-relaxed text-text-muted">
-              Tariff lines and export policy from DGFT ITC(HS) 2022. GST from Notification
+              Export values from DGCIS, the Department of Commerce&apos;s own customs
+              statistics, in US$ million. Tariff lines and export policy from DGFT ITC(HS)
+              2022. GST from Notification
               9/2025-Integrated Tax (Rate). RoDTEP from DGFT Appendix 4R. Duty Drawback from
               CBIC 77/2023-Cus (N.T.). Destination duties from UNCTAD TRAINS via World Bank
               WITS. Bundled and updated periodically, never fetched live — rates change by
@@ -1088,6 +1151,35 @@ function Digits({ code, lit, onDark }: { code: string; lit: number; onDark?: boo
         </span>
       ))}
     </span>
+  );
+}
+
+/**
+ * Seven financial years as bars.
+ *
+ * Deliberately not a chart library: this is one series of seven positive
+ * numbers, and the only thing a manufacturer needs from it is the shape.
+ * Heights are scaled against the largest year so a flat line looks flat.
+ */
+function Sparkline({ series }: { series: TradeSeries }) {
+  const max = Math.max(...series.valuesUsdMn, 1);
+  return (
+    <div className="flex items-end gap-1.5">
+      {series.financialYears.map((y, i) => {
+        const v = series.valuesUsdMn[i];
+        const isLast = i === series.financialYears.length - 1;
+        return (
+          <div key={y} className="flex flex-col items-center gap-1.5">
+            <div
+              title={`FY${y}: ${usdMn(v)}`}
+              className={`w-5 rounded-sm ${isLast ? "bg-artha-gold" : "bg-text-muted/30"}`}
+              style={{ height: `${Math.max(3, (v / max) * 52)}px` }}
+            />
+            <span className="font-mono text-[9.5px] text-text-muted">{y.slice(2, 4)}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

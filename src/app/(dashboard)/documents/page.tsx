@@ -99,15 +99,22 @@ export default function DocumentVaultPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1280px] p-8">
+      <div className="mx-auto max-w-[1400px]">
         <Skeleton className="mb-6 h-8 w-48" />
         <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
 
+  // A column of empty cells under an "Actions" heading is worse than no
+  // column: it reads as a feature that is broken rather than one that does not
+  // apply. Generated documents have no stored file to download.
+  const anyDownloadable = filtered.some((d) => d.file_url);
+
   return (
-    <div className="mx-auto max-w-[1280px] p-8">
+    // The dashboard layout's <main> already applies p-6/p-8; this page used to
+    // add its own on top, insetting every screen twice.
+    <div className="mx-auto max-w-[1400px]">
       {error && (
         <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
           {error}{" "}
@@ -146,22 +153,24 @@ export default function DocumentVaultPage() {
         <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-background">
-                {["Document Name", "Category", "Date", "Status", "Actions"].map((h, i) => (
-                  <th
-                    key={i}
-                    className={`border-b border-border px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-text-secondary ${
-                      i === 4 ? "text-right" : "text-left"
-                    }`}
-                  >
-                    {h}
-                  </th>
-                ))}
+              <tr className="bg-subtle">
+                {["Document Name", "Category", "Date", "Status", ...(anyDownloadable ? ["Actions"] : [])].map(
+                  (h, i, arr) => (
+                    <th
+                      key={h}
+                      className={`border-b border-border px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider text-text-secondary ${
+                        i === arr.length - 1 && anyDownloadable ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {h}
+                    </th>
+                  )
+                )}
               </tr>
             </thead>
             <tbody>
               {filtered.map((d, i) => (
-                <tr key={d.id} className="transition-colors hover:bg-background">
+                <tr key={d.id} className="transition-colors hover:bg-subtle">
                   <td className={`px-5 py-3.5 ${i < filtered.length - 1 ? "border-b border-subtle" : ""}`}>
                     <div className="flex items-center gap-2.5">
                       <FileText size={18} className="text-text-muted" />
@@ -179,19 +188,21 @@ export default function DocumentVaultPage() {
                       {statusLabels[d.status] || d.status}
                     </span>
                   </td>
-                  <td className={`px-5 py-3.5 ${i < filtered.length - 1 ? "border-b border-subtle" : ""}`}>
-                    <div className="flex justify-end gap-1.5">
-                      {d.file_url && (
-                        <button
-                          onClick={() => handleDownload(d)}
-                          title="Download"
-                          className="flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border bg-card text-text-secondary transition-colors hover:bg-background hover:text-text-heading"
-                        >
-                          <Download size={15} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  {anyDownloadable && (
+                    <td className={`px-5 py-3.5 ${i < filtered.length - 1 ? "border-b border-subtle" : ""}`}>
+                      <div className="flex justify-end gap-1.5">
+                        {d.file_url && (
+                          <button
+                            onClick={() => handleDownload(d)}
+                            title="Download"
+                            className="flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border bg-card text-text-secondary transition-colors hover:bg-subtle hover:text-text-heading"
+                          >
+                            <Download size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

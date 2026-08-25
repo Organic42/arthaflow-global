@@ -250,7 +250,7 @@ export default function SettingsPage() {
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="mx-auto max-w-[800px] p-8">
+      <div className="mx-auto max-w-[800px]">
         <Skeleton className="mb-6 h-8 w-48" />
         <div className="flex flex-col gap-6">
           <Skeleton className="h-64 rounded-xl" />
@@ -262,7 +262,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[800px] p-8">
+    <div className="mx-auto max-w-[800px]">
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>

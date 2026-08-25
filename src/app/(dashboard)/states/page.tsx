@@ -39,7 +39,7 @@ const empties = [
 
 export default function StatesPage() {
   return (
-    <div className="mx-auto max-w-[1280px] p-8">
+    <div className="mx-auto max-w-[1400px]">
       <h1 className="mb-1.5 text-2xl font-extrabold tracking-tight text-text-heading">
         Empty & Error States
       </h1>

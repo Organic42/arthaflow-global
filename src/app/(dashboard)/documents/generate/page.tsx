@@ -285,7 +285,7 @@ export default function AIDocGeneratorPage() {
   const previewDoc = previewType ? generated[previewType] : null;
 
   return (
-    <div className="mx-auto max-w-[1280px] p-8">
+    <div className="mx-auto max-w-[1280px]">
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         {/* LEFT */}
         <div className="flex flex-col gap-5">

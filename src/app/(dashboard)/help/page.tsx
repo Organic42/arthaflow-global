@@ -264,7 +264,7 @@ const quickLinks = [
 
 export default function HelpPage() {
   return (
-    <div className="mx-auto max-w-[1280px] p-8">
+    <div className="mx-auto max-w-[1400px]">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3">

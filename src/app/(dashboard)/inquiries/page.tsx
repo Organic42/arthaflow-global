@@ -159,7 +159,7 @@ export default function BuyerInquiriesPage() {
   // ── Loading skeleton ────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1280px]">
+      <div className="mx-auto max-w-[1400px]">
         <div className="grid min-h-[calc(100vh-64px)] grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)]">
           <div className="border-r border-border bg-card px-6 pt-6">
             <Skeleton className="mb-5 h-7 w-40" />
@@ -187,7 +187,7 @@ export default function BuyerInquiriesPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-[1280px]">
+    <div className="mx-auto max-w-[1400px]">
       {error && (
         <div className="m-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
           {error}{" "}

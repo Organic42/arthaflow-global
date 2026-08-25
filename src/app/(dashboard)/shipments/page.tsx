@@ -100,7 +100,7 @@ export default function ShipmentTrackerPage() {
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1280px] p-8">
+      <div className="mx-auto max-w-[1400px]">
         <Skeleton className="mb-6 h-8 w-48" />
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Skeleton className="h-28 rounded-xl" />
@@ -119,7 +119,7 @@ export default function ShipmentTrackerPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-[1280px] p-8">
+    <div className="mx-auto max-w-[1400px]">
       {error && (
         <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
           {error}{" "}

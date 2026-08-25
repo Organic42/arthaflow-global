@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Package, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { StaggerGrid, StaggerItem } from "@/components/arthaflow/stagger";
 
@@ -38,38 +38,90 @@ interface Product {
 
 const statusMap: Record<string, { label: string; cls: string }> = {
   export_ready: { label: "Export Ready", cls: "bg-green-bg text-success" },
-  incomplete: { label: "Incomplete", cls: "bg-gold-bg text-[#92710A]" },
+  incomplete: {
+    label: "Incomplete",
+    cls: "bg-gold-bg text-[#92710A] dark:text-artha-gold",
+  },
   draft: { label: "Draft", cls: "bg-subtle text-text-secondary" },
 };
 
 function ProductCard({ product, onEdit }: { product: Product; onEdit: (p: Product) => void }) {
   const s = statusMap[product.status] || statusMap.draft;
+  // "Incomplete" on its own tells a manufacturer there is a problem without
+  // telling them which one. These are the fields the rest of the app needs.
+  const missing = [
+    !product.hs_code && "an HS code",
+    !product.moq && "a minimum order quantity",
+    !product.lead_time && "a lead time",
+  ].filter(Boolean) as string[];
   return (
-    <div className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-[3px] hover:shadow-md">
-      <div className="relative flex h-40 items-center justify-center bg-subtle text-text-muted">
-        <Package size={48} />
-        <span className={`absolute right-3 top-3 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.cls}`}>
+    <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-[2px] hover:shadow-md">
+      <div className="flex items-start justify-between gap-3 px-5 pt-5">
+        <div className="min-w-0">
+          <h3 className="truncate text-[15px] font-bold text-text-heading">{product.name}</h3>
+          {/* The HS code is the anchor a manufacturer recognises their own
+              product by, so it leads. Where it is absent the card says so
+              rather than hiding the field, because that absence is exactly
+              what makes the product unusable everywhere else in the app. */}
+          {product.hs_code ? (
+            <div className="mt-1 font-mono text-[13px] font-semibold tracking-[0.06em] text-text-body">
+              {product.hs_code}
+            </div>
+          ) : (
+            <div className="mt-1 font-mono text-[12px] text-text-muted">No HS code yet</div>
+          )}
+        </div>
+        <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.cls}`}>
           {s.label}
         </span>
       </div>
-      <div className="p-5">
-        <h3 className="mb-1 text-[15px] font-bold text-text-heading">{product.name}</h3>
-        {product.hs_code && (
-          <div className="mb-3.5 font-mono text-xs text-text-secondary">HS Code: {product.hs_code}</div>
+
+      {missing.length > 0 && (
+        <p className="mt-3 px-5 text-[12px] leading-snug text-text-secondary">
+          Add {missing.join(", ")} to quote this to a buyer.
+        </p>
+      )}
+
+      <div className="mt-4 grid grid-cols-3 gap-px border-y border-border bg-border">
+        {[
+          { k: "MOQ", v: product.moq },
+          { k: "Lead time", v: product.lead_time },
+          { k: "Capacity", v: product.production_capacity },
+        ].map((f) => (
+          <div key={f.k} className="bg-card px-5 py-3">
+            <div className="text-[10.5px] uppercase tracking-wider text-text-muted">{f.k}</div>
+            <div className="mt-0.5 truncate text-[13px] font-semibold text-text-body">
+              {f.v || "—"}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-3 px-5 py-3.5">
+        {/* A product with a code can be priced immediately — the toolkit takes
+            it straight off the URL. Without one there is nothing to price, so
+            the card offers the thing that fixes that instead. */}
+        {product.hs_code ? (
+          <Link
+            href={`/tools?hs=${product.hs_code.replace(/\D/g, "")}`}
+            className="text-[13px] font-semibold text-action-blue hover:underline"
+          >
+            Price this product
+          </Link>
+        ) : (
+          <button
+            onClick={() => onEdit(product)}
+            className="text-[13px] font-semibold text-action-blue hover:underline"
+          >
+            Add an HS code
+          </button>
         )}
-        <div className="mb-4 flex gap-5">
-          <div>
-            <div className="text-[11px] text-text-muted">MOQ</div>
-            <div className="text-[13px] font-semibold text-text-body">{product.moq || "—"}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-text-muted">Lead Time</div>
-            <div className="text-[13px] font-semibold text-text-body">{product.lead_time || "—"}</div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between border-t border-subtle pt-3.5">
-          <Link href="/documents/generate" className="text-[13px] font-semibold text-action-blue hover:underline">
-            Generate Docs
+        <div className="flex items-center gap-4">
+          <Link
+            href="/documents/generate"
+            className="text-[13px] font-medium text-text-secondary hover:text-text-heading"
+          >
+            Docs
           </Link>
           <button
             onClick={() => onEdit(product)}
@@ -210,17 +262,19 @@ export default function ProductCataloguePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1280px] p-8">
+      <div className="mx-auto max-w-[1400px]">
         <Skeleton className="mb-6 h-8 w-40" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[320px] rounded-xl" />)}
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[210px] rounded-xl" />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1280px] p-8">
+    // The dashboard layout's <main> already applies p-6/p-8; this page used to
+    // add its own on top, insetting every screen twice.
+    <div className="mx-auto max-w-[1400px]">
       {loadError && (
         <div className="mb-4 rounded-lg bg-red-bg px-4 py-3 text-sm text-error">
           {loadError}{" "}
@@ -310,7 +364,7 @@ export default function ProductCataloguePage() {
         </Dialog>
       </div>
 
-      <StaggerGrid className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <StaggerGrid className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {products.map((p) => (
           <StaggerItem key={p.id}>
             <ProductCard product={p} onEdit={openEditDialog} />
@@ -319,7 +373,7 @@ export default function ProductCataloguePage() {
         <StaggerItem>
           <button
             onClick={openAddDialog}
-            className="flex min-h-[320px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-action-blue hover:text-action-blue"
+            className="flex h-full min-h-[210px] w-full flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-border text-text-muted transition-colors hover:border-action-blue hover:text-action-blue"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-subtle">
               <Plus size={22} />

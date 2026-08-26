@@ -72,6 +72,24 @@ export function rateLimit(
 }
 
 /**
+ * Give back the most recent hit for a key.
+ *
+ * For allowances that are a scarce budget rather than a speed limit. Saathi's
+ * anonymous trial is six questions a day; if the model provider returns 503,
+ * the visitor did not get an answer and should not lose one of the six. A
+ * per-minute limiter would not need this — the window moves on by itself —
+ * but a daily budget does.
+ *
+ * Only ever call this when the work the hit was reserving definitively did
+ * not happen. Refunding a request that partly ran would let a caller spend
+ * model time for free.
+ */
+export function refundRateLimit(identifier: string, cfg: RateLimitConfig): void {
+  const bucket = BUCKETS.get(`${cfg.scope}:${identifier}`);
+  if (bucket && bucket.hits.length > 0) bucket.hits.pop();
+}
+
+/**
  * Extract a client identifier from a request. Uses x-forwarded-for
  * (set by Vercel/most reverse proxies), falls back to x-real-ip, then
  * to a fixed string (so a limit still applies even if headers are missing).

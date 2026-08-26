@@ -13,7 +13,8 @@ type ChatMessage = {
   toolCalls?: TradeToolCall[];
 };
 
-// Saathi's /api/chat endpoint is signed-in only (the Gemini key must not be
+// Saathi's /api/chat endpoint now serves anonymous visitors a capped trial as
+// well as signed-in manufacturers (the Gemini key must not be
 // reachable by anonymous traffic — see src/app/api/chat/route.ts). Checking
 // auth state here lets a logged-out visitor see a "sign in to chat" prompt
 // up front instead of typing a question and getting a 401 back.
@@ -44,6 +45,16 @@ export function ChatBot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [authState, setAuthState] = useState<AuthState>("loading");
+  /**
+   * Free questions left, as last reported by the server. null until the first
+   * anonymous reply comes back, and irrelevant once signed in.
+   *
+   * Deliberately server-reported rather than counted here: a client-side
+   * counter is bypassable, and it goes wrong the moment someone refreshes.
+   */
+  const [freeLeft, setFreeLeft] = useState<number | null>(null);
+  /** Set when the trial is spent, so the composer becomes a sign-up prompt. */
+  const [trialSpent, setTrialSpent] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +96,8 @@ export function ChatBot() {
 
   function send(text: string) {
     const userMessage = text.trim();
-    if (!userMessage || loading || authState !== "in") return;
+    // Anonymous visitors may send until the server says the trial is spent.
+    if (!userMessage || loading || authState === "loading" || trialSpent) return;
 
     // The greeting is a client-only intro, so it's excluded from what we send.
     const history = [
@@ -106,13 +118,22 @@ export function ChatBot() {
         if (!response.ok) {
           // Prefer the server's own explanation (rate limits, message too
           // long, at-capacity) over a generic failure string.
-          const detail = await response
-            .json()
-            .then((d) => (typeof d?.error === "string" ? d.error : null))
-            .catch(() => null);
+          const body = await response.json().catch(() => null);
+          const detail =
+            body && typeof body.error === "string" ? body.error : null;
+          // The trial running out is not an error state to retry — it swaps
+          // the composer for a sign-up prompt.
+          if (body?.signUpRequired) {
+            setTrialSpent(true);
+            setFreeLeft(0);
+          }
           throw new Error(detail || `Something went wrong (${response.status}).`);
         }
         const data = await response.json();
+        if (typeof data.anonRemaining === "number") {
+          setFreeLeft(data.anonRemaining);
+          if (data.anonRemaining <= 0) setTrialSpent(true);
+        }
         setMessages((prev) => [...prev, {
           role: 'assistant',
           content: data.response || "Sorry, I couldn't generate a response.",
@@ -244,7 +265,7 @@ export function ChatBot() {
 
           {/* Quick starters — real capabilities, shown only before the first
               question so they read as an invitation, not clutter later on. */}
-          {messages.length === 1 && authState === "in" && !loading && (
+          {messages.length === 1 && authState !== "loading" && !loading && (
             <div className="flex flex-col items-start gap-1.5">
               {STARTERS.map((s) => (
                 <button
@@ -275,13 +296,13 @@ export function ChatBot() {
 
         {/* Input */}
         <div className="border-t border-white/10 bg-white/5 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {authState === "out" ? (
+          {trialSpent ? (
             <Link
               href="/login"
               className="flex w-full items-center justify-center gap-2 rounded-full bg-artha-gold px-5 py-3.5 text-sm font-semibold text-navy transition-transform hover:scale-[1.02]"
             >
               <LogIn size={16} />
-              Sign in to chat with Saathi — it&apos;s free
+              Create a free account to keep going
             </Link>
           ) : (
             <form onSubmit={handleSubmit}>
@@ -298,21 +319,33 @@ export function ChatBot() {
                 />
                 <button
                   type="submit"
-                  disabled={loading || !input.trim() || authState !== "in"}
+                  disabled={loading || !input.trim() || authState === "loading"}
                   className="absolute right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-artha-gold text-navy transition-transform hover:scale-105 disabled:scale-100 disabled:opacity-50"
                   aria-label="Send message"
                 >
                   <Send size={15} className="ml-0.5" />
                 </button>
               </div>
-              {showCounter && (
-                <p
-                  className={`mt-1.5 text-right text-[11px] ${
-                    remaining <= 0 ? "text-[#FCA5A5]" : "text-white/50"
-                  }`}
-                >
-                  {remaining} characters left
-                </p>
+              {/* One footer line carries both counters: the trial allowance on
+                  the left, the character count on the right. Anonymous
+                  visitors need to know the trial is finite before it ends, or
+                  the sign-up prompt arrives as an interruption. */}
+              {(showCounter || freeLeft !== null) && (
+                <div className="mt-1.5 flex items-baseline justify-between gap-3 text-[11px]">
+                  <span className="text-white/50">
+                    {freeLeft !== null && (
+                      <>
+                        {freeLeft} free {freeLeft === 1 ? "question" : "questions"} left ·{" "}
+                        <Link href="/login" className="text-artha-gold hover:underline">
+                          sign up for unlimited
+                        </Link>
+                      </>
+                    )}
+                  </span>
+                  <span className={remaining <= 0 ? "text-[#FCA5A5]" : "text-white/50"}>
+                    {showCounter ? `${remaining} characters left` : ""}
+                  </span>
+                </div>
               )}
             </form>
           )}

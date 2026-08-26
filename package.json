@@ -10,7 +10,8 @@
     "test:hs": "tsx scripts/check-hs-search.mjs",
     "test:dgcis": "tsx scripts/check-dgcis.mjs",
     "test:india-exports": "tsx scripts/check-india-exports.mjs",
-    "build:india-exports": "python scripts/build-india-exports.py"
+    "build:india-exports": "python scripts/build-india-exports.py",
+    "test:rate-limit": "tsx scripts/check-rate-limit.mjs"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.39",

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 import { rateLimit, refundRateLimit, clientIp } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
-import { runSaathi, type SaathiContext } from "@/lib/saathi/agent";
+import {
+  runSaathi,
+  type SaathiContext,
+  type SaathiProgress,
+} from "@/lib/saathi/agent";
 import { createSaathiClient } from "@/lib/saathi/model";
 
 // Ensure this route is always evaluated at request time, never during the
@@ -43,6 +47,35 @@ const USER_RATE_LIMIT = { scope: "chat-user", limit: 8, windowMs: 60_000 };
 const ANON_DAILY_CAP = { scope: "chat-anon", limit: 6, windowMs: 24 * 60 * 60_000 };
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
+
+/**
+ * What to show a visitor while a tool runs.
+ *
+ * Deliberately phrased as the work being done rather than the function being
+ * called: "Checking what India exports" tells someone why they are waiting,
+ * "getIndiaExportVolume" tells them we could not be bothered to translate.
+ * An unlisted tool falls back to a generic line rather than leaking the
+ * registered name — the system prompt forbids disclosing the tool list, and
+ * a progress ticker should not route around that.
+ */
+const TOOL_LABELS: Record<string, string> = {
+  classifyProduct: "Finding the right HS code",
+  lookupHs: "Checking that code exists",
+  getIndianTariffLines: "Reading India's tariff schedule",
+  getIndiaExportVolume: "Checking what India exports of this",
+  getIndiaExports: "Looking up who buys it from India",
+  getTopImporters: "Finding the biggest importers",
+  getTopExporters: "Checking who else supplies this",
+  getTradeTrend: "Working out whether demand is growing",
+  getImportDuty: "Looking up the import duty",
+  calculateLandedCost: "Working out the landed cost",
+};
+
+function progressLabel(p: SaathiProgress): string {
+  if (p.phase === "thinking") return "Working out what to look up";
+  if (p.phase === "composing") return "Putting the answer together";
+  return TOOL_LABELS[p.tool] ?? "Checking the trade data";
+}
 
 /**
  * Normalize the request body into a conversation history whose last entry is
@@ -222,24 +255,75 @@ export async function POST(request: Request) {
     const ctx: SaathiContext = user
       ? await loadContext(supabase, user, language)
       : { language };
-    const result = await runSaathi(client, history, ctx);
-    // An answer exists, so the question is genuinely spent.
-    anonIpToRefund = null;
 
-    // `response` is kept for backward compatibility with the existing widget;
-    // `toolCalls` exposes the structured trade data for chart rendering.
-    //
-    // Only successful results are surfaced. Failed ones carry internal
-    // diagnostics (missing env-var names, upstream rate-limit notices) that
-    // shouldn't reach the browser, and the UI has nothing to draw from them —
-    // the user-facing explanation is already in `response`.
-    return NextResponse.json({
-      response: result.text,
-      toolCalls: result.toolCalls.filter((t) => t.result.ok),
-      // Only present for anonymous callers, so the widget can count down
-      // honestly instead of guessing client-side — a client-side counter is
-      // both bypassable and, worse, wrong after a refresh.
-      ...(anonRemaining !== null ? { anonRemaining } : {}),
+    /**
+     * Newline-delimited JSON, one event per line.
+     *
+     * NDJSON rather than Server-Sent Events: SSE brings a framing format and
+     * an EventSource API designed for long-lived subscriptions, and this is a
+     * single request that ends when the answer does. A reader that splits on
+     * newlines is the whole client implementation.
+     *
+     * The reason any of this exists is latency — a first answer takes 75-100
+     * seconds, dominated by the model, and a static spinner for that long
+     * loses the visitor before the agent has finished making its case.
+     */
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (obj: unknown) => {
+          try {
+            controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+          } catch {
+            // The client hung up. Nothing to do; the agent finishes and the
+            // result is discarded.
+          }
+        };
+
+        try {
+          const result = await runSaathi(client, history, ctx, (p) =>
+            send({ type: "progress", phase: p.phase, label: progressLabel(p) })
+          );
+
+          // Only successful tool results are surfaced. Failed ones carry
+          // internal diagnostics (missing env-var names, upstream rate-limit
+          // notices) that shouldn't reach the browser, and the UI has nothing
+          // to draw from them — the user-facing explanation is in the answer.
+          send({
+            type: "done",
+            response: result.text,
+            toolCalls: result.toolCalls.filter((t) => t.result.ok),
+            ...(anonRemaining !== null ? { anonRemaining } : {}),
+          });
+          // An answer reached the client, so the question is genuinely spent.
+          anonIpToRefund = null;
+        } catch (err) {
+          console.error("Saathi stream error:", err);
+          // The visitor asked and got nothing back. Hand the question back
+          // rather than charging them for an outage that was not theirs.
+          if (anonIpToRefund) refundRateLimit(anonIpToRefund, ANON_DAILY_CAP);
+          const status = (err as { status?: number } | null)?.status;
+          send({
+            type: "error",
+            error:
+              status === 429 || status === 503
+                ? "Saathi is at capacity right now. Please try again in a few minutes."
+                : "Something went wrong. Please try again.",
+          });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Cache-Control": "no-store, no-transform",
+        // Nginx and some proxies buffer streamed responses by default, which
+        // would deliver every event at once and defeat the point.
+        "X-Accel-Buffering": "no",
+      },
     });
   } catch (error) {
     console.error("Saathi error:", error);

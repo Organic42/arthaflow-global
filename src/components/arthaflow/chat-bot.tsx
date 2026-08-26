@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { MessageCircle, X, Send, RotateCcw, LogIn } from "lucide-react";
+import { Check, MessageCircle, X, Send, RotateCcw, LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { TradeCharts, type TradeToolCall } from "./trade-chart";
 import { MarkdownLite } from "./markdown-lite";
@@ -55,6 +55,15 @@ export function ChatBot() {
   const [freeLeft, setFreeLeft] = useState<number | null>(null);
   /** Set when the trial is spent, so the composer becomes a sign-up prompt. */
   const [trialSpent, setTrialSpent] = useState(false);
+  /**
+   * What Saathi is doing right now, streamed from the server.
+   *
+   * A first answer takes 75-100 seconds — the model, not the tools. A static
+   * spinner for that long loses the visitor before the agent has finished
+   * making its case, and the case is precisely what the steps show: real
+   * lookups against real data, one after another.
+   */
+  const [steps, setSteps] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -108,39 +117,92 @@ export function ChatBot() {
     setInput("");
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
+    setSteps([]);
 
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history }),
-    })
-      .then(async (response) => {
+    (async () => {
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: history }),
+        });
+
+        // Guard responses (rate limits, message too long, trial spent) are
+        // still plain JSON — only a run that reaches the agent streams.
         if (!response.ok) {
-          // Prefer the server's own explanation (rate limits, message too
-          // long, at-capacity) over a generic failure string.
           const body = await response.json().catch(() => null);
           const detail =
             body && typeof body.error === "string" ? body.error : null;
-          // The trial running out is not an error state to retry — it swaps
-          // the composer for a sign-up prompt.
+          // The trial running out is not an error to retry — it swaps the
+          // composer for a sign-up prompt.
           if (body?.signUpRequired) {
             setTrialSpent(true);
             setFreeLeft(0);
           }
           throw new Error(detail || `Something went wrong (${response.status}).`);
         }
-        const data = await response.json();
-        if (typeof data.anonRemaining === "number") {
-          setFreeLeft(data.anonRemaining);
-          if (data.anonRemaining <= 0) setTrialSpent(true);
+
+        if (!response.body) throw new Error("Connection interrupted. Please try again.");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let settled = false;
+
+        // Newline-delimited JSON. A chunk can split a line anywhere, so
+        // whatever follows the last newline is held back for the next read.
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let ev: {
+              type?: string;
+              label?: string;
+              response?: string;
+              toolCalls?: unknown;
+              anonRemaining?: number;
+              error?: string;
+            };
+            try {
+              ev = JSON.parse(line);
+            } catch {
+              continue; // A malformed line is not worth failing the answer over.
+            }
+
+            if (ev.type === "progress" && ev.label) {
+              // Repeats are dropped so consecutive identical phases do not
+              // stack up as duplicate lines.
+              setSteps((prev) =>
+                prev[prev.length - 1] === ev.label ? prev : [...prev, ev.label!]
+              );
+            } else if (ev.type === "done") {
+              settled = true;
+              if (typeof ev.anonRemaining === "number") {
+                setFreeLeft(ev.anonRemaining);
+                if (ev.anonRemaining <= 0) setTrialSpent(true);
+              }
+              setMessages((prev) => [...prev, {
+                role: 'assistant',
+                content: ev.response || "Sorry, I couldn't generate a response.",
+                toolCalls: Array.isArray(ev.toolCalls) ? ev.toolCalls : undefined,
+              }]);
+            } else if (ev.type === "error") {
+              settled = true;
+              throw new Error(ev.error || "Something went wrong. Please try again.");
+            }
+          }
         }
-        setMessages((prev) => [...prev, {
-          role: 'assistant',
-          content: data.response || "Sorry, I couldn't generate a response.",
-          toolCalls: Array.isArray(data.toolCalls) ? data.toolCalls : undefined,
-        }]);
-      })
-      .catch((err) => {
+
+        // The stream ended without a verdict — a dropped connection mid-answer.
+        if (!settled) {
+          throw new Error("Connection interrupted before Saathi finished. Please try again.");
+        }
+      } catch (err) {
         console.error('Chat error:', err);
         const msg =
           err instanceof Error && err.message
@@ -149,8 +211,11 @@ export function ChatBot() {
         // Errors surface as a message from Saathi, in Saathi's voice — not a
         // separate banner the user has to reconcile with the conversation.
         setMessages((prev) => [...prev, { role: 'assistant', content: msg }]);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+        setSteps([]);
+      }
+    })();
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -281,13 +346,27 @@ export function ChatBot() {
 
           {loading && (
             <div className="flex w-full justify-start motion-safe:animate-in motion-safe:fade-in">
-              <div className="flex max-w-[85%] items-center gap-2.5 rounded-2xl rounded-bl-sm border border-white/10 bg-white/5 px-4 py-3 text-[13px] text-white/60">
-                <span className="flex items-center gap-1" aria-hidden>
-                  <span className="h-1.5 w-1.5 rounded-full bg-artha-gold motion-safe:animate-bounce [animation-delay:-0.3s]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-artha-gold motion-safe:animate-bounce [animation-delay:-0.15s]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-artha-gold motion-safe:animate-bounce" />
-                </span>
-                Looking this up…
+              <div
+                className="max-w-[85%] rounded-2xl rounded-bl-sm border border-white/10 bg-white/5 px-4 py-3 text-[13px]"
+                aria-live="polite"
+              >
+                {/* Completed steps stay on screen while the answer is being
+                    assembled. They are the record of what was actually
+                    consulted, which is the point worth showing. */}
+                {steps.slice(0, -1).map((label, i) => (
+                  <div key={i} className="flex items-center gap-2 text-white/45">
+                    <Check size={12} className="shrink-0 text-[#34D399]" strokeWidth={3} />
+                    {label}
+                  </div>
+                ))}
+                <div className="flex items-center gap-2.5 text-white/70">
+                  <span className="flex items-center gap-1" aria-hidden>
+                    <span className="h-1.5 w-1.5 rounded-full bg-artha-gold motion-safe:animate-bounce [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-artha-gold motion-safe:animate-bounce [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-artha-gold motion-safe:animate-bounce" />
+                  </span>
+                  {steps[steps.length - 1] ?? "Looking this up…"}
+                </div>
               </div>
             </div>
           )}

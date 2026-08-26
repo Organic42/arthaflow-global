@@ -187,6 +187,31 @@ export interface SaathiToolCallRecord {
   result: ToolResult<unknown>;
 }
 
+/**
+ * What the agent is doing right now, for a caller that wants to show progress.
+ *
+ * WHY PROGRESS AND NOT TOKENS. The obvious way to make a slow answer feel fast
+ * is to stream the text as it generates. That cannot be done here without
+ * giving something up: enforceLanguage() below inspects the COMPLETE answer
+ * and may rewrite it — a reply that came back in the wrong language, or
+ * degenerate — so tokens cannot be committed to the screen before it has run.
+ * Streaming them anyway would mean either dropping that guard or showing text
+ * and then swapping it, which reads as a bug.
+ *
+ * Progress is also the better thing to show for this particular agent. A
+ * visitor watching "Classifying your product… Checking India's export data…"
+ * is watching the case for why this is not a wrapper around a public API. Text
+ * appearing gradually says nothing about where it came from.
+ */
+export type SaathiProgress =
+  | { phase: "thinking" }
+  /** A tool is about to run. `tool` is its registered name. */
+  | { phase: "tool"; tool: string }
+  /** Every tool this round has returned; the model is composing. */
+  | { phase: "composing" };
+
+export type SaathiProgressFn = (p: SaathiProgress) => void;
+
 export interface SaathiResult {
   /** The final natural-language answer. */
   text: string;
@@ -325,8 +350,22 @@ async function enforceLanguage(
 export async function runSaathi(
   client: OpenAI,
   history: Array<{ role: "user" | "assistant"; content: string }>,
-  ctx: SaathiContext = {}
+  ctx: SaathiContext = {},
+  /**
+   * Optional. Called as the agent works so a caller can stream progress.
+   * Never throws into the agent loop — a broken listener must not fail a
+   * request that is otherwise going fine.
+   */
+  onProgress?: SaathiProgressFn
 ): Promise<SaathiResult> {
+  const report = (p: SaathiProgress) => {
+    try {
+      onProgress?.(p);
+    } catch {
+      // A progress listener is decoration. It does not get to break the answer.
+    }
+  };
+
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: buildSystemPrompt(ctx) },
     ...history.map((m) => ({ role: m.role, content: m.content })),
@@ -341,6 +380,13 @@ export async function runSaathi(
     // On the final allowed round, drop the tools so the model is forced to
     // answer in prose rather than requesting yet another call.
     const lastRound = round === MAX_TOOL_ROUNDS;
+
+    // Only the first round is announced as thinking. Later rounds are still
+    // deliberation, but they follow a tool whose label is already on screen,
+    // and announcing them again would push the completed steps around for no
+    // information. "composing" is reserved for the round that actually
+    // produces prose, which is the one that requests no further tools.
+    if (round === 0) report({ phase: "thinking" });
 
     const completion = await completeResiliently(client, {
       model: AGENT_MODEL,
@@ -372,6 +418,7 @@ export async function runSaathi(
     // No tool calls → this is the final answer.
     if (requested.length === 0) {
       const text = choice.content?.trim() || "I could not find an answer to that.";
+      report({ phase: "composing" });
       return {
         text: await enforceLanguage(client, messages, text, userText),
         toolCalls,
@@ -406,6 +453,7 @@ export async function runSaathi(
       if (!fn) {
         toolContent = `Error: unknown tool "${name}".`;
       } else {
+        report({ phase: "tool", tool: name });
         const result = await fn(parsedArgs);
         toolCalls.push({ tool: name, args: parsedArgs, result });
         // Feed the model the friendly narrative + compact structured data.

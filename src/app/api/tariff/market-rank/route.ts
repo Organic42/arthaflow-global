@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { destinationDuty, supportedDestinations, WITS_REPORTERS } from "@/lib/tariff/destination";
+import { destinationDuty, supportedDestinations, destinationName } from "@/lib/tariff/destination";
 import { agreementFor } from "@/lib/tariff/fta";
 import { surchargeFor } from "@/lib/tariff/surcharge";
 import { VAT_RATES, VAT_SOURCE, VAT_TABLE_AS_OF } from "@/lib/tariff/vat";
@@ -87,7 +87,7 @@ async function priceOne(iso3: string, hsCode: string): Promise<Row> {
   const sur = surchargeFor(iso3, hsCode);
   const base: Row = {
     iso3,
-    country: WITS_REPORTERS[iso3]?.name ?? iso3,
+    country: destinationName(iso3),
     dutyRatePct: null,
     year: null,
     hasFta: fta !== null,

@@ -221,9 +221,22 @@ export function composeLandedCost(
   const dutyAmount = (dutyBase * destination.mfnRatePct) / 100;
   const landed = cif + dutyAmount;
 
-  caveats.push(
-    `Duty is the MFN rate (${destination.mfnRatePct}%, reported ${destination.year}).`
-  );
+  // A destination priced from a treaty is not quoting MFN, and saying it is
+  // would be a plain falsehood about the number directly above it.
+  const treatyPriced = destination.rateBasis === "treaty-zero";
+
+  if (treatyPriced) {
+    caveats.push(
+      `Duty is ${destination.mfnRatePct}% under ${destination.rateSource ?? "a trade agreement"}, ` +
+        `which is a treaty rate and not ${destination.country}'s MFN rate. It applies only to ` +
+        `goods proved to be of Indian origin — without a Certificate of Origin your buyer pays ` +
+        `the MFN rate instead, which we do not hold.`
+    );
+  } else {
+    caveats.push(
+      `Duty is the MFN rate (${destination.mfnRatePct}%, reported ${destination.year}).`
+    );
+  }
   caveats.push(
     `Duty calculated on ${dutyBasis}, which is how ${destination.country} assesses it.`
   );
@@ -241,7 +254,18 @@ export function composeLandedCost(
       }
     : null;
 
-  if (fta?.claimable) {
+  if (treatyPriced) {
+    // The duty above already IS this agreement's rate. The generic branch below
+    // says it "likely overstates what your buyer actually pays" and that "we do
+    // not hold the preferential rate" — both false here, and both contradicting
+    // the number we just printed. What is left to warn about is the condition.
+    caveats.push(
+      `${fta?.name ?? "The agreement"} is already applied in the duty above, so there is no ` +
+        `further preference to claim. What there is to do is prove origin: apply for a ` +
+        `Certificate of Origin through DGFT's Common Digital Platform for CoO, without which ` +
+        `the MFN rate applies instead.${fta?.note ? ` ${fta.note}` : ""}`
+    );
+  } else if (fta?.claimable) {
     caveats.push(
       `${fta.name} is in force${fta.inForceSince ? ` (since ${fta.inForceSince})` : ""}, ` +
         "so the duty above likely overstates what your buyer actually pays. We do not hold the " +

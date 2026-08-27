@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { landedCost } from "@/lib/tariff/landed-cost";
 import { searchHsCodes, lookupHsCode } from "@/lib/hs/classify";
 import { tariffLinesFor, lookupTariffLine } from "@/lib/hs/itchs";
-import { supportedDestinations, WITS_REPORTERS } from "@/lib/tariff/destination";
+import {
+  supportedDestinations,
+  destinationName,
+  isTreatyPriced,
+} from "@/lib/tariff/destination";
 import { agreementFor } from "@/lib/tariff/fta";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
@@ -48,11 +52,15 @@ export async function GET(request: Request) {
       // destination for an Indian exporter — it was showing up in the picker.
       destinations: supportedDestinations().filter((iso) => iso !== "IND").map((iso) => ({
         iso3: iso,
-        name: WITS_REPORTERS[iso].name,
+        name: destinationName(iso),
         // Lets the destination picker flag FTA-covered markets before a
         // calculation even runs — cheap, and it's the same fta.ts lookup
         // landedCost() itself uses, not a separate list to keep in sync.
         hasFta: agreementFor(iso) !== null,
+        // Lets the picker say what KIND of duty is coming before it arrives.
+        // Without it the FTA note promises a preferential rate the buyer could
+        // still claim, which is wrong where the quoted duty is already it.
+        treatyPriced: isTreatyPriced(iso),
       })),
     });
   }

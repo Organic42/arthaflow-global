@@ -55,6 +55,14 @@ export interface VatRate {
 export const VAT_RATES: Record<string, VatRate> = {
   ARE: { standardRatePct: 5, label: "VAT" },
   ARG: { standardRatePct: 21, label: "IVA" },
+  AUS: {
+    standardRatePct: 10,
+    label: "GST",
+    note:
+      "Charged on the value of the taxable importation - customs value plus duty plus " +
+      "transport and insurance - which is the same base used here. Consignments below the " +
+      "A$1,000 low-value threshold are handled differently.",
+  },
   BEN: {
     standardRatePct: 18,
     label: "TVA",

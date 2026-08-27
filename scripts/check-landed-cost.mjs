@@ -17,7 +17,12 @@
  * it, so none of this needs a network or the Supabase cache.
  */
 import { composeLandedCost, dutyBasisFor } from "../src/lib/tariff/landed-cost.ts";
-import { WITS_REPORTERS } from "../src/lib/tariff/destination.ts";
+import {
+  WITS_REPORTERS,
+  supportedDestinations,
+  treatyPricedDestinations,
+  isTreatyPriced,
+} from "../src/lib/tariff/destination.ts";
 import { AGREEMENTS } from "../src/lib/tariff/fta.ts";
 
 let passed = 0;
@@ -223,7 +228,8 @@ check(
 // ── Trade agreements ────────────────────────────────────────────────────────
 // Every agreement must attach to a destination we can actually price; an
 // entry for a country with no duty lookup would never be reached.
-const orphans = Object.keys(AGREEMENTS).filter((iso) => !WITS_REPORTERS[iso]);
+const priceable = new Set(supportedDestinations());
+const orphans = Object.keys(AGREEMENTS).filter((iso) => !priceable.has(iso));
 check("no agreement names a destination we cannot price", orphans.length === 0, orphans.join(", "));
 
 // Added after finding that five priced destinations with in-force Indian
@@ -244,6 +250,77 @@ check(
   "and the caveat points at the Certificate of Origin",
   claimable.caveats.some((c) => /Certificate of Origin/i.test(c))
 );
+
+// ── Australia, priced from a treaty rather than a tariff lookup ─────────────
+// TRAINS holds nothing for Australia, but ECTA's final phase put every
+// Australian tariff line at zero for Indian-origin goods on 1 January 2026 —
+// so the rate is known, and better known than any MFN average would be.
+const AUS_DUTY = {
+  iso3: "AUS",
+  country: "Australia",
+  hsCode: "610910",
+  mfnRatePct: 0,
+  minRatePct: 0,
+  maxRatePct: 0,
+  year: 2026,
+  lineCount: null,
+  rateBasis: "treaty-zero",
+  rateSource: "India-Australia ECTA, final tariff phase from 1 January 2026",
+};
+
+check("Australia is priceable", supportedDestinations().includes("AUS"));
+check("Australia is priced from a treaty, not TRAINS", treatyPricedDestinations().includes("AUS"));
+
+// A REGRESSION GUARD, not a formality. TRAINS rejects Australia's reporter
+// code 36, and the neighbouring code 360 answers with a real, plausible rate —
+// Indonesia's. Anyone "fixing" the 400 by reaching for 360 would ship Jakarta's
+// tariff labelled Sydney, and every number downstream would look fine.
+check("Australia has no WITS reporter", WITS_REPORTERS.AUS === undefined);
+check("reporter 360 still belongs to Indonesia", WITS_REPORTERS.IDN?.code === 360);
+
+const au = composeLandedCost(
+  {
+    hsCode: "610910",
+    destinationIso: "AUS",
+    fobInr: FOB,
+    freightInr: FREIGHT,
+    insuranceInr: INSURANCE,
+  },
+  AUS_DUTY
+);
+
+check("Australian duty is zero", au.buyer.dutyInr === 0);
+check("so landed cost is just CIF", near(au.buyer.landedCostInr, CIF), `${au.buyer.landedCostInr}`);
+// GST 10% on 1,092,000 = 109,200; buyer fronts 1,201,200.
+check("GST is 10%", au.buyer.vat?.ratePct === 10);
+check("GST is charged on CIF plus duty", near(au.buyer.vat.amountInr, 109_200), `${au.buyer.vat?.amountInr}`);
+check("cash at border is 1,201,200", near(au.buyer.cashAtBorderInr, 1_201_200), `${au.buyer.cashAtBorderInr}`);
+check("GST is reclaimable by a registered buyer", au.buyer.vat?.recoverable === true);
+
+// The two ways this could quietly start lying about what the number is.
+const auText = au.caveats.join(" ");
+check(
+  "the duty is not described as an MFN rate",
+  !/Duty is the MFN rate/.test(auText),
+  au.caveats[0]?.slice(0, 70)
+);
+check("it is named as a treaty rate instead", /treaty rate/i.test(auText));
+check(
+  "the agreement is not said to overstate the duty it already is",
+  !/likely overstates/.test(auText)
+);
+check(
+  "and the Certificate of Origin condition is stated",
+  /Certificate of Origin/i.test(auText)
+);
+check("Australia's ECTA entry is in force", AGREEMENTS.AUS?.status === "in-force");
+check("isTreatyPriced agrees for Australia", isTreatyPriced("AUS") === true);
+check("isTreatyPriced is case-insensitive", isTreatyPriced("aus") === true);
+// Germany has no agreement and the UK has one; neither is treaty-PRICED, and
+// conflating "has an FTA" with "is priced from it" is what put a false
+// sentence under the picker in the first place.
+check("a TRAINS-priced FTA market is not treaty-priced", isTreatyPriced("GBR") === false);
+check("a market with no agreement is not treaty-priced", isTreatyPriced("DEU") === false);
 
 console.log(
   `\n${failed === 0 ? "all landed-cost checks passed" : `${failed} check(s) FAILED`}` +

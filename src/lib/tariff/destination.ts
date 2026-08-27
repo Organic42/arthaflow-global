@@ -36,9 +36,14 @@ const BASE = "https://wits.worldbank.org/API/V1/SDMX/V21/datasource/TRN";
  * outright. Every code here was verified against a live query returning a real
  * rate — guessing produced silent "no data" rather than an error.
  *
- * Belgium, Australia, Brazil and Bangladesh are deliberately absent: TRAINS
- * held no rate for them in any year we probed, and an absent country yields an
- * honest "no data" rather than a wrong number.
+ * Belgium, Brazil and Bangladesh are deliberately absent: TRAINS held no rate
+ * for them in any year we probed, and an absent country yields an honest "no
+ * data" rather than a wrong number. Re-probed August 2026 and still 400s.
+ *
+ * Australia was in that list and is now priced from TREATY_RATES below instead.
+ * Note for anyone tempted to add it here: TRAINS rejects reporter 36, and 360
+ * is INDONESIA, not Australia. Querying 360 returns a real, plausible rate that
+ * is simply the wrong country's.
  */
 export const WITS_REPORTERS: Record<string, { code: number; name: string }> = {
   // The block below was added after probing TRAINS for every candidate: only
@@ -136,6 +141,35 @@ export const WITS_REPORTERS: Record<string, { code: number; name: string }> = {
  */
 const YEARS = [2023, 2022, 2021, 2020, 2019];
 
+/**
+ * Destinations whose duty on Indian goods we know from a treaty rather than a
+ * tariff lookup.
+ *
+ * This exists because the two reasons to hold a rate can point in opposite
+ * directions. Normally TRAINS is the best source we have, and an agreement only
+ * warns that the real figure may be lower. Australia inverts that: TRAINS holds
+ * nothing at all, while the rate itself is published and total — since
+ * 1 January 2026 the final phase of ECTA puts every Australian tariff line at
+ * zero for Indian-origin goods. Refusing to price a destination because a
+ * database is missing, when the actual number is zero and certain, is precision
+ * worn as a costume.
+ *
+ * The zero is conditional on proving origin, and every consumer of this must
+ * say so — without a Certificate of Origin the buyer pays Australia's MFN rate,
+ * which we do NOT hold and must not imply we do.
+ */
+const TREATY_RATES: Record<
+  string,
+  { name: string; ratePct: number; since: number; source: string }
+> = {
+  AUS: {
+    name: "Australia",
+    ratePct: 0,
+    since: 2026,
+    source: "India-Australia ECTA, final tariff phase from 1 January 2026",
+  },
+};
+
 export interface DestinationDuty {
   /** ISO-3 of the importing country. */
   iso3: string;
@@ -152,6 +186,16 @@ export interface DestinationDuty {
   year: number;
   /** How many tariff lines sit under this heading. */
   lineCount: number | null;
+  /**
+   * What kind of rate `mfnRatePct` actually is.
+   *
+   * Optional, and absent means "mfn" — rows cached before this field existed
+   * deserialise without it, and reading those as MFN is correct because every
+   * one of them came from TRAINS.
+   */
+  rateBasis?: "mfn" | "treaty-zero";
+  /** Where a non-MFN rate came from. Set only when rateBasis is not "mfn". */
+  rateSource?: string;
 }
 
 export type DestinationDutyResult =
@@ -268,6 +312,27 @@ export async function destinationDuty(
     };
   }
 
+  // Checked before the reporter, because a destination priced from a treaty has
+  // no reporter and would otherwise be refused as unsupported.
+  const treaty = TREATY_RATES[iso];
+  if (treaty) {
+    const data: DestinationDuty = {
+      iso3: iso,
+      country: treaty.name,
+      hsCode,
+      mfnRatePct: treaty.ratePct,
+      minRatePct: treaty.ratePct,
+      maxRatePct: treaty.ratePct,
+      year: treaty.since,
+      lineCount: null,
+      rateBasis: "treaty-zero",
+      rateSource: treaty.source,
+    };
+    // No cache write: the value is a constant in this file rather than a fetch,
+    // so a round trip to Supabase would cost more than it could ever save.
+    return { ok: true, data, narrative: describe(data), cached: false };
+  }
+
   const reporter = WITS_REPORTERS[iso];
   if (!reporter) {
     return {
@@ -349,6 +414,21 @@ export function describe(d: DestinationDuty): string {
 
   const fta = agreementFor(d.iso3);
 
+  if (d.rateBasis === "treaty-zero") {
+    // Deliberately not routed through describeAgreement(): that frames an
+    // agreement as a reason the quoted duty MIGHT be lower. Here the treaty IS
+    // the quoted duty, and what is left to warn about is the paperwork.
+    return (
+      `${d.country} charges no import duty on HS ${d.hsCode} for Indian-origin goods. ` +
+      `Source: ${d.rateSource}. ` +
+      `MANDATORY: this zero is conditional on proving origin. The exporter must obtain a ` +
+      `Certificate of Origin under ECTA through DGFT's Common Digital Platform, and the buyer ` +
+      `presents it at import. Without it Australia charges its MFN rate, which we do not hold - ` +
+      `say so rather than implying the duty is zero regardless. ` +
+      `Never present this as the landed cost: freight, insurance and GST still apply.`
+    );
+  }
+
   let s =
     `${d.country} applies an MFN import duty of ${d.mfnRatePct}% on HS ${d.hsCode}${spread}, ` +
     `reported for ${d.year} (UNCTAD TRAINS via World Bank WITS). ` +
@@ -368,5 +448,38 @@ export function describe(d: DestinationDuty): string {
 
 /** Destinations we can answer for — used by the tool schema and diagnostics. */
 export function supportedDestinations(): string[] {
-  return Object.keys(WITS_REPORTERS).sort();
+  return [
+    ...new Set([...Object.keys(WITS_REPORTERS), ...Object.keys(TREATY_RATES)]),
+  ].sort();
+}
+
+/**
+ * The display name for any destination we can price.
+ *
+ * Exists because callers used to reach into WITS_REPORTERS directly, which was
+ * fine while that table was the only source of a priceable destination and
+ * became a crash the moment it was not: WITS_REPORTERS["AUS"] is undefined, and
+ * `.name` on it throws rather than degrading. Falls back to the ISO code so an
+ * unknown destination is still rendered rather than blanked.
+ */
+export function destinationName(iso3: string): string {
+  const iso = iso3.trim().toUpperCase();
+  return WITS_REPORTERS[iso]?.name ?? TREATY_RATES[iso]?.name ?? iso;
+}
+
+/** Destinations priced from a treaty rather than TRAINS. Exported for tests. */
+export function treatyPricedDestinations(): string[] {
+  return Object.keys(TREATY_RATES).sort();
+}
+
+/**
+ * Whether this destination's duty comes from a treaty rather than TRAINS.
+ *
+ * Callers need this to describe the number correctly. "The duty below is the
+ * MFN rate, your buyer likely pays less against a Certificate of Origin" is
+ * true of every FTA destination we price EXCEPT these, where the duty already
+ * is the agreement rate and the sentence becomes false in both halves.
+ */
+export function isTreatyPriced(iso3: string): boolean {
+  return TREATY_RATES[iso3.trim().toUpperCase()] !== undefined;
 }

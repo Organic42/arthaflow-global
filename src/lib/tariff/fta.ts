@@ -101,6 +101,17 @@ export const AGREEMENTS: Record<string, TradeAgreement> = {
     status: "in-force",
     note: "A preferential trade agreement covering a limited list of products, not a comprehensive FTA — check whether your line is on the schedule.",
   },
+  AUS: {
+    name: "India-Australia ECTA",
+    status: "in-force",
+    inForceSince: "2022-12-29",
+    note:
+      "The final tariff phase landed on 1 January 2026: Australia now applies zero duty on " +
+      "100% of its tariff lines to Indian-origin goods, up from about 98% at entry into force. " +
+      "The duty shown for Australia is that treaty zero rather than an MFN rate, so a " +
+      "Certificate of Origin is not an optimisation here - without one the buyer pays " +
+      "Australia's MFN rate instead.",
+  },
   PHL: {
     name: "ASEAN–India AITIGA",
     status: "in-force",

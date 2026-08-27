@@ -110,7 +110,13 @@ interface LineDetail {
   trade: TradeSeries | null;
 }
 
-interface Destination { iso3: string; name: string; hasFta: boolean }
+interface Destination {
+  iso3: string;
+  name: string;
+  hasFta: boolean;
+  /** True when the duty shown is the agreement's own rate, not MFN. */
+  treatyPriced?: boolean;
+}
 interface Vat {
   label: string;
   ratePct: number;
@@ -939,7 +945,17 @@ export default function ExportToolkitPage() {
                   would be an artificial wait. */}
               {dest && (
                 <p className="mt-9 border-l-2 border-artha-gold py-1 pl-4 text-[13.5px] leading-relaxed text-text-body">
-                  {dest.hasFta ? (
+                  {dest.treatyPriced ? (
+                    <>
+                      <span className="font-semibold text-text-heading">
+                        India&apos;s agreement with {dest.name} is already in the duty below.
+                      </span>{" "}
+                      That is the agreement&apos;s own rate, not the MFN rate — so there is no
+                      further preference to claim. It applies only to goods proved to be of
+                      Indian origin: without a Certificate of Origin your buyer pays the MFN
+                      rate instead, which we don&apos;t hold.
+                    </>
+                  ) : dest.hasFta ? (
                     <>
                       <span className="font-semibold text-text-heading">
                         India has a trade agreement with {dest.name}.

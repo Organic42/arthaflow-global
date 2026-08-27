@@ -11,7 +11,8 @@
     "test:dgcis": "tsx scripts/check-dgcis.mjs",
     "test:india-exports": "tsx scripts/check-india-exports.mjs",
     "build:india-exports": "python scripts/build-india-exports.py",
-    "test:rate-limit": "tsx scripts/check-rate-limit.mjs"
+    "test:rate-limit": "tsx scripts/check-rate-limit.mjs",
+    "test:landed-cost": "tsx scripts/check-landed-cost.mjs"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.39",

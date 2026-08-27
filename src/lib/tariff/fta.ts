@@ -101,6 +101,40 @@ export const AGREEMENTS: Record<string, TradeAgreement> = {
     status: "in-force",
     note: "A preferential trade agreement covering a limited list of products, not a comprehensive FTA — check whether your line is on the schedule.",
   },
+  PHL: {
+    name: "ASEAN–India AITIGA",
+    status: "in-force",
+    // No date: the Philippines implemented AITIGA later than the first tranche
+    // of ASEAN members, and we do not hold a date we are confident enough to
+    // print next to the others.
+    note: "The Philippines implemented AITIGA after the first tranche of ASEAN members; confirm the schedule for your line.",
+  },
+  LKA: {
+    name: "India–Sri Lanka FTA (and APTA, SAFTA)",
+    status: "in-force",
+    inForceSince: "2000-03-01",
+    note: "One of India's oldest FTAs, but it carries a substantial negative list — a fair number of lines are excluded from concessions entirely. Check yours before quoting a preferential price.",
+  },
+  NPL: {
+    name: "India–Nepal Treaty of Trade (and SAFTA)",
+    status: "in-force",
+    // Deliberately undated. The Treaty of Trade is long-standing but is renewed
+    // on a fixed term rather than running indefinitely, so a single "since"
+    // date would misrepresent it.
+    note: "Long-standing and renewed on a fixed term rather than running indefinitely. Most Indian goods enter Nepal duty-free, though Nepal levies other border charges that are not customs duty and are not modelled here.",
+  },
+  MDV: {
+    name: "SAFTA",
+    status: "in-force",
+    inForceSince: "2006-01-01",
+    note: "The Maldives is treated as a least-developed member under SAFTA, so its concessions to Indian goods are narrower than the reverse direction.",
+  },
+  NOR: {
+    name: "India–EFTA TEPA",
+    status: "in-force",
+    inForceSince: "2025-10-01",
+    note: "Covers Norway, Switzerland, Iceland and Liechtenstein. In force since October 2025, so implementation is still recent — confirm the tariff line with your buyer's broker.",
+  },
 };
 
 /** How a preference is actually claimed. Same mechanism across agreements. */

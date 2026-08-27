@@ -173,6 +173,27 @@ export async function landedCost(
     return duty;
   }
 
+  const data = composeLandedCost(args, duty.data);
+  return { ok: true, data, narrative: describe(data), cached: duty.cached };
+}
+
+/**
+ * The arithmetic, with the duty rate handed in rather than fetched.
+ *
+ * Separated from landedCost() so the money can be tested. Every number a
+ * manufacturer would price a shipment on is decided in here — which value duty
+ * is charged on, whether VAT compounds on the duty, whether a RoDTEP cap was
+ * applied — and none of it was assertable while it sat behind a WITS call that
+ * needs a network and a Supabase cache to reach.
+ *
+ * Callers must validate `fobInr` first; this function assumes it is a positive
+ * finite number, which landedCost() has already checked by the time it calls.
+ */
+export function composeLandedCost(
+  args: LandedCostArgs,
+  destination: DestinationDuty
+): LandedCostBreakdown {
+  const fob = Number(args.fobInr);
   const caveats: string[] = [];
 
   const freight = Number(args?.freightInr);
@@ -197,14 +218,14 @@ export async function landedCost(
   const iso = args.destinationIso.trim().toUpperCase();
   const dutyBasis = dutyBasisFor(iso);
   const dutyBase = dutyBasis === "FOB" ? fob : cif;
-  const dutyAmount = (dutyBase * duty.data.mfnRatePct) / 100;
+  const dutyAmount = (dutyBase * destination.mfnRatePct) / 100;
   const landed = cif + dutyAmount;
 
   caveats.push(
-    `Duty is the MFN rate (${duty.data.mfnRatePct}%, reported ${duty.data.year}).`
+    `Duty is the MFN rate (${destination.mfnRatePct}%, reported ${destination.year}).`
   );
   caveats.push(
-    `Duty calculated on ${dutyBasis}, which is how ${duty.data.country} assesses it.`
+    `Duty calculated on ${dutyBasis}, which is how ${destination.country} assesses it.`
   );
 
   // Named agreement or an explicit "none" — never the vague "may be lower"
@@ -349,7 +370,7 @@ export async function landedCost(
 
   const netRealisation = fob + (rodtepInr ?? 0) + (drawbackInr ?? 0);
 
-  const data: LandedCostBreakdown = {
+  return {
     buyer: {
       fobInr: inr(fob),
       freightInr: inr(freightVal),
@@ -357,7 +378,7 @@ export async function landedCost(
       cifInr: inr(cif),
       dutyBasis,
       dutyBasisValueInr: inr(dutyBase),
-      dutyRatePct: duty.data.mfnRatePct,
+      dutyRatePct: destination.mfnRatePct,
       dutyInr: inr(dutyAmount),
       landedCostInr: inr(landed),
       upliftPct: inr(((landed - fob) / fob) * 100),
@@ -374,13 +395,11 @@ export async function landedCost(
       drawbackAmbiguous,
       netRealisationInr: inr(netRealisation),
     },
-    destination: duty.data,
+    destination,
     fta,
     surcharge,
     caveats,
   };
-
-  return { ok: true, data, narrative: describe(data), cached: duty.cached };
 }
 
 function money(n: number): string {

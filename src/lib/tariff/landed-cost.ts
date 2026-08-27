@@ -23,7 +23,12 @@
 import { destinationDuty, type DestinationDuty } from "./destination";
 import { assessVat, vatAbsenceReason, VAT_SOURCE, type VatAssessment } from "./vat";
 import { agreementFor, type FtaStatus } from "./fta";
-import { surchargeFor, describeSurcharge, type SurchargeKind } from "./surcharge";
+import {
+  surchargeFor,
+  describeSurcharge,
+  type SurchargeKind,
+  type SurchargeScope,
+} from "./surcharge";
 import { lookupRodtep } from "@/lib/hs/rodtep";
 import { drawbackForHsCode } from "@/lib/hs/drawback";
 
@@ -133,6 +138,26 @@ export interface LandedCostBreakdown {
     since: string;
     coversProduct: boolean;
     source: string;
+    /** Where this product sits relative to the measure — see surcharge.ts. */
+    scope: SurchargeScope;
+    /**
+     * What the buyer pays IF the measure applies to this line.
+     *
+     * A conditional figure, not a second opinion on the duty. It exists because
+     * omitting it is not neutral: on the United States a landed cost built on
+     * MFN alone understates the buyer's duty by 18% of customs value, and the
+     * headline number is the one that gets quoted into a real deal. Stating the
+     * premise out loud costs nothing; leaving the exporter to discover it costs
+     * them the margin on a shipment.
+     *
+     * null where the measure is not charged as a percentage of value (CBAM) or
+     * the product is documented outside it — in neither case is there a figure
+     * that would mean anything.
+     */
+    ifAppliedDutyInr: number | null;
+    ifAppliedLandedCostInr: number | null;
+    /** The same, with import VAT recomputed on the higher duty-paid value. */
+    ifAppliedCashAtBorderInr: number | null;
   } | null;
   /** Every caveat that materially moves these numbers. */
   caveats: string[];
@@ -287,6 +312,15 @@ export function composeLandedCost(
   // sits on top of it, and since 2025 that is no longer true of the largest
   // destination for Indian goods.
   const surchargeLookup = surchargeFor(iso, args.hsCode);
+
+  // Charged on the same value the duty is, not on the duty-inclusive figure —
+  // an additional tariff sits beside the MFN rate on customs value, it does not
+  // compound on it the way import VAT does.
+  const extraRate = surchargeLookup?.applicableRatePct ?? null;
+  const extraDuty = extraRate === null ? null : (dutyBase * extraRate) / 100;
+  const raisedLanded = extraDuty === null ? null : landed + extraDuty;
+  const raisedVat = raisedLanded === null ? null : assessVat(iso, raisedLanded);
+
   const surcharge: LandedCostBreakdown["surcharge"] = surchargeLookup
     ? {
         name: surchargeLookup.measure.name,
@@ -295,6 +329,14 @@ export function composeLandedCost(
         since: surchargeLookup.measure.since,
         coversProduct: surchargeLookup.coversProduct,
         source: surchargeLookup.measure.source,
+        scope: surchargeLookup.scope,
+        ifAppliedDutyInr:
+          extraDuty === null ? null : inr(dutyAmount + extraDuty),
+        ifAppliedLandedCostInr: raisedLanded === null ? null : inr(raisedLanded),
+        ifAppliedCashAtBorderInr:
+          raisedLanded === null
+            ? null
+            : inr(raisedLanded + (raisedVat?.amountInr ?? 0)),
       }
     : null;
 
@@ -452,6 +494,23 @@ export function describe(d: LandedCostBreakdown): string {
         ? ` — but reclaims the ${b.vat.label} if VAT-registered, so their real cost stays ` +
           `${money(b.landedCostInr)}. `
         : `, and cannot reclaim it. `);
+  }
+
+  // The conditional figure goes BEFORE the exporter's side, because it changes
+  // the competitiveness number the whole paragraph above was building towards.
+  // Saathi reads this narrative aloud in effect, and a measure worth 18% of
+  // invoice value cannot be left to a caveat at the end.
+  const sur = d.surcharge;
+  if (sur?.ifAppliedLandedCostInr !== null && sur?.ifAppliedLandedCostInr !== undefined) {
+    s +=
+      sur.scope === "in-scope"
+        ? `${sur.name} applies to this product at ${sur.headlineRatePct}% on top of that duty, ` +
+          `so the buyer's real landed cost is ${money(sur.ifAppliedLandedCostInr)}, not ` +
+          `${money(b.landedCostInr)}. MANDATORY: quote the higher figure and say why. `
+        : `${sur.name} may also apply at ${sur.headlineRatePct}%, which we cannot confirm from ` +
+          `the tariff line alone. If it does, the landed cost is ` +
+          `${money(sur.ifAppliedLandedCostInr)} rather than ${money(b.landedCostInr)}. ` +
+          `MANDATORY: give both figures and tell the user to settle which applies before quoting. `;
   }
 
   s += `For the exporter: `;

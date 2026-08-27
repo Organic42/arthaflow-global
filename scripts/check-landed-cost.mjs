@@ -16,7 +16,7 @@
  * composeLandedCost() takes the duty rate as an argument instead of fetching
  * it, so none of this needs a network or the Supabase cache.
  */
-import { composeLandedCost, dutyBasisFor } from "../src/lib/tariff/landed-cost.ts";
+import { composeLandedCost, describe, dutyBasisFor } from "../src/lib/tariff/landed-cost.ts";
 import {
   WITS_REPORTERS,
   supportedDestinations,
@@ -24,6 +24,7 @@ import {
   isTreatyPriced,
 } from "../src/lib/tariff/destination.ts";
 import { AGREEMENTS } from "../src/lib/tariff/fta.ts";
+import { surchargeFor, MEASURES } from "../src/lib/tariff/surcharge.ts";
 
 let passed = 0;
 let failed = 0;
@@ -136,13 +137,31 @@ check("landed cost still includes freight and insurance", near(us.buyer.landedCo
 check("the US levies no import VAT", us.buyer.vat === null);
 check("cash at border equals landed cost where there is no VAT", near(us.buyer.cashAtBorderInr, us.buyer.landedCostInr));
 
-// ── A surcharge is disclosed but never added to the duty ────────────────────
-// surcharge.ts holds no per-line rate because scope is defined below the
-// granularity we can verify, so the US measure is reported and explained
-// rather than folded into the number. If that ever changes, this fails.
+// ── A surcharge is disclosed, and quantified as a conditional figure ────────
+// The quoted duty stays MFN-only: it is the number we can verify without
+// qualification. What changed is that the measure is no longer left as prose —
+// omitting the arithmetic is not neutral when the exporter quotes from the
+// screen, so the corrected total is computed alongside and labelled.
 check("the US measure is attached", us.surcharge?.headlineRatePct === 18);
 check("the US measure is in scope for this product", us.surcharge?.coversProduct === true);
-check("the surcharge is NOT added to the duty", near(us.buyer.dutyInr, 80_000));
+check("the quoted duty stays MFN-only", near(us.buyer.dutyInr, 80_000));
+// 1,000,000 FOB x 18% = 180,000 on top of the 80,000 MFN duty.
+check(
+  "the conditional duty adds 18% of customs value",
+  near(us.surcharge.ifAppliedDutyInr, 260_000),
+  `${us.surcharge?.ifAppliedDutyInr}`
+);
+check(
+  "and the conditional landed cost is 1,352,000",
+  near(us.surcharge.ifAppliedLandedCostInr, 1_352_000),
+  `${us.surcharge?.ifAppliedLandedCostInr}`
+);
+// Charged on the same value the duty is, not compounded on the duty-paid
+// figure the way import VAT is. 18% of 1,092,000 would be 196,560.
+check(
+  "the surcharge is charged on customs value, not on CIF-plus-duty",
+  near(us.surcharge.ifAppliedLandedCostInr - us.buyer.landedCostInr, 180_000)
+);
 check(
   "the surcharge caveat is read first, ahead of freight and rounding",
   /reciprocal|18%/.test(us.caveats[0] ?? ""),
@@ -321,6 +340,97 @@ check("isTreatyPriced is case-insensitive", isTreatyPriced("aus") === true);
 // sentence under the picker in the first place.
 check("a TRAINS-priced FTA market is not treaty-priced", isTreatyPriced("GBR") === false);
 check("a market with no agreement is not treaty-priced", isTreatyPriced("DEU") === false);
+
+// ── Scope is three-valued, and each value behaves differently ───────────────
+// The February 2026 joint statement names categories on both sides, so a
+// chapter can be positively covered, positively exempt, or simply unnamed.
+const DUTY_US = (hs, mfn) => ({
+  iso3: "USA",
+  country: "United States",
+  hsCode: hs,
+  mfnRatePct: mfn,
+  minRatePct: null,
+  maxRatePct: null,
+  year: 2023,
+  lineCount: null,
+});
+
+// Textiles (61) are named in scope; pharmaceuticals (30), gems (71) and
+// aircraft parts (88) are named for removal; furniture (94) is named only as
+// "home décor", which does not map onto a chapter.
+check("textiles are in scope", surchargeFor("USA", "610910")?.scope === "in-scope");
+check("leather goods are in scope", surchargeFor("USA", "420221")?.scope === "in-scope");
+check("organic chemicals are in scope", surchargeFor("USA", "290511")?.scope === "in-scope");
+check("pharmaceuticals are named exempt", surchargeFor("USA", "300490")?.scope === "out-of-scope");
+check("gems and diamonds are named exempt", surchargeFor("USA", "711319")?.scope === "out-of-scope");
+check("aircraft parts are named exempt", surchargeFor("USA", "880330")?.scope === "out-of-scope");
+check("an unnamed chapter is unknown, not exempt", surchargeFor("USA", "940360")?.scope === "unknown");
+
+// The rate follows the scope. An exempt line must carry no figure at all —
+// showing one would invent a cost the exporter would then price in.
+check("an exempt line carries no rate", surchargeFor("USA", "300490")?.applicableRatePct === null);
+check("an in-scope line carries the rate", surchargeFor("USA", "610910")?.applicableRatePct === 18);
+// An unresolved line carries the rate as EXPOSURE. This is the case the old
+// behaviour handled worst: silence read as "no surcharge".
+check("an unresolved line carries it as exposure", surchargeFor("USA", "940360")?.applicableRatePct === 18);
+
+const exempt = composeLandedCost(
+  { hsCode: "300490", destinationIso: "USA", fobInr: FOB },
+  DUTY_US("300490", 0)
+);
+check("an exempt product gets no conditional figure", exempt.surcharge?.ifAppliedLandedCostInr === null);
+check(
+  "and is told the exemption is named rather than assumed",
+  exempt.caveats.some((c) => /named as exempt/i.test(c))
+);
+
+const unresolved = composeLandedCost(
+  { hsCode: "940360", destinationIso: "USA", fobInr: FOB },
+  DUTY_US("940360", 0)
+);
+check(
+  "an unresolved product still gets the exposure figure",
+  near(unresolved.surcharge.ifAppliedLandedCostInr, 1_180_000),
+  `${unresolved.surcharge?.ifAppliedLandedCostInr}`
+);
+check(
+  "and is told we cannot tell, rather than that it is safe",
+  unresolved.caveats.some((c) => /cannot tell/i.test(c))
+);
+
+// CBAM is priced on embedded carbon, so there is no percentage that could go
+// into a conditional figure. It must stay null however in-scope the goods are.
+const cbam = composeLandedCost(
+  { hsCode: "730890", destinationIso: "DEU", fobInr: FOB },
+  dest("DEU", "Germany", "730890", 2)
+);
+check("CBAM is in scope for steel", cbam.surcharge?.scope === "in-scope");
+check("but carries no conditional figure, being a carbon levy", cbam.surcharge?.ifAppliedLandedCostInr === null);
+
+// ── The narrative must carry the corrected figure, not just the caveats ─────
+// Saathi answers from the narrative; a number that only exists in a caveat is
+// a number the model may not repeat.
+const narrative = describe(
+  composeLandedCost(
+    { hsCode: "610910", destinationIso: "USA", fobInr: FOB, freightInr: FREIGHT, insuranceInr: INSURANCE },
+    DUTY_US("610910", 16.5)
+  )
+);
+check("the narrative states the real landed cost", /14,37,000/.test(narrative), narrative.slice(0, 90));
+check("and instructs that the higher figure is the one to quote", /quote the higher figure/i.test(narrative));
+
+// ── Staleness is stated, not implied ────────────────────────────────────────
+// This measure moved four times in twelve months. A `since` date alone reads
+// as currency the figure does not have.
+check("every measure records when it was last checked", Boolean(MEASURES.USA?.asOf));
+check(
+  "and the sentence says so rather than implying it is live",
+  /as we last checked it in/i.test(us.caveats.join(" "))
+);
+check(
+  "the note warns the rate may have moved since",
+  /not as today's certainty/i.test(us.caveats.join(" "))
+);
 
 console.log(
   `\n${failed === 0 ? "all landed-cost checks passed" : `${failed} check(s) FAILED`}` +

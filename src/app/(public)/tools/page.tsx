@@ -162,6 +162,10 @@ interface LandedResult {
     since: string;
     coversProduct: boolean;
     source: string;
+    scope: "in-scope" | "out-of-scope" | "unknown";
+    ifAppliedDutyInr: number | null;
+    ifAppliedLandedCostInr: number | null;
+    ifAppliedCashAtBorderInr: number | null;
   } | null;
   caveats: string[];
 }
@@ -181,6 +185,9 @@ interface MarketRow {
   surchargeName: string | null;
   surchargeRatePct: number | null;
   surchargeCovers: boolean;
+  surchargeScope: "in-scope" | "out-of-scope" | "unknown" | null;
+  /** MFN plus any measure positively covering this product. Ranks on this. */
+  effectiveDutyRatePct: number | null;
   unavailable: string | null;
 }
 interface MarketRank {
@@ -1003,23 +1010,36 @@ export default function ExportToolkitPage() {
                       <p className="mt-2.5 font-mono text-[11px] tracking-wide text-white/40">
                         {result.buyer.upliftPct}% over your invoice
                       </p>
-                      {result.surcharge?.coversProduct && (
+                      {/* The corrected total, shown as a figure rather than a
+                          warning. A caveat saying "this is too low" leaves the
+                          exporter quoting the number above it anyway, because
+                          that is the only number on the screen. */}
+                      {result.surcharge?.ifAppliedLandedCostInr != null && (
                         <div className="mt-5 border-l-2 border-[#FCA5A5] py-1 pl-4">
                           <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#FCA5A5]">
-                            This total is too low
+                            {result.surcharge.scope === "in-scope"
+                              ? "This total is too low"
+                              : "This total may be too low"}
                           </div>
-                          <p className="mt-1.5 max-w-[420px] text-[12.5px] leading-relaxed text-white/65">
-                            {result.surcharge.name} applies on top of the duty above
-                            {result.surcharge.headlineRatePct !== null && (
-                              <>
-                                , with a headline rate of{" "}
-                                <span className="font-mono font-semibold text-white">
-                                  {result.surcharge.headlineRatePct}%
-                                </span>
-                              </>
-                            )}
-                            . We hold no per-line rate for it and will not estimate one — the
-                            note below says what to confirm.
+                          <div className="mt-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                            <span className="font-mono text-[19px] font-bold tracking-tight text-white">
+                              {inr(result.surcharge.ifAppliedLandedCostInr)}
+                            </span>
+                            <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-white/45">
+                              {result.surcharge.scope === "in-scope"
+                                ? "what your buyer pays"
+                                : "if the measure applies"}
+                            </span>
+                          </div>
+                          <p className="mt-2 max-w-[420px] text-[12.5px] leading-relaxed text-white/65">
+                            {result.surcharge.name} adds{" "}
+                            <span className="font-mono font-semibold text-white">
+                              {result.surcharge.headlineRatePct}%
+                            </span>{" "}
+                            on top of the duty above, charged on the same value.{" "}
+                            {result.surcharge.scope === "in-scope"
+                              ? "Your product's chapter is named in scope, so quote against this figure rather than the one above."
+                              : "We cannot tell from the tariff line whether your product is in scope — settle that before you quote."}
                           </p>
                         </div>
                       )}
@@ -1304,7 +1324,13 @@ function MarketRowLine({
   onPick: () => void;
 }) {
   const priced = m.dutyRatePct !== null;
-  const surcharged = Boolean(m.surchargeName && m.surchargeCovers);
+  // Positively in scope: the rate shown is the corrected one, and the list is
+  // ordered on it. Unresolved scope gets the same warning colour but keeps the
+  // MFN figure, because we have not earned the right to change the number.
+  const surcharged = Boolean(m.surchargeName && m.surchargeScope === "in-scope");
+  const uncertain = Boolean(m.surchargeName && m.surchargeScope === "unknown");
+  const shownRate =
+    surcharged && m.effectiveDutyRatePct !== null ? m.effectiveDutyRatePct : m.dutyRatePct;
   return (
     <button
       onClick={onPick}
@@ -1339,24 +1365,30 @@ function MarketRowLine({
         {priced ? (
           <span className="inline-flex items-baseline gap-1.5">
             <span
-              className={`font-mono text-[17px] font-bold tabular-nums ${
+              title={
                 surcharged
+                  ? `${m.dutyRatePct}% MFN plus ${m.surchargeRatePct}% under ${m.surchargeName}`
+                  : undefined
+              }
+              className={`font-mono text-[17px] font-bold tabular-nums ${
+                surcharged || uncertain
                   ? "text-error"
-                  : m.dutyRatePct === 0
+                  : shownRate === 0
                     ? "text-[#0E7A5F] dark:text-[#34D399]"
                     : "text-text-heading"
               }`}
             >
-              {m.dutyRatePct}%
+              {shownRate}%
             </span>
-            {/* This rank is built on MFN, and MFN is not the whole story here.
-                Saying so on the row is the only way the number is honest. */}
-            {surcharged && (
+            {/* A measure we cannot place this product inside leaves the rate
+                alone and marks it instead — moving a market on a maybe is the
+                same error as ignoring one we can confirm. */}
+            {uncertain && (
               <span
-                title={`${m.surchargeName} applies on top of this rate`}
+                title={`${m.surchargeName} may apply on top of this rate — scope unresolved`}
                 className="font-mono text-[13px] font-bold text-error"
               >
-                +
+                ?
               </span>
             )}
           </span>

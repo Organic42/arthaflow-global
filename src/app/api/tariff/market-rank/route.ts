@@ -72,11 +72,27 @@ interface Row {
   /**
    * A measure on top of MFN — see surcharge.ts. Ranking on MFN alone would put
    * the United States 20 places higher than it belongs, so this has to travel
-   * with the row even though it cannot reorder it.
+   * with the row. Where the measure's scope positively covers the product it
+   * also reorders the list — see effectiveDutyRatePct.
    */
   surchargeName: string | null;
   surchargeRatePct: number | null;
   surchargeCovers: boolean;
+  surchargeScope: "in-scope" | "out-of-scope" | "unknown" | null;
+  /**
+   * The rate to rank on: MFN plus any measure we can positively place this
+   * product inside.
+   *
+   * This list answers "where should I sell?", so ranking it on a rate the
+   * buyer will not actually pay is not a caveat problem, it is a wrong answer.
+   * For a cotton t-shirt the United States reports 16.5% MFN and charges a
+   * further 18% on top; ranked on MFN it sits above markets that are genuinely
+   * cheaper for that shipment.
+   *
+   * Only "in-scope" is added. An unresolved scope stays out of the ordering,
+   * because moving a market on a maybe is the mirror of the same error.
+   */
+  effectiveDutyRatePct: number | null;
   /** Set when we could not price this market, with the reason. */
   unavailable: string | null;
 }
@@ -102,8 +118,17 @@ async function priceOne(iso3: string, hsCode: string): Promise<Row> {
     surchargeName: sur?.measure.name ?? null,
     surchargeRatePct: sur?.measure.headlineRatePct ?? null,
     surchargeCovers: sur?.coversProduct ?? false,
+    surchargeScope: sur?.scope ?? null,
+    effectiveDutyRatePct: null,
     unavailable: null,
   };
+
+  // Added only where the product is positively in scope AND the measure is
+  // charged as a percentage of value. CBAM is neither.
+  const addOn =
+    sur?.scope === "in-scope" && sur.applicableRatePct !== null
+      ? sur.applicableRatePct
+      : 0;
 
   try {
     const result = await Promise.race([
@@ -113,7 +138,12 @@ async function priceOne(iso3: string, hsCode: string): Promise<Row> {
       ),
     ]);
     if (!result.ok) return { ...base, unavailable: "No tariff reported for this product." };
-    return { ...base, dutyRatePct: result.data.mfnRatePct, year: result.data.year };
+    return {
+      ...base,
+      dutyRatePct: result.data.mfnRatePct,
+      effectiveDutyRatePct: result.data.mfnRatePct + addOn,
+      year: result.data.year,
+    };
   } catch {
     // A market we could not reach is reported as unpriced, never dropped —
     // a silently shorter list would read as "these are all the options".
@@ -164,13 +194,16 @@ export async function POST(request: Request) {
     const isos = supportedDestinations().filter((iso) => iso !== "IND");
     const rows = await pool(isos, POOL, (iso) => priceOne(iso, hsCode));
 
-    // Cheapest duty first; unpriced markets last, so the list never implies
-    // a market is expensive when we simply could not read its tariff.
+    // Cheapest duty first, counting any measure we can place this product
+    // inside; unpriced markets last, so the list never implies a market is
+    // expensive when we simply could not read its tariff.
     rows.sort((a, b) => {
-      if (a.dutyRatePct === null && b.dutyRatePct === null) return a.country.localeCompare(b.country);
-      if (a.dutyRatePct === null) return 1;
-      if (b.dutyRatePct === null) return -1;
-      if (a.dutyRatePct !== b.dutyRatePct) return a.dutyRatePct - b.dutyRatePct;
+      const ar = a.effectiveDutyRatePct;
+      const br = b.effectiveDutyRatePct;
+      if (ar === null && br === null) return a.country.localeCompare(b.country);
+      if (ar === null) return 1;
+      if (br === null) return -1;
+      if (ar !== br) return ar - br;
       // Same duty: a claimable agreement is the tie-breaker that actually
       // changes what the buyer pays.
       if (a.ftaClaimable !== b.ftaClaimable) return a.ftaClaimable ? -1 : 1;
@@ -178,10 +211,12 @@ export async function POST(request: Request) {
     });
 
     const priced = rows.filter((r) => r.dutyRatePct !== null);
-    // Counted, not reordered. The MFN rate is the number we can verify, and a
-    // measure whose per-line scope we cannot resolve must not silently move a
-    // market up or down a list a manufacturer is about to act on.
-    const surchargedCount = priced.filter((r) => r.surchargeName && r.surchargeCovers).length;
+    // Counted for the banner. Rows whose scope we could NOT resolve are counted
+    // too, because the manufacturer still has to go and settle them — they are
+    // simply not allowed to move the ordering.
+    const surchargedCount = priced.filter(
+      (r) => r.surchargeName && r.surchargeScope !== "out-of-scope"
+    ).length;
     return NextResponse.json({
       data: {
         hsCode,

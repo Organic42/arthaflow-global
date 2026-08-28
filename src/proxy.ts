@@ -8,6 +8,9 @@ const publicRoutes = [
   "/login",
   "/privacy",
   "/terms",
+  // The diligence page. Must stay public: investors and incubator reviewers
+  // reach it from a search result, not from a signed-in session.
+  "/about",
   // Free tools, deliberately usable before sign-up.
   "/tools",
   "/calculator",

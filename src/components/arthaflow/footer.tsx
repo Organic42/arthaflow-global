@@ -28,6 +28,7 @@ const resourceLinks = [
   { label: "FAQ", href: "/pricing#faq" },
 ];
 const companyLinks = [
+  { label: "About", href: "/about" },
   { label: "Contact", href: "mailto:info@arthaflowglobal.com" },
   { label: "Pricing", href: "/pricing" },
   { label: "Privacy Policy", href: "/privacy" },

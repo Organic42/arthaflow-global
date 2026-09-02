@@ -12,6 +12,27 @@
  *   - India's own CEPA schedules are published as annexes to each agreement.
  *     The commerce.gov.in links are dead and the UAE ministry copy is blocked.
  *
+ * IS THE UAE SCHEDULE REALLY UNREACHABLE? WE CHECKED PROPERLY, ONCE.
+ * A competitor (impexq.com) shows a specific number — 0% on leather handbags
+ * (HS 42022110) into the UAE — with no hedge. Rather than assume it was
+ * guessed, we traced it as far as it goes. The UAE Ministry of Economy
+ * publishes the full signed CEPA text as a 320-page PDF, and that PDF
+ * contains a page titled "Annex 2B: Schedule of Specific Tariff Commitments
+ * of United Arab Emirates on Trade in Goods" — followed by nothing. A cover
+ * page, no table. The actual line-by-line schedule is not bundled into the
+ * government's own consolidated agreement document.
+ *
+ * The best corroboration we found for that specific 0% was the Council for
+ * Leather Exports — India's official export-promotion body for that sector —
+ * stating in member guidance that UAE gives 0% on all of Chapter 42. That
+ * happens to confirm the number. It is also not a general solution: it exists
+ * because leather has an active council publishing sector-specific circulars.
+ * Most HS lines into most of our 21+ FTA destinations have no equivalent
+ * document to triangulate against. A competitor being right on one line,
+ * reachable only by a lucky secondary source after the primary document
+ * dead-ends, is not evidence the underlying data problem is solved — it is
+ * evidence of exactly the risk this module refuses to take on generally.
+ *
  * Guessing a preferential rate would be the worst thing this codebase could
  * ship. So this module answers the question one step back — "does an agreement
  * cover this destination, and how do I claim it?" — which is true, useful, and

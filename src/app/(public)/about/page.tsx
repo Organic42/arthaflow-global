@@ -125,7 +125,7 @@ const founders = [
     owns: "Data layer, tariff engine, product",
     linkedin: "https://www.linkedin.com/in/sarthak-wage-993b5a282/",
     facts: [
-      ["Previously", "Co-founder and CTO of a 3D game-tech startup, through multiple funding rounds"],
+      ["Previously", "CTO of a 3D design studio — raised multiple funding rounds, revenue to seven figures"],
       ["Studied", "K. J. Somaiya College of Engineering, Vidyavihar"],
       ["Builds", "The datasets, the tariff engine, and the landed-cost arithmetic"],
     ],

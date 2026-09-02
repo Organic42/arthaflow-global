@@ -46,7 +46,7 @@ AI is the *output* of the moat, not the moat itself.
 | Base | Pune, Maharashtra, India |
 | Website | https://arthaflowglobal.com |
 | Contact | info@arthaflowglobal.com |
-| Founder & CEO | Sarthak Wage — previously co-founded a 3D game-tech startup as CTO (six-figure revenue, raised multiple rounds) |
+| Founder & CEO | Sarthak Wage — previously CTO of a 3D design studio (raised multiple funding rounds, revenue to seven figures) |
 | Co-founder & CTO | Sameer Morya — strategy/ops → AI architect, ex-SeekMyCOURSE |
 
 ### Business model — an evolution, not a single line

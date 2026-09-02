@@ -94,6 +94,13 @@ export const VAT_RATES: Record<string, VatRate> = {
   COL: { standardRatePct: 19, label: "IVA" },
   CZE: { standardRatePct: 21, label: "VAT" },
   DEU: { standardRatePct: 19, label: "VAT" },
+  DMA: {
+    standardRatePct: 15,
+    label: "VAT",
+    note:
+      "Confirmed against the Inland Revenue Division of Dominica directly. A 10% rate " +
+      "applies to accommodation and diving activity, irrelevant to a goods shipment.",
+  },
   DNK: { standardRatePct: 25, label: "VAT" },
   ECU: { standardRatePct: 15, label: "IVA" },
   EGY: { standardRatePct: 14, label: "VAT" },
@@ -115,6 +122,11 @@ export const VAT_RATES: Record<string, VatRate> = {
     label: "TVA",
     note:
       "Single-sourced; confirm before relying on it for a large consignment.",
+  },
+  GMB: {
+    standardRatePct: 15,
+    label: "VAT",
+    note: "Confirmed against the Gambia Revenue Authority directly.",
   },
   GRC: {
     standardRatePct: 24,
@@ -157,6 +169,24 @@ export const VAT_RATES: Record<string, VatRate> = {
     label: "none",
     note: "Kuwait has not implemented VAT despite the GCC framework agreement.",
   },
+  LBR: {
+    standardRatePct: 13,
+    label: "GST",
+    note:
+      "Raised from 12% to 13% effective 1 May 2026 under the Liberia Tax Amendment Act, " +
+      "confirmed against the Liberia Revenue Authority's own notice — telecom services are " +
+      "taxed separately at 15%. Liberia plans to replace GST with an 18% VAT from January " +
+      "2027; re-check this rate after that date.",
+  },
+  LBY: {
+    standardRatePct: null,
+    label: "none",
+    note:
+      "Libya levies no VAT or general sales tax (PwC Worldwide Tax Summaries). Customs " +
+      "duties were also abolished in 2005 for everything except tobacco. Imports instead " +
+      "carry a 5% service fee on value plus roughly 0.5% in other import charges — neither " +
+      "modelled here, since this file covers only VAT/GST.",
+  },
   LKA: {
     standardRatePct: 18,
     label: "VAT",
@@ -171,7 +201,20 @@ export const VAT_RATES: Record<string, VatRate> = {
       "Rate from PwC Worldwide Tax Summaries; not in the VATupdate table, so " +
       "single-sourced.",
   },
+  MDV: {
+    standardRatePct: 8,
+    label: "GST",
+    note:
+      "The General GST rate, in force since 1 January 2023 — not the 17% Tourism GST, " +
+      "which applies only to the tourism sector. MIRA's own site blocks automated access; " +
+      "corroborated instead across several independent sources citing the same amendment.",
+  },
   MEX: { standardRatePct: 16, label: "IVA" },
+  MLI: {
+    standardRatePct: 18,
+    label: "TVA",
+    note: "WAEMU harmonised rate — same bloc, same rate, as Benin and Cote d'Ivoire.",
+  },
   MNE: { standardRatePct: 21, label: "PDV" },
   MOZ: {
     standardRatePct: 16,
@@ -220,9 +263,40 @@ export const VAT_RATES: Record<string, VatRate> = {
       "Rate from the VATupdate 2026 table; not covered by the PwC chart, so single-sourced.",
   },
   SAU: { standardRatePct: 15, label: "VAT" },
+  SDN: {
+    standardRatePct: 17,
+    label: "VAT",
+    note:
+      "Statutory rate, administered by the Taxation Chamber under the Ministry of " +
+      "Finance, cross-checked across several independent trackers. Sudan has been in " +
+      "active civil war since April 2023 with contested territorial control — whether " +
+      "customs and tax administration function normally for a given shipment is a real " +
+      "question this rate cannot answer, and is a materially bigger risk than the number " +
+      "itself.",
+  },
   SEN: { standardRatePct: 18, label: "TVA" },
   SGP: { standardRatePct: 9, label: "GST" },
+  SLE: {
+    standardRatePct: 15,
+    label: "GST",
+    note: "Confirmed against the National Revenue Authority directly; charged on imports.",
+  },
   SWE: { standardRatePct: 25, label: "VAT" },
+  SYC: {
+    standardRatePct: 15,
+    label: "VAT",
+    note:
+      "Confirmed against the Seychelles Revenue Commission directly; charged on CIF plus " +
+      "duty plus any excise.",
+  },
+  TGO: {
+    standardRatePct: 18,
+    label: "TVA",
+    note:
+      "WAEMU harmonised rate, same bloc as Benin, Cote d'Ivoire and Mali. The Office " +
+      "Togolais des Recettes' own site could not be reached directly; cross-checked " +
+      "across independent Togolese sources instead.",
+  },
   THA: {
     standardRatePct: 7,
     label: "VAT",

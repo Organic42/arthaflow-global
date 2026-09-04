@@ -22,7 +22,12 @@ export interface CountryValue {
   name: string;
   valueUsd: number;
   valueUsdM: number;   // Millions of USD, rounded
-  sharePct: number;    // Share of total in the response
+  /**
+   * Share of the total in THIS response, which is not always a world total -
+   * see `sampledImportsUsd` / `sampledExportsUsd`. For the India tools the
+   * denominator is India's own exports of the line and so is complete.
+   */
+  sharePct: number;
   rank: number;
 }
 
@@ -85,6 +90,28 @@ function badHsCode(hsCode: string): ToolError | null {
   };
 }
 
+/**
+ * We do not ask Comtrade for "the world". We ask a curated list of reporters
+ * (see `countries.ts`) and add up what they filed.
+ *
+ * That list is broad - every major economy plus India's significant partners -
+ * but it is not exhaustive: Switzerland, Austria, Pakistan and Ukraine are
+ * among the economies missing from it. So the totals these tools return are
+ * sums over a sample, and each country's share is a share of that sample, not
+ * of world trade.
+ *
+ * The gap is usually small. It is still a real one, and the fields used to be
+ * called `totalWorldImportsUsd` and `totalWorldExportsUsd` - names the model
+ * reads literally and quotes as global market size. Naming them for what they
+ * are costs nothing and stops the overclaim at the source.
+ */
+function samplingNote(reporterCount: number, flow: "imports" | "exports"): string {
+  return (
+    ` Figures cover the ${reporterCount} major economies we query, so treat them ` +
+    `as a floor on world ${flow} rather than a complete total.`
+  );
+}
+
 function currentDataYear(): number {
   // Comtrade annual data lags: the most recent year is usually incomplete or
   // unpublished across most reporters. Year-minus-2 is the sweet spot where
@@ -109,13 +136,16 @@ export interface GetTopImportersArgs {
 export interface TopImportersData {
   hsCode: string;
   year: number;
-  totalWorldImportsUsd: number;
-  totalWorldImportsUsdB: number; // Billions
+  /** Summed across the reporters we query, NOT a world total. */
+  sampledImportsUsd: number;
+  sampledImportsUsdB: number; // Billions
+  /** How many reporters that sum is over, so the basis travels with it. */
+  reportersSampled: number;
   countries: CountryValue[];
 }
 
 /**
- * Get the top countries importing a given HS code globally.
+ * Get the top countries importing a given HS code across the reporters we query.
  * Answers: "where can I export my product?"
  */
 export async function getTopImporters(
@@ -180,11 +210,12 @@ export async function getTopImporters(
   const narrative =
     top.length === 0
       ? `I did not find import data for HS ${args.hsCode} in ${year}.`
-      : `In ${year}, the top ${top.length} countries importing HS ${args.hsCode} globally were: ` +
+      : `In ${year}, the top ${top.length} countries importing HS ${args.hsCode} were: ` +
         top
           .map((c, i) => `${i + 1}. ${c.name} ($${c.valueUsdM}M, ${c.sharePct}%)`)
           .join("; ") +
-        ".";
+        "." +
+        samplingNote(majorReporterM49s.length, "imports");
 
   return {
     ok: true,
@@ -193,8 +224,9 @@ export async function getTopImporters(
     data: {
       hsCode: args.hsCode,
       year,
-      totalWorldImportsUsd: total,
-      totalWorldImportsUsdB: Math.round((total / 1_000_000_000) * 10) / 10,
+      sampledImportsUsd: total,
+      sampledImportsUsdB: Math.round((total / 1_000_000_000) * 10) / 10,
+      reportersSampled: majorReporterM49s.length,
       countries: top,
     },
   };
@@ -529,8 +561,11 @@ export interface GetTopExportersArgs {
 export interface TopExportersData {
   hsCode: string;
   year: number;
-  totalWorldExportsUsd: number;
-  totalWorldExportsUsdB: number;
+  /** Summed across the reporters we query, NOT a world total. */
+  sampledExportsUsd: number;
+  sampledExportsUsdB: number;
+  /** How many reporters that sum is over, so the basis travels with it. */
+  reportersSampled: number;
   exporters: CountryValue[];
 }
 
@@ -591,11 +626,12 @@ export async function getTopExporters(
   const narrative =
     top.length === 0
       ? `I did not find export data for HS ${args.hsCode} in ${year}.`
-      : `In ${year}, the top ${top.length} exporters of HS ${args.hsCode} globally were: ` +
+      : `In ${year}, the top ${top.length} exporters of HS ${args.hsCode} were: ` +
         top
           .map((c) => `${c.name} ($${c.valueUsdM}M, ${c.sharePct}%)`)
           .join(", ") +
-        ".";
+        "." +
+        samplingNote(majorReporterM49s.length, "exports");
 
   return {
     ok: true,
@@ -604,8 +640,9 @@ export async function getTopExporters(
     data: {
       hsCode: args.hsCode,
       year,
-      totalWorldExportsUsd: total,
-      totalWorldExportsUsdB: Math.round((total / 1_000_000_000) * 10) / 10,
+      sampledExportsUsd: total,
+      sampledExportsUsdB: Math.round((total / 1_000_000_000) * 10) / 10,
+      reportersSampled: majorReporterM49s.length,
       exporters: top,
     },
   };
@@ -887,7 +924,7 @@ export const TRADE_TOOLS = [
   {
     name: "getTopImporters",
     description:
-      "Get the top countries importing a given HS code globally. Answers: where can I export my product?",
+      "Get the top countries importing a given HS code, summed across the major economies we query (not a complete world total). Answers: where can I export my product?",
     parameters: {
       type: "object",
       properties: {

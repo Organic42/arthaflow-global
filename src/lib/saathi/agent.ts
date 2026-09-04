@@ -53,7 +53,7 @@ import {
   isDegenerate,
   LANGUAGE_RETRY_INSTRUCTION,
 } from "@/lib/saathi/language";
-import { SAATHI_MODEL } from "@/lib/saathi/model";
+import { SAATHI_MODEL, SAATHI_REASONING_EFFORT } from "@/lib/saathi/model";
 
 // Saathi runs on Google Gemini 3.5 Flash, reached through the OpenAI-compatible
 // client built in ./model. The whole loop below is provider-agnostic Chat
@@ -62,7 +62,25 @@ const AGENT_MODEL = SAATHI_MODEL;
 
 // Hard cap on tool round-trips so a confused model can't loop forever
 // (and can't run up the Comtrade quota on one conversation).
-const MAX_TOOL_ROUNDS = 4;
+/**
+ * Rounds of tool-calling before the model must answer in prose.
+ *
+ * This is the multiplier on everything fixed. Measured with Gemini's own
+ * countTokens: the system prompt is ~1,970 tokens and the tool schemas
+ * ~1,660, and BOTH are re-sent on every round because chat completions are
+ * stateless. So each extra round costs at least ~3,630 input tokens before a
+ * single word of conversation or tool output.
+ *
+ * At 4 (five completions) the floor was ~18,000 input tokens per user message,
+ * plus another full-context call if enforceLanguage() fired — ~21,800 before
+ * any payloads. That is what was draining the key in one prompt.
+ *
+ * 3 still fits every chain the system prompt actually asks for; the longest is
+ * classify -> tariff lines -> landed cost -> answer, which is four completions
+ * and exactly what a budget of 3 allows. Lowering it further would start
+ * truncating real work rather than waste.
+ */
+const MAX_TOOL_ROUNDS = 3;
 
 // ── Tool dispatch ────────────────────────────────────────────────────────────
 
@@ -219,6 +237,35 @@ export interface SaathiResult {
   toolCalls: SaathiToolCallRecord[];
   /** Model used, for observability. */
   model: string;
+  /**
+   * What this turn actually cost, summed across every completion it made.
+   *
+   * Without this the only signal that a turn went expensive is the bill at the
+   * end of the month. A turn that hits the round budget costs several times
+   * one that answers immediately, and nothing in the response distinguished
+   * them.
+   */
+  usage: SaathiUsage;
+}
+
+export interface SaathiUsage {
+  /** Completions issued this turn, including any language retry. */
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+/** Running tally for one turn. Mutated by the loop, returned on the way out. */
+function newUsage(): SaathiUsage {
+  return { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+}
+
+function addUsage(into: SaathiUsage, c: { usage?: ChatCompletion["usage"] }): void {
+  into.requests += 1;
+  into.promptTokens += c.usage?.prompt_tokens ?? 0;
+  into.completionTokens += c.usage?.completion_tokens ?? 0;
+  into.totalTokens += c.usage?.total_tokens ?? 0;
 }
 
 // ── Resilience ───────────────────────────────────────────────────────────────
@@ -255,12 +302,81 @@ function isToolValidationError(e: unknown): boolean {
  * the model once about types, and if it still can't comply, drop tools
  * entirely so the user still gets an answer.
  */
+/**
+ * One call, retried on transient failure - but 429 and 5xx are not the same
+ * problem and must not get the same backoff.
+ *
+ * A 5xx is a capacity blip: the model was there a second ago and will be
+ * again, so two quick retries usually recover it for free (a rejected request
+ * bills nothing). Worth doing, and worth doing fast.
+ *
+ * A 429 is quota. On Gemini's free tier that is a per-minute or per-day
+ * ceiling, and it does not clear in the time anyone will sit watching a
+ * spinner. Retrying it hard is how a key that is merely throttled turns into a
+ * key that is hammered - so it gets exactly one retry, and only when the
+ * server names a delay short enough to be worth waiting out.
+ */
+function retryAfterMs(e: unknown): number | null {
+  const h = (e as { headers?: Headers | Record<string, string> })?.headers;
+  const raw =
+    h instanceof Headers
+      ? h.get("retry-after")
+      : (h as Record<string, string> | undefined)?.["retry-after"];
+  if (!raw) return null;
+  const secs = Number(raw);
+  return Number.isFinite(secs) ? secs * 1000 : null;
+}
+
+async function withTransientRetry(
+  client: OpenAI,
+  params: ChatCompletionCreateParamsNonStreaming
+): Promise<ChatCompletion> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await client.chat.completions.create(params);
+    } catch (e) {
+      if (!isTransientError(e)) throw e;
+      lastError = e;
+      if (attempt >= 2) break;
+
+      if ((e as { status?: number })?.status === 429) {
+        // Wait only if the server says the wait is short. Otherwise this is a
+        // real quota wall and another request will not get through it.
+        const wait = retryAfterMs(e);
+        if (wait === null || wait > 2000) break;
+        await sleep(wait);
+      } else {
+        await sleep(400 * (attempt + 1));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * True for the transient "try again shortly" statuses, as opposed to a bad
+ * request we would only repeat verbatim.
+ *
+ * Worth handling since moving to the lite tier: it shares capacity more
+ * aggressively, and a 503 was observed on the OpenAI-compatible endpoint
+ * seconds after the same model answered fine. A rejected request bills no
+ * tokens, so retrying one is close to free and strictly better than failing
+ * the user's turn.
+ */
+function isTransientError(e: unknown): boolean {
+  const status = (e as { status?: number })?.status;
+  return status === 429 || status === 500 || status === 502 || status === 503;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function completeResiliently(
   client: OpenAI,
   params: ChatCompletionCreateParamsNonStreaming
 ): Promise<ChatCompletion> {
   try {
-    return await client.chat.completions.create(params);
+    return await withTransientRetry(client, params);
   } catch (e) {
     if (!isToolValidationError(e)) throw e;
 
@@ -305,28 +421,38 @@ async function completeResiliently(
  */
 async function enforceLanguage(
   client: OpenAI,
-  messages: ChatCompletionMessageParam[],
   text: string,
-  userText: string
+  userText: string,
+  usage: SaathiUsage
 ): Promise<string> {
   const wrongLanguage = !replyMatchesInput(userText, text);
   const degenerate = isDegenerate(text);
   if (!wrongLanguage && !degenerate) return text;
 
   try {
+    // Deliberately NOT `...messages`. This turn rewrites prose that is already
+    // written — LANGUAGE_RETRY_INSTRUCTION says to keep every code, country,
+    // figure and percentage exactly as-is and change only the surrounding
+    // language — so the draft carries all the facts the rewrite needs. Sending
+    // the full transcript meant paying for the system prompt, the tool schemas
+    // and every tool payload a second time to do a translation. The question
+    // and the draft are enough, and cost a fraction.
     const retry = await client.chat.completions.create({
       model: AGENT_MODEL,
       messages: [
-        ...messages,
+        { role: "user", content: userText },
         { role: "assistant", content: text },
         { role: "system", content: LANGUAGE_RETRY_INSTRUCTION },
       ],
       temperature: 0.4,
       max_tokens: 1200,
+      reasoning_effort: SAATHI_REASONING_EFFORT,
       // No tools: the data is already gathered and in context. This turn is
       // purely a rewrite, and offering tools invites another round of calls.
       // No frequency_penalty — see the note in the main loop above.
     });
+
+    addUsage(usage, retry);
 
     const second = retry.choices[0]?.message?.content?.trim();
     if (!second) return text;
@@ -375,6 +501,7 @@ export async function runSaathi(
   const userText = [...history].reverse().find((m) => m.role === "user")?.content ?? "";
 
   const toolCalls: SaathiToolCallRecord[] = [];
+  const usage = newUsage();
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
     // On the final allowed round, drop the tools so the model is forced to
@@ -388,11 +515,14 @@ export async function runSaathi(
     // produces prose, which is the one that requests no further tools.
     if (round === 0) report({ phase: "thinking" });
 
+
     const completion = await completeResiliently(client, {
       model: AGENT_MODEL,
       messages,
       temperature: 0.4,
       max_tokens: 1200,
+      // See SAATHI_REASONING_EFFORT: hidden thinking was ~90% of billed output.
+      reasoning_effort: SAATHI_REASONING_EFFORT,
       // No frequency_penalty: this was the Groq/llama-era guard against
       // degenerate repetition (writing Devanagari after a long English tool
       // context reliably sent that model into a loop — 4,700 characters built
@@ -404,6 +534,8 @@ export async function runSaathi(
       tools: lastRound ? undefined : CHAT_TOOLS,
       tool_choice: lastRound ? undefined : "auto",
     });
+
+    addUsage(usage, completion);
 
     const choice = completion.choices[0]?.message;
     if (!choice) break;
@@ -420,9 +552,10 @@ export async function runSaathi(
       const text = choice.content?.trim() || "I could not find an answer to that.";
       report({ phase: "composing" });
       return {
-        text: await enforceLanguage(client, messages, text, userText),
+        text: await enforceLanguage(client, text, userText, usage),
         toolCalls,
         model: AGENT_MODEL,
+        usage,
       };
     }
 
@@ -519,5 +652,6 @@ export async function runSaathi(
     text: "I gathered the trade data but need a moment — could you rephrase your question or narrow it to one product and market?",
     toolCalls,
     model: AGENT_MODEL,
+    usage,
   };
 }

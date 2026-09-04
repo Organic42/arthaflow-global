@@ -285,6 +285,16 @@ export async function POST(request: Request) {
             send({ type: "progress", phase: p.phase, label: progressLabel(p) })
           );
 
+          // Server-side only: what this turn cost. Deliberately not sent to
+          // the browser - it is operational data, not something a user needs -
+          // but without it an expensive turn is indistinguishable from a cheap
+          // one until the monthly bill.
+          console.info(
+            `[saathi] ${result.model} reqs=${result.usage.requests} ` +
+              `in=${result.usage.promptTokens} out=${result.usage.completionTokens} ` +
+              `total=${result.usage.totalTokens} tools=${result.toolCalls.length}`
+          );
+
           // Only successful tool results are surfaced. Failed ones carry
           // internal diagnostics (missing env-var names, upstream rate-limit
           // notices) that shouldn't reach the browser, and the UI has nothing

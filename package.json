@@ -12,7 +12,10 @@
     "test:india-exports": "tsx scripts/check-india-exports.mjs",
     "build:india-exports": "python scripts/build-india-exports.py",
     "test:rate-limit": "tsx scripts/check-rate-limit.mjs",
-    "test:landed-cost": "tsx scripts/check-landed-cost.mjs"
+    "test:landed-cost": "tsx scripts/check-landed-cost.mjs",
+    "test:trend": "tsx scripts/check-trade-trend.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run test:hs && npm run test:dgcis && npm run test:india-exports && npm run test:rate-limit && npm run test:landed-cost && npm run test:trend"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.39",

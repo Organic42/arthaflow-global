@@ -635,6 +635,14 @@ export interface TradeTrendPoint {
   valueUsd: number;
   valueUsdM: number;
   growthPct: number | null; // Year-over-year %
+  /**
+   * False when the reporter filed nothing for this year.
+   *
+   * Comtrade returns no row for an unpublished year, which is not the same
+   * fact as trade of zero. Unreported points carry valueUsd 0 so a chart can
+   * still lay out an axis, but nothing may read that 0 as an observation.
+   */
+  reported: boolean;
 }
 
 export interface TradeTrendData {
@@ -645,6 +653,108 @@ export interface TradeTrendData {
   points: TradeTrendPoint[];
   totalGrowthPct: number | null;
   cagr: number | null;
+  /** The span growth was actually measured over, once gaps are excluded. */
+  measuredFrom: number | null;
+  measuredTo: number | null;
+  /** Years inside the requested window the reporter never filed. */
+  unreportedYears: number[];
+}
+
+/**
+ * The trend arithmetic, separated from the fetch so it can be pinned exactly.
+ *
+ * WHY THIS IS NOT A `?? 0`
+ * The obvious way to build a series is to walk the requested years and default
+ * a missing one to zero. That is wrong here, and wrong in the specific way this
+ * codebase exists to avoid: it silently converts "the reporter has not
+ * published yet" into "this market bought nothing".
+ *
+ * It is not a rare edge case either. `currentDataYear()` already backs off two
+ * years precisely because the recent end of Comtrade is routinely unpublished,
+ * and plenty of reporters lag further. So the ordinary shape of a real response
+ * is four good years and an empty one at the top - which under `?? 0` anchors
+ * `last` at zero and prints "-100% total growth" over a market that grew. A
+ * manufacturer reading that walks away from a live market.
+ *
+ * Two other places in this repo already got this right: `cagr()` in
+ * `hs/india-exports-tool.ts` returns null unless BOTH ends are positive, and
+ * `export-growth.ts` holds both ends above a materiality floor. This was the
+ * only copy guarding the first year and not the last, and it is the copy on
+ * the live Saathi path.
+ *
+ * So: growth is measured between the first and last years actually REPORTED,
+ * gaps are named rather than imputed, and when fewer than two years carry data
+ * there is no rate at all rather than a fabricated one.
+ */
+export function composeTrend(
+  /** Requested years, any order - normalised here. */
+  requestedYears: number[],
+  /** Reported values keyed by year. An absent key means "not filed". */
+  byYear: Map<number, number>
+): Pick<
+  TradeTrendData,
+  | "points"
+  | "totalGrowthPct"
+  | "cagr"
+  | "measuredFrom"
+  | "measuredTo"
+  | "unreportedYears"
+> {
+  const years = [...requestedYears].sort((a, b) => a - b);
+
+  const points: TradeTrendPoint[] = years.map((year, i) => {
+    const raw = byYear.get(year);
+    const reported = raw !== undefined;
+    const prevYear = i > 0 ? years[i - 1] : null;
+    const prev = prevYear === null ? undefined : byYear.get(prevYear);
+    return {
+      year,
+      valueUsd: raw ?? 0,
+      valueUsdM: usdM(raw ?? 0),
+      // A year-over-year step needs two real observations. Either side
+      // missing, or a prior year of zero, and there is no rate to state.
+      growthPct:
+        reported && prev !== undefined && prev > 0
+          ? Math.round(((raw - prev) / prev) * 1000) / 10
+          : null,
+      reported,
+    };
+  });
+
+  const filed = points.filter((p) => p.reported && p.valueUsd > 0);
+  const unreportedYears = points.filter((p) => !p.reported).map((p) => p.year);
+
+  if (filed.length < 2) {
+    return {
+      points,
+      totalGrowthPct: null,
+      cagr: null,
+      measuredFrom: filed[0]?.year ?? null,
+      measuredTo: filed[0]?.year ?? null,
+      unreportedYears,
+    };
+  }
+
+  const a = filed[0];
+  const b = filed[filed.length - 1];
+  // Compound over elapsed calendar years, not over the count of filings - a
+  // gap in the middle must not shorten the period and inflate the rate.
+  const periods = b.year - a.year;
+
+  return {
+    points,
+    totalGrowthPct:
+      Math.round(((b.valueUsd - a.valueUsd) / a.valueUsd) * 1000) / 10,
+    cagr:
+      periods > 0
+        ? Math.round(
+            (Math.pow(b.valueUsd / a.valueUsd, 1 / periods) - 1) * 1000
+          ) / 10
+        : null,
+    measuredFrom: a.year,
+    measuredTo: b.year,
+    unreportedYears,
+  };
 }
 
 export async function getTradeTrend(
@@ -701,42 +811,54 @@ export async function getTradeTrend(
     byYear.set(y, (byYear.get(y) ?? 0) + rec.primaryValue);
   }
 
-  const points: TradeTrendPoint[] = years
-    .slice()
-    .reverse()
-    .map((y, i, arr) => {
-      const v = byYear.get(y) ?? 0;
-      const prev = i > 0 ? (byYear.get(arr[i - 1]) ?? 0) : 0;
-      return {
-        year: y,
-        valueUsd: v,
-        valueUsdM: usdM(v),
-        growthPct: prev > 0 ? Math.round(((v - prev) / prev) * 1000) / 10 : null,
-      };
-    });
-
-  const first = points[0]?.valueUsd ?? 0;
-  const last = points[points.length - 1]?.valueUsd ?? 0;
-  const totalGrowthPct =
-    first > 0 ? Math.round(((last - first) / first) * 1000) / 10 : null;
-  const cagr =
-    first > 0 && points.length > 1
-      ? Math.round((Math.pow(last / first, 1 / (points.length - 1)) - 1) * 1000) / 10
-      : null;
+  const {
+    points,
+    totalGrowthPct,
+    cagr,
+    measuredFrom,
+    measuredTo,
+    unreportedYears,
+  } = composeTrend(years, byYear);
 
   const flowWord = (args.flow ?? "X") === "M" ? "imports of" : "exports of";
   const label = wantsWorld
     ? `${reporter.name} total ${flowWord} HS ${args.hsCode}`
     : `${reporter.name} → ${partnerName}, HS ${args.hsCode}`;
 
+  // Only reported years are quotable. Printing "$0M" for a year nobody filed
+  // is the same lie the -100% was, just spread across the series instead of
+  // concentrated into one figure.
+  const reportedPoints = points.filter((p) => p.reported);
+
+  const gapNote = unreportedYears.length
+    ? ` ${reporter.name} has not filed ${unreportedYears.join(", ")}, so ` +
+      `${unreportedYears.length === 1 ? "that year is" : "those years are"} ` +
+      `left out rather than counted as zero.`
+    : "";
+
+  const growthNote =
+    totalGrowthPct !== null && measuredFrom !== null && measuredTo !== null
+      ? ` That is ${totalGrowthPct >= 0 ? "+" : ""}${totalGrowthPct}% across ` +
+        `${measuredFrom}-${measuredTo}` +
+        (cagr !== null
+          ? `, or ${cagr >= 0 ? "+" : ""}${cagr}% a year compounded`
+          : "") +
+        "."
+      : reportedPoints.length === 1
+        ? ` Only ${reportedPoints[0].year} carries data, so there is no growth ` +
+          `rate to give.`
+        : "";
+
   const narrative =
-    points.length === 0
+    reportedPoints.length === 0
       ? `I did not find trade trend data for HS ${args.hsCode} for ${reporter.name}${
           wantsWorld ? "" : ` with ${partnerName}`
         }.`
       : `${label}: ` +
-        points.map((p) => `${p.year}: $${p.valueUsdM}M`).join(", ") +
-        (totalGrowthPct !== null ? ` (${totalGrowthPct}% total growth)` : "");
+        reportedPoints.map((p) => `${p.year}: $${p.valueUsdM}M`).join(", ") +
+        "." +
+        growthNote +
+        gapNote;
 
   return {
     ok: true,
@@ -747,9 +869,12 @@ export async function getTradeTrend(
       reporter: reporter.name,
       partner: partnerName,
       flow: args.flow ?? "X",
-      points,
+      points: reportedPoints,
       totalGrowthPct,
       cagr,
+      measuredFrom,
+      measuredTo,
+      unreportedYears,
     },
   };
 }

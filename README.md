@@ -222,9 +222,15 @@ Two changes came out of it, and they are the rule for every builder in `scripts/
 
 <br />
 
-> **Architecture deep-dive:** [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — the
-> five-stage manufacturer flow, what AI touches and what it never does, model
-> configuration, and where the system deliberately refuses to answer.
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| **[`docs/PRODUCT.md`](./docs/PRODUCT.md)** | **Full product &amp; company report** — problem and evidence, ICP, solution, live capability, market sizing, business model, competitive position, traction, roadmap, team. Start here. |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Technical deep-dive — the five-stage manufacturer flow, the layered stack, what AI touches and what it never does, model configuration, and where the system deliberately refuses to answer. |
+| [`AGENTS.md`](./AGENTS.md) | Working notes for contributors, human or otherwise. |
+
+<br />
 
 ## Verification
 

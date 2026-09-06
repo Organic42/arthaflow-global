@@ -179,37 +179,135 @@ dead-ends, the system says so instead of estimating.
 
 ## 6. Technology
 
-Full detail in **[`ARCHITECTURE.md`](./ARCHITECTURE.md)**. In summary:
+**AI is used exactly where the problem is ambiguous — and never where the problem has a
+right answer.** That sentence explains every decision in this section.
 
-**Stack.** Next.js 16 (App Router) · React 19 · TypeScript 5 · Tailwind CSS 4 ·
+Deeper detail, including the request path and per-stage components, is in
+[`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+### 6.1 The organising idea
+
+**One classification unlocks the entire system.** The 8-digit ITC-HS code is the join
+key across every dataset we hold. Once a product has a code, everything else — duty,
+VAT, trade-agreement eligibility, RoDTEP, drawback, GST, export policy, market demand —
+is a keyed lookup rather than a judgement call.
+
+So the only genuinely hard problem in the product is getting the code right, and that is
+the one place a model is involved in an answer.
+
+### 6.2 The stack
+
+Data flows upward. Note where the agent sits: **near the top, not at the centre.**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ⑥ CLIENT                                                     │
+│   Next.js 16 App Router · React 19 · TypeScript · Tailwind 4 │
+│   Manufacturer dashboard · documents · streaming chat        │
+├──────────────────────────────────────────────────────────────┤
+│ ⑤ API                                                        │
+│   /api/chat (NDJSON progress stream) · /api/tariff/*         │
+│   /api/hsn-search · /api/generate-document                   │
+│   Auth-gated · per-user rate limiting                        │
+├──────────────────────────────────────────────────────────────┤
+│ ④ AI AGENT — Export Saathi                                   │
+│   10 registered tools · max 3 tool rounds                    │
+│   Language enforcement · model-agnostic client               │
+├──────────────────────────────────────────────────────────────┤
+│ ③ DOMAIN ENGINES — pure TypeScript, no AI, no network        │
+│   classification · landed cost · FTA · incentives · market   │
+│   247 automated checks, mutation-verified                    │
+├──────────────────────────────────────────────────────────────┤
+│ ② DATA PIPELINE                                              │
+│   build-time → 7 scripts vendor official data to versioned   │
+│                JSON, committed to the repo                   │
+│   runtime    → Comtrade / WITS, cached in Supabase, 30d TTL  │
+├──────────────────────────────────────────────────────────────┤
+│ ① OFFICIAL SOURCES                                           │
+│   DGFT · DGCI&S · CBIC · UN Comtrade · World Bank WITS       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Stack choices.** Next.js 16 (App Router) · React 19 · TypeScript 5 · Tailwind CSS 4 ·
 Supabase (Postgres with Row Level Security) · Vercel. Saathi runs on Gemini
-`gemini-3.5-flash` at `reasoning_effort: low`, through the OpenAI-compatible endpoint.
+`gemini-3.5-flash`, through the OpenAI-compatible endpoint.
 
-**The organising idea.** One classification unlocks the entire system — the 8-digit
-ITC-HS code is the join key across every dataset. So the only genuinely ambiguous
-problem is getting the code right, and that is the one place a model is involved in an
-answer.
+**Why data is vendored at build time.** The product does not depend on a government
+portal being reachable when a manufacturer asks a question. Datasets are parsed once,
+committed as versioned JSON, and reviewed on change. A portal outage degrades nothing.
 
-**What AI does:** understands the question including Devanagari, chooses which of 10
-tools to call and in what order, selects an HS code from a fixed candidate set, composes
-the answer, and enforces the reply language.
+### 6.3 One question, end to end
 
-**What AI never touches:** every duty, VAT, surcharge and incentive rate; every
-calculation; every source citation. Those come from vendored government data and
-deterministic engines.
+```
+user question
+  → /api/chat            auth + rate limit
+  → agent loop           model selects a tool and its arguments
+  → domain engine        deterministic lookup or arithmetic
+  → vendored JSON  |  Supabase cache  |  live API
+  → engine returns structured result + narrative
+  → agent composes the answer
+  → language check       wrong script → one corrective retry
+  → NDJSON stream        progress events, then the final payload
+  → client               renders answer + chart
+```
+
+Progress is streamed rather than tokens, because the language check inspects the
+**complete** answer — the reply cannot be released a word at a time and then corrected.
+
+### 6.4 The manufacturer's flow, stage by stage
+
+| Stage | What fires | AI | Deterministic |
+|---|---|---|---|
+| **① List** | `hs/classify` over 12,310 official ITC-HS lines | **Selects** from retrieved candidates — the only genuinely ambiguous step | Candidate set is the fixed official list; the model cannot invent a code |
+| **② Enrich** | `hs/gst` · `hs/rodtep` · `hs/drawback` · `hs/itchs` | **None** | Keyed lookups. Where GST is ambiguous (97 lines), all candidates are returned |
+| **③ Target** | `comtrade/tools` · `tariff/landed-cost` | Orchestration — turns one vague question into the right tool sequence | Rankings, CAGR, duty, VAT, landed cost. 97 pinned checks |
+| **④ Ask** | `saathi/agent` — 10 tools, max 3 rounds | Understand, choose tools, compose, enforce language | Every figure comes from ①–③. The agent narrates; it does not compute |
+| **⑤ Execute** | `/api/generate-document`, partner layer | Drafts documents | Partner matching against shipment size, destination, incoterm |
+
+**Stage ② is the one to notice.** The step that attaches GST, RoDTEP, drawback and
+export policy — arguably the most commercially valuable in the flow — uses no AI at all.
+
+### 6.5 What AI does, and what it never touches
+
+| Capability | AI | Deterministic |
+|---|:--:|:--:|
+| Understand the question (incl. Devanagari) | ● | |
+| Choose which tools to call, and in what order | ● | |
+| **HS code — select from the official list** | **● selects** | **● fixed 12,310-line set** |
+| Duty, VAT, surcharge rates | | ● vendored government data |
+| Landed-cost arithmetic | | ● pure function, 97 checks |
+| FTA eligibility | | ● lookup, 16 agreements |
+| RoDTEP / drawback / GST | | ● lookup, 10,610 + 1,014 |
+| Market ranking and demand trend | | ● computed from Comtrade |
+| Compose the answer | ● | |
+| Enforce reply language | ● retry | ● script detection |
+
+Classification is the only row with marks in both columns — and even there the model
+**selects** rather than generates.
 
 ```
 RETRIEVE → VALIDATE → RESPOND
 ```
 
-This is an architectural guarantee, not a prompt instruction. A prompt can be ignored; a
-fixed candidate set cannot be.
+**This is an architectural guarantee, not a prompt instruction.** A prompt can be
+ignored; a fixed candidate set cannot be.
 
-**Model-agnostic by design.** The provider was migrated Groq/Llama → Gemini without
-changing the agent loop. The model is a swappable component; the data layer is the
+### 6.6 Model configuration
+
+| Setting | Value | Why |
+|---|---|---|
+| Model | `gemini-3.5-flash` | Override with `SAATHI_MODEL`. `gemini-2.5-*` is advertised by the models list but returns 404 on both transports. |
+| `reasoning_effort` | `low` | Gemini 3.x bills hidden reasoning as output without reporting it in `completion_tokens`. Measured: 5 completion + 16 prompt tokens but **212 total** — roughly 90% invisible. `"none"` is rejected with a 400. |
+| `max_tokens` | 1200 | |
+| `MAX_TOOL_ROUNDS` | 3 | System prompt (~1,970 tokens) and tool schemas (~1,660) are re-sent every round, so each round costs ~3,630 input tokens before any content. |
+
+Retries are split by cause: `5xx` gets two fast attempts (a rejected request bills
+nothing); `429` is quota rather than a blip, so it retries once and only when the server
+names a sub-2-second delay.
+
+**Model-agnostic by design.** The provider was migrated Groq/Llama → Gemini **without
+changing the agent loop**. The model is a swappable component; the data layer is the
 product.
-
----
 
 ## 7. Data provenance
 

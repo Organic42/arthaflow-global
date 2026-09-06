@@ -4,7 +4,7 @@
 
 # ArthaFlow Global
 
-### The operating system for global trade — starting with India's 57M unexported MSMEs.
+### The operating system for global trade — starting with the 72,775 Indian MSMEs who export, and the millions who should.
 
 <img src="https://readme-typing-svg.demolab.com?font=Space+Grotesk&size=18&duration=2600&pause=900&color=D4A843&center=true&vCenter=true&width=680&lines=Classify+the+product.+Price+the+shipment.;Find+where+in+the+world+it+actually+sells.;No+invented+HS+codes.+No+fabricated+figures.;Every+number+traced+to+a+primary+source." alt="Typing SVG" />
 
@@ -130,7 +130,7 @@ product and destination — no blank templates, no manual re-keying.
 | UI | Tailwind CSS 4 · shadcn-style components · Lucide icons |
 | Type | Space Grotesk (headings) · DM Sans (body) · JetBrains Mono (figures) |
 | Auth / DB / Storage | Supabase — Postgres with Row Level Security |
-| Saathi inference | **Gemini** `gemini-3.5-flash`, via the `openai` SDK against Gemini's compatible endpoint |
+| Saathi inference | **Gemini** `gemini-3.5-flash` at `reasoning_effort: low`, via the `openai` SDK against Gemini's compatible endpoint. Override the model with `SAATHI_MODEL` — see [`model.ts`](./src/lib/saathi/model.ts) before changing it |
 | Document inference | **Groq** |
 | Trade data | DGCIS (India) · UN Comtrade · World Bank WITS / UNCTAD TRAINS |
 | Visuals | `cobe` (WebGL globe) · `motion` |
@@ -222,6 +222,10 @@ Two changes came out of it, and they are the rule for every builder in `scripts/
 
 <br />
 
+> **Architecture deep-dive:** [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — the
+> five-stage manufacturer flow, what AI touches and what it never does, model
+> configuration, and where the system deliberately refuses to answer.
+
 ## Verification
 
 Data bugs in this codebase have been silent and large, so the numbers that matter are
@@ -231,10 +235,12 @@ hand in a comment beside the assertion.
 | Suite | Checks | Covers |
 |---|--:|---|
 | `npm run test:landed-cost` | **97** | Duty basis, VAT compounding, RoDTEP caps, drawback refusal, surcharge scope, treaty rates |
+| `npm run test:hs` | **60** | HS retrieval, tariff-line policy, RoDTEP/drawback/GST lookups, language enforcement |
+| `npm run test:trend` | **36** | Growth arithmetic, unreported years, interior gaps, CAGR anchoring |
 | `npm run test:india-exports` | **28** | DGCIS totals against India's published book, prefix aggregation |
+| `npm run test:dgcis` | **17** | Per-destination aggregation, financial-year disclosure |
 | `npm run test:rate-limit` | **9** | Anonymous trial cap, refunds on upstream failure |
-| `npm run test:hs` | — | HS retrieval regression |
-| `npm run test:dgcis` | — | Per-destination aggregation |
+| **`npm test`** | **247** | **Typecheck plus every suite above** |
 
 **Tests are verified by mutation, not by passing.** A suite that only ever goes green
 proves nothing. Breaking the calculation on purpose must break the suite:
@@ -245,6 +251,7 @@ proves nothing. Breaking the calculation on purpose must break the suite:
 | VAT on CIF instead of CIF+duty | 3 | VAT understated ₹13,486 |
 | RoDTEP per-unit cap ignored | 2 | rebate overstated ₹14,000 |
 | Surcharge scope collapsed to two values | 4 | an 18% exposure hidden entirely |
+| Unreported trade years imputed as zero | 4 | a market that grew 17% reported as `-100% total growth` |
 
 <br />
 
@@ -298,7 +305,10 @@ hardened functions and triggers.
 | `npm run dev` | Development server |
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| **`npm test`** | **Typecheck + all six suites (247 checks). Run this before any PR.** |
 | `npm run test:landed-cost` | Landed-cost arithmetic — run after touching `src/lib/tariff/` |
+| `npm run test:trend` | Trade-trend arithmetic — run after touching `src/lib/comtrade/` |
 | `npm run test:india-exports` | DGCIS export-value dataset |
 | `npm run test:rate-limit` | Sliding-window limiter and refunds |
 | `npm run test:hs` | HS retrieval regression — run after touching `src/lib/hs/` |
